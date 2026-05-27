@@ -1,7 +1,8 @@
-/// Chat screen for viewing session messages with Markdown rendering.
+/// Chat screen with message sending via WebSocket JSON-RPC.
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import '../services/connection_manager.dart';
+import '../services/ws_client.dart';
 
 class ChatScreen extends StatefulWidget {
   final SavedConnection connection;
@@ -23,6 +24,11 @@ class _ChatScreenState extends State<ChatScreen> {
   String? _error;
   ApiClient? _client;
 
+  // Chat sending state
+  final _textController = TextEditingController();
+  bool _sending = false;
+  String? _sendError;
+
   @override
   void initState() {
     super.initState();
@@ -33,6 +39,7 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   void dispose() {
     _client?.close();
+    _textController.dispose();
     super.dispose();
   }
 
@@ -59,6 +66,32 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
+  Future<void> _sendMessage() async {
+    final text = _textController.text.trim();
+    if (text.isEmpty || _sending) return;
+
+    setState(() {
+      _sending = true;
+      _sendError = null;
+    });
+    _textController.text = '';
+
+    try {
+      final ws = WsClient(widget.connection.baseUrl);
+      await ws.connect();
+      await ws.resumeSession(widget.session.id);
+      await ws.sendMessage(text);
+      ws.close();
+    } catch (e) {
+      setState(() {
+        _sendError = e.toString();
+      });
+    } finally {
+      setState(() { _sending = false; });
+      _fetchMessages();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -77,10 +110,93 @@ class _ChatScreenState extends State<ChatScreen> {
         ],
       ),
       body: _buildBody(),
+      bottom: _buildInputBar(),
+    );
+  }
+
+  Widget _buildInputBar() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        boxShadow: [
+          BoxShadow(blurRadius: 4, color: Colors.black.withValues(alpha: 0.1)),
+        ],
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: TextField(
+              controller: _textController,
+              decoration: InputDecoration(
+                hintText: 'Type a message…',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(24)),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                isDense: true,
+              ),
+              minLines: 1,
+              maxLines: 4,
+              textCapitalization: TextCapitalization.sentences,
+              onSubmitted: (_) => _sendMessage(),
+            ),
+          ),
+          const SizedBox(width: 8),
+          CircleAvatar(
+            child: _sending
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : IconButton(
+                    icon: const Icon(Icons.send, size: 20),
+                    onPressed: _sendMessage,
+                    tooltip: 'Send',
+                  ),
+          ),
+        ],
+      ),
     );
   }
 
   Widget _buildBody() {
+    if (_sending) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const CircularProgressIndicator(),
+            const SizedBox(height: 16),
+            Text('Sending…', style: Theme.of(context).textTheme.titleSmall),
+          ],
+        ),
+      );
+    }
+
+    if (_sendError != null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.error_outline, size: 48, color: Colors.orange),
+              const SizedBox(height: 16),
+              Text('Send failed', style: Theme.of(context).textTheme.titleMedium),
+              const SizedBox(height: 8),
+              Text(
+                _sendError!,
+                style: Theme.of(context).textTheme.bodySmall,
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              FilledButton(onPressed: _fetchMessages, child: const Text('Refresh')),
+            ],
+          ),
+        ),
+      );
+    }
+
     if (_loading) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -117,9 +233,21 @@ class _ChatScreenState extends State<ChatScreen> {
 
     if (_messages.isEmpty) {
       return Center(
-        child: Text(
-          'No messages yet',
-          style: Theme.of(context).textTheme.titleMedium,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.chat_bubble_outline, size: 48, color: Colors.grey),
+            const SizedBox(height: 16),
+            Text(
+              'No messages yet',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Type a message below to start',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ],
         ),
       );
     }
