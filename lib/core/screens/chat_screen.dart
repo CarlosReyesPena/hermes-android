@@ -1,4 +1,5 @@
 /// Chat screen with message sending via WebSocket JSON-RPC.
+/// Optimistic message insertion with auto-refresh.
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import '../services/connection_manager.dart';
@@ -27,7 +28,6 @@ class _ChatScreenState extends State<ChatScreen> {
   // Chat sending state
   final _textController = TextEditingController();
   bool _sending = false;
-  String? _sendError;
 
   @override
   void initState() {
@@ -44,6 +44,7 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Future<void> _fetchMessages() async {
+    if (_loading) return;
     setState(() {
       _loading = true;
       _error = null;
@@ -70,11 +71,13 @@ class _ChatScreenState extends State<ChatScreen> {
     final text = _textController.text.trim();
     if (text.isEmpty || _sending) return;
 
+    // Optimistic: add user message immediately
+    final optimisticMsg = {'role': 'user', 'content': text};
+    _textController.text = '';
+
     setState(() {
       _sending = true;
-      _sendError = null;
     });
-    _textController.text = '';
 
     try {
       final ws = WsClient(widget.connection.baseUrl);
@@ -82,13 +85,38 @@ class _ChatScreenState extends State<ChatScreen> {
       await ws.resumeSession(widget.session.id);
       await ws.sendMessage(text);
       ws.close();
+
+      // Update UI with optimistic message
+      setState(() {
+        _messages.insert(0, optimisticMsg);
+        _sending = false;
+        _loading = false;
+        _error = null;
+      });
+
+      // Auto-refresh to pick up assistant response
+      await Future.delayed(const Duration(milliseconds: 1500));
+      await _fetchMessages();
     } catch (e) {
       setState(() {
-        _sendError = e.toString();
+        _sending = false;
+        // Remove optimistic message on failure
+        if (_messages.isNotEmpty &&
+            _messages[0]['role'] == 'user' &&
+            _messages[0]['content'] == text) {
+          _messages.removeAt(0);
+        }
       });
-    } finally {
-      setState(() { _sending = false; });
-      _fetchMessages();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Send failed: $e'),
+            backgroundColor: Colors.orange,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
     }
   }
 
@@ -104,13 +132,17 @@ class _ChatScreenState extends State<ChatScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
-            onPressed: _fetchMessages,
+            onPressed: _loading ? null : _fetchMessages,
             tooltip: 'Refresh',
           ),
         ],
       ),
-      body: _buildBody(),
-      bottom: _buildInputBar(),
+      body: Column(
+        children: [
+          Expanded(child: _buildBody()),
+          _buildInputBar(),
+        ],
+      ),
     );
   }
 
@@ -137,6 +169,7 @@ class _ChatScreenState extends State<ChatScreen> {
               minLines: 1,
               maxLines: 4,
               textCapitalization: TextCapitalization.sentences,
+              enabled: !_loading && !_sending,
               onSubmitted: (_) => _sendMessage(),
             ),
           ),
@@ -160,43 +193,6 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Widget _buildBody() {
-    if (_sending) {
-      return Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const CircularProgressIndicator(),
-            const SizedBox(height: 16),
-            Text('Sending…', style: Theme.of(context).textTheme.titleSmall),
-          ],
-        ),
-      );
-    }
-
-    if (_sendError != null) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(32),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.error_outline, size: 48, color: Colors.orange),
-              const SizedBox(height: 16),
-              Text('Send failed', style: Theme.of(context).textTheme.titleMedium),
-              const SizedBox(height: 8),
-              Text(
-                _sendError!,
-                style: Theme.of(context).textTheme.bodySmall,
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 16),
-              FilledButton(onPressed: _fetchMessages, child: const Text('Refresh')),
-            ],
-          ),
-        ),
-      );
-    }
-
     if (_loading) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -231,28 +227,8 @@ class _ChatScreenState extends State<ChatScreen> {
       );
     }
 
-    if (_messages.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.chat_bubble_outline, size: 48, color: Colors.grey),
-            const SizedBox(height: 16),
-            Text(
-              'No messages yet',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Type a message below to start',
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
-          ],
-        ),
-      );
-    }
-
     return ListView.builder(
+      padding: const EdgeInsets.only(bottom: 4),
       reverse: true,
       itemCount: _messages.length,
       itemBuilder: (context, index) {

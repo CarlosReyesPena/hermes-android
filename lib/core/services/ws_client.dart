@@ -4,7 +4,6 @@
 /// Wire protocol: newline-delimited JSON-RPC 2.0, same as the TUI gateway.
 import 'dart:async';
 import 'dart:convert';
-import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:web_socket_channel/io.dart';
 
 /// A JSON-RPC error response from the gateway.
@@ -23,6 +22,7 @@ class JsonRpcError implements Exception {
 class WsClient {
   final String baseUrl;
   IOWebSocketChannel? _channel;
+  bool _connected = false;
   int _nextId = 1;
 
   /// Pending requests: id -> (completer, timer).
@@ -32,11 +32,15 @@ class WsClient {
 
   /// Connect to the WebSocket gateway.
   Future<void> connect() async {
-    if (_channel != null && _channel!.sink.isActive) return;
+    if (_connected) return;
     final wsUrl = baseUrl.replaceFirst('http://', 'ws://')
         .replaceFirst('https://', 'wss://') + '/api/ws';
     _channel = IOWebSocketChannel.connect(Uri.parse(wsUrl));
-    _channel!.stream.listen(_handleMessage, onDone: () { _channel = null; });
+    _connected = true;
+    _channel!.stream.listen(_handleMessage, onDone: () {
+      _connected = false;
+      _channel = null;
+    });
   }
 
   /// Handle inbound messages.
@@ -45,7 +49,7 @@ class WsClient {
       Map<String, dynamic> data;
       if (msg is String) {
         data = jsonDecode(msg) as Map<String, dynamic>;
-      } else if (msg is Map) {
+      } else if (msg is Map<String, dynamic>) {
         data = msg;
       } else {
         return;
@@ -72,7 +76,7 @@ class WsClient {
     Map<String, dynamic> params, {
     Duration timeout = const Duration(seconds: 30),
   }) async {
-    if (_channel == null || !_channel!.sink.isActive) {
+    if (!_connected || _channel == null) {
       throw Exception('Not connected');
     }
 
@@ -100,7 +104,8 @@ class WsClient {
   Future<String> resumeSession(String sessionId) async {
     final result = await send('session.resume', {'session_id': sessionId});
     if (result['error'] != null) {
-      throw JsonRpcError('session.resume', result['error']['message'] as String?);
+      final errMap = result['error'] as Map<String, dynamic>;
+      throw JsonRpcError('session.resume', errMap['message'] as String ?? 'Unknown error');
     }
     return result['result']?['session_id'] as String? ?? sessionId;
   }
@@ -109,7 +114,8 @@ class WsClient {
   Future<String> sendMessage(String message) async {
     final result = await send('prompt.submit', {'message': message});
     if (result['error'] != null) {
-      throw JsonRpcError('prompt.submit', result['error']['message'] as String?);
+      final errMap = result['error'] as Map<String, dynamic>;
+      throw JsonRpcError('prompt.submit', errMap['message'] as String ?? 'Unknown error');
     }
     return result['result']?['session_id'] as String? ?? '';
   }
@@ -123,6 +129,7 @@ class WsClient {
       }
     }
     _pending.clear();
+    _connected = false;
     _channel?.sink.close();
     _channel = null;
   }
