@@ -201,32 +201,100 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _showApiKeyDialog(SavedConnection conn) {
     final ctrl = TextEditingController(text: conn.apiKey);
+    bool validating = false;
+    String? error;
+
     showDialog(
       context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Update API Key'),
-        content: TextField(
-          controller: ctrl,
-          decoration: const InputDecoration(
-            labelText: 'API Key',
-            hintText: 'API_SERVER_KEY from ~/.hermes/.env',
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: const Text('Update API Key'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (error != null)
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(10),
+                  margin: const EdgeInsets.only(bottom: 12),
+                  decoration: BoxDecoration(
+                    color: Colors.red.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.error_outline, color: Colors.red, size: 18),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(error!, style: const TextStyle(color: Colors.red, fontSize: 13)),
+                      ),
+                    ],
+                  ),
+                ),
+              TextField(
+                controller: ctrl,
+                decoration: const InputDecoration(
+                  labelText: 'API Key',
+                  hintText: 'API_SERVER_KEY from ~/.hermes/.env',
+                ),
+                obscureText: true,
+                enabled: !validating,
+              ),
+            ],
           ),
-          obscureText: true,
+          actions: [
+            TextButton(
+              onPressed: validating ? null : () => Navigator.pop(ctx),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: validating
+                  ? null
+                  : () async {
+                      final key = ctrl.text.trim();
+                      if (key.isEmpty) return;
+
+                      setDialogState(() {
+                        validating = true;
+                        error = null;
+                      });
+
+                      try {
+                        final baseUrl = 'http://${conn.host}:${conn.port}';
+                        final client = ApiClient(baseUrl: baseUrl, apiKey: key);
+                        final ok = await client.healthCheck();
+                        client.close();
+
+                        if (!ctx.mounted) return;
+
+                        if (ok) {
+                          widget.connManager.updateApiKey(conn.id, key);
+                          _refresh();
+                          Navigator.pop(ctx);
+                        } else {
+                          setDialogState(() {
+                            error = 'Invalid API key. Server returned 401.';
+                            validating = false;
+                          });
+                        }
+                      } catch (e) {
+                        if (!ctx.mounted) return;
+                        setDialogState(() {
+                          error = 'Cannot reach ${conn.host}:${conn.port}.';
+                          validating = false;
+                        });
+                      }
+                    },
+              child: validating
+                  ? const SizedBox(
+                      width: 18, height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                    )
+                  : const Text('Save'),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-          FilledButton(
-            onPressed: () {
-              final key = ctrl.text.trim();
-              if (key.isNotEmpty) {
-                widget.connManager.updateApiKey(conn.id, key);
-                _refresh();
-              }
-              Navigator.pop(context);
-            },
-            child: const Text('Save'),
-          ),
-        ],
       ),
     );
   }
@@ -334,6 +402,49 @@ class _AddDialogState extends State<_AddDialog> {
   final _host = TextEditingController(text: '192.168.68.188');
   final _port = TextEditingController(text: '8642');
   final _apiKey = TextEditingController();
+  bool _validating = false;
+  String? _error;
+
+  Future<void> _validateAndSave() async {
+    final label = _label.text.trim();
+    final host = _host.text.trim();
+    final port = int.tryParse(_port.text.trim()) ?? 8642;
+    final apiKey = _apiKey.text.trim();
+
+    if (label.isEmpty || host.isEmpty || port <= 0) return;
+
+    setState(() {
+      _validating = true;
+      _error = null;
+    });
+
+    try {
+      final baseUrl = 'http://$host:$port';
+      final client = ApiClient(baseUrl: baseUrl, apiKey: apiKey);
+      final ok = await client.healthCheck();
+      client.close();
+
+      if (!mounted) return;
+
+      if (ok) {
+        widget.onSave(label, host, port, apiKey);
+        Navigator.pop(context);
+      } else {
+        setState(() {
+          _error = apiKey.isEmpty
+              ? 'Server requires an API key. Enter your API_SERVER_KEY.'
+              : 'Invalid API key. Server returned 401.';
+          _validating = false;
+        });
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = 'Cannot reach $host:$port. Check the host and port.';
+        _validating = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -343,6 +454,27 @@ class _AddDialogState extends State<_AddDialog> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            if (_error != null) ...[
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(10),
+                margin: const EdgeInsets.only(bottom: 12),
+                decoration: BoxDecoration(
+                  color: Colors.red.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.error_outline, color: Colors.red, size: 18),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(_error!, style: const TextStyle(color: Colors.red, fontSize: 13)),
+                    ),
+                  ],
+                ),
+              ),
+            ],
             TextField(controller: _label, decoration: const InputDecoration(labelText: 'Label')),
             const SizedBox(height: 12),
             TextField(
@@ -370,19 +502,18 @@ class _AddDialogState extends State<_AddDialog> {
         ),
       ),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+        TextButton(
+          onPressed: _validating ? null : () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
         FilledButton(
-          onPressed: () {
-            final label = _label.text.trim();
-            final host = _host.text.trim();
-            final port = int.tryParse(_port.text.trim()) ?? 8642;
-            final apiKey = _apiKey.text.trim();
-            if (label.isNotEmpty && host.isNotEmpty && port > 0) {
-              widget.onSave(label, host, port, apiKey);
-              Navigator.pop(context);
-            }
-          },
-          child: const Text('Connect'),
+          onPressed: _validating ? null : _validateAndSave,
+          child: _validating
+              ? const SizedBox(
+                  width: 18, height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                )
+              : const Text('Connect'),
         ),
       ],
     );
