@@ -23,7 +23,7 @@ class _CronScreenState extends State<CronScreen> {
   @override
   void initState() {
     super.initState();
-    _client = ApiClient();
+    _client = ApiClient(baseUrl: widget.connection.baseUrl, apiKey: widget.connection.apiKey);
     _loadJobs();
   }
 
@@ -41,10 +41,7 @@ class _CronScreenState extends State<CronScreen> {
 
     try {
       // The endpoint returns a bare JSON array
-      final data = await _client.apiGetList(
-        widget.connection.baseUrl,
-        'cron/jobs',
-      );
+      final data = await _client.apiGetList('cron/jobs');
 
       final items = <Map<String, dynamic>>[];
       for (final item in data) {
@@ -101,11 +98,7 @@ class _CronScreenState extends State<CronScreen> {
     final action = paused ? 'resume' : 'pause';
 
     try {
-      await _client.apiPost(
-        widget.connection.baseUrl,
-        'cron/jobs/$jobId/$action',
-        {},
-      );
+      await _client.apiPost('cron/jobs/$jobId/$action');
       // Update local state immediately
       if (paused) {
         job.remove('paused_at');
@@ -160,7 +153,7 @@ class _CronScreenState extends State<CronScreen> {
     if (confirmed != true) return;
 
     try {
-      await _client.apiDelete(widget.connection.baseUrl, 'cron/jobs/$jobId');
+      await _client.apiDelete('cron/jobs/$jobId');
       setState(() => _jobs.removeWhere((j) => j['id'] == jobId));
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -183,11 +176,7 @@ class _CronScreenState extends State<CronScreen> {
     final jobId = job['id'] as String? ?? '';
     if (jobId.isEmpty) return;
     try {
-      await _client.apiPost(
-        widget.connection.baseUrl,
-        'cron/jobs/$jobId/trigger',
-        {},
-      );
+      await _client.apiPost('cron/jobs/$jobId/trigger');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Job triggered')),

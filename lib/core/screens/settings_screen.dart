@@ -31,7 +31,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   void initState() {
     super.initState();
-    _client = ApiClient();
+    _client = ApiClient(baseUrl: widget.connection.baseUrl, apiKey: widget.connection.apiKey);
     _loadData();
   }
 
@@ -48,11 +48,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
     });
 
     try {
-      final baseUrl = widget.connection.baseUrl;
       final results = await Future.wait([
-        _client.getModelInfo(baseUrl),
-        _client.getModelOptions(baseUrl),
-        _client.getSkills(baseUrl),
+        _client.getModelInfo(),
+        _client.getModelOptions(),
+        _client.getSkills(),
       ]);
 
       setState(() {
@@ -122,7 +121,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
     try {
       await _client.setModel(
-        widget.connection.baseUrl,
+        'main',
         _selectedProvider,
         _selectedModel,
       );

@@ -19,7 +19,7 @@ class _SkillsScreenState extends State<SkillsScreen> {
   @override
   void initState() {
     super.initState();
-    _client = ApiClient();
+    _client = ApiClient(baseUrl: widget.connection.baseUrl, apiKey: widget.connection.apiKey);
     _load();
   }
 
@@ -32,7 +32,7 @@ class _SkillsScreenState extends State<SkillsScreen> {
   Future<void> _load() async {
     setState(() { _loading = true; _error = null; });
     try {
-      final raw = await _client.getSkills(widget.connection.baseUrl);
+      final raw = await _client.getSkills();
       if (!mounted) return;
       setState(() {
         _skills = raw.whereType<Map<String, dynamic>>().toList();

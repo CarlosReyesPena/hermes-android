@@ -27,7 +27,7 @@ class _MemoryScreenState extends State<MemoryScreen> {
   @override
   void initState() {
     super.initState();
-    _client = ApiClient();
+    _client = ApiClient(baseUrl: widget.connection.baseUrl, apiKey: widget.connection.apiKey);
     _loadMemory();
   }
 
@@ -46,9 +46,7 @@ class _MemoryScreenState extends State<MemoryScreen> {
     try {
       // Try dedicated /api/memory endpoint first
       try {
-        final memData = await _client.apiGet(
-          widget.connection.baseUrl, 'memory',
-        );
+        final memData = await _client.apiGet('api/memory');
         final items = memData['entries'] as List? ?? memData['memory'] as List? ?? [];
         if (items.isNotEmpty) {
           setState(() {
@@ -63,7 +61,7 @@ class _MemoryScreenState extends State<MemoryScreen> {
       }
 
       // Fallback: read memory from /api/config
-      final config = await _client.apiGet(widget.connection.baseUrl, 'config');
+      final config = await _client.apiGet('config');
       final mem = config['memory'];
 
       if (mem is List) {

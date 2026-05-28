@@ -149,6 +149,50 @@ class ApiClient {
     }
   }
 
+  // ── Generic HTTP helpers (for Dashboard API compatibility) ────────────
+
+  Future<Map<String, dynamic>> apiGet(String endpoint) async {
+    final res = await _http.get(Uri.parse('$baseUrl/$endpoint'), headers: _headers);
+    if (res.statusCode != 200) throw Exception('HTTP ${res.statusCode}');
+    return jsonDecode(res.body) as Map<String, dynamic>;
+  }
+
+  Future<List<dynamic>> apiGetList(String endpoint) async {
+    final res = await _http.get(Uri.parse('$baseUrl/$endpoint'), headers: _headers);
+    if (res.statusCode != 200) throw Exception('HTTP ${res.statusCode}');
+    return jsonDecode(res.body) as List<dynamic>;
+  }
+
+  Future<Map<String, dynamic>> apiPost(String endpoint, {Map<String, dynamic>? body}) async {
+    final res = await _http.post(
+      Uri.parse('$baseUrl/$endpoint'),
+      headers: _headers,
+      body: body != null ? jsonEncode(body) : null,
+    );
+    if (res.statusCode < 200 || res.statusCode >= 300) {
+      throw Exception('HTTP ${res.statusCode}');
+    }
+    return jsonDecode(res.body) as Map<String, dynamic>;
+  }
+
+  Future<void> apiDelete(String endpoint) async {
+    final res = await _http.delete(Uri.parse('$baseUrl/$endpoint'), headers: _headers);
+    if (res.statusCode < 200 || res.statusCode >= 300) {
+      throw Exception('HTTP ${res.statusCode}');
+    }
+  }
+
+  // ── Dashboard-compatible helpers (port 9119 endpoints, may not work on API server) ──
+
+  Future<Map<String, dynamic>> getModelInfo() => apiGet('api/model/info');
+  Future<Map<String, dynamic>> getModelOptions() => apiGet('api/model/options');
+  Future<List<Map<String, dynamic>>> getSkills() async {
+    final data = await apiGetList('api/skills');
+    return data.whereType<Map<String, dynamic>>().toList();
+  }
+  Future<Map<String, dynamic>> setModel(String scope, String provider, String model) =>
+      apiPost('api/model/set', body: {'scope': scope, 'provider': provider, 'model': model});
+
   void close() => _http.close();
 }
 
