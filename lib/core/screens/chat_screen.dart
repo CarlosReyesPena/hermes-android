@@ -29,6 +29,7 @@ class _ChatScreenState extends State<ChatScreen> {
   bool _loading = true;
   String? _error;
   late final ApiClient _client;
+  late final GatewayChatClient _gateway;
 
   // Chat sending state
   final _textController = TextEditingController();
@@ -49,7 +50,11 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   void initState() {
     super.initState();
-    _client = ApiClient();
+    _client = ApiClient(
+      baseUrl: widget.connection.baseUrl,
+      apiKey: widget.connection.apiKey,
+    );
+    _gateway = GatewayChatClient(_client);
     _fetchMessages();
     _loadVerboseMode();
     _scrollController.addListener(_onScroll);
@@ -96,7 +101,6 @@ class _ChatScreenState extends State<ChatScreen> {
 
     try {
       final messages = await _client.getMessages(
-        widget.connection.baseUrl,
         widget.session.id,
       );
       if (!mounted) return;
@@ -121,7 +125,7 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
-  /// Send message via REST endpoint.
+  /// Send message via SSE streaming (Gateway API Server).
   Future<void> _sendMessage() async {
     final text = _textController.text.trim();
     if (text.isEmpty) return;
@@ -129,39 +133,67 @@ class _ChatScreenState extends State<ChatScreen> {
 
     _textController.text = '';
 
+    // Build conversation history for SSE request
+    final history = <Map<String, dynamic>>[];
+    for (var i = _messages.length - 1; i >= 0; i--) {
+      final m = _messages[i];
+      history.add({'role': m['role'] ?? 'user', 'content': m['content'] ?? ''});
+    }
+
     setState(() {
       _sending = true;
       _streaming = true;
       _showScrollToBottom = false;
       _messages.insert(0, {'role': 'user', 'content': text});
+      // Insert a placeholder streaming message
+      _messages.insert(0, {'role': 'assistant', 'content': ''});
     });
 
     WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
 
-    try {
-      // Send the message via REST
-      await _client.restSendMessage(
-        widget.connection.baseUrl,
-        widget.session.id,
-        text,
-      );
-      
-      // Refresh messages to get the response
-      if (mounted) {
-        final messages = await _client.getMessages(
-          widget.connection.baseUrl,
-          widget.session.id,
-        );
+    // Accumulate tokens into the streaming placeholder
+    await _gateway.sendMessageStreaming(
+      message: text,
+      sessionId: widget.session.id,
+      history: history,
+      onToken: (token) {
+        if (!mounted) return;
         setState(() {
-          _messages = messages;
-          _streaming = false;
-          _sending = false;
-          _showScrollToBottom = false;
+          if (_messages.isNotEmpty && _messages[0]['role'] == 'assistant') {
+            _messages[0]['content'] = (_messages[0]['content'] as String) + token;
+          }
         });
-      }
-    } catch (e) {
-      _handleSendError(text, e);
-    }
+      },
+      onDone: () async {
+        if (!mounted) return;
+        // Refresh messages to get the final server-side state
+        try {
+          final messages = await _client.getMessages(widget.session.id);
+          if (!mounted) return;
+          setState(() {
+            _messages = messages;
+            _streaming = false;
+            _sending = false;
+            _showScrollToBottom = false;
+          });
+        } catch (e) {
+          setState(() {
+            _streaming = false;
+            _sending = false;
+          });
+        }
+      },
+      onError: (error) {
+        if (!mounted) return;
+        // Remove the placeholder assistant message
+        setState(() {
+          if (_messages.isNotEmpty && _messages[0]['role'] == 'assistant') {
+            _messages.removeAt(0);
+          }
+        });
+        _handleSendError(text, error);
+      },
+    );
   }
 
   void _handleSendError(String text, Object e) {
