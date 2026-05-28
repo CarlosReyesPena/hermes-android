@@ -11,7 +11,7 @@ class SkillsScreen extends StatefulWidget {
 }
 
 class _SkillsScreenState extends State<SkillsScreen> {
-  late ApiClient _client;
+  late DashboardClient _client;
   List<Map<String, dynamic>> _skills = [];
   bool _loading = true;
   String? _error;
@@ -19,7 +19,7 @@ class _SkillsScreenState extends State<SkillsScreen> {
   @override
   void initState() {
     super.initState();
-    _client = ApiClient(baseUrl: widget.connection.baseUrl, apiKey: widget.connection.apiKey);
+    _client = DashboardClient(host: widget.connection.host);
     _load();
   }
 

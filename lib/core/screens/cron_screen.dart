@@ -15,7 +15,7 @@ class CronScreen extends StatefulWidget {
 }
 
 class _CronScreenState extends State<CronScreen> {
-  late ApiClient _client;
+  late DashboardClient _client;
   List<Map<String, dynamic>> _jobs = [];
   bool _loading = true;
   String? _error;
@@ -23,7 +23,7 @@ class _CronScreenState extends State<CronScreen> {
   @override
   void initState() {
     super.initState();
-    _client = ApiClient(baseUrl: widget.connection.baseUrl, apiKey: widget.connection.apiKey);
+    _client = DashboardClient(host: widget.connection.host);
     _loadJobs();
   }
 

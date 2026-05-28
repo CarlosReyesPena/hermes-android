@@ -14,7 +14,7 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  late ApiClient _client;
+  late DashboardClient _client;
   Map<String, dynamic>? _modelInfo;
   Map<String, dynamic>? _modelOptions;
   List<Map<String, dynamic>> _skills = [];
@@ -31,7 +31,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   void initState() {
     super.initState();
-    _client = ApiClient(baseUrl: widget.connection.baseUrl, apiKey: widget.connection.apiKey);
+    _client = DashboardClient(host: widget.connection.host);
     _loadData();
   }
 

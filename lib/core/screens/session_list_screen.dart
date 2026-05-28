@@ -95,9 +95,14 @@ class _SessionListScreenState extends State<SessionListScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          widget.connection.label,
-          style: GoogleFonts.cinzel(fontSize: 18, letterSpacing: 2),
+          'HERMES',
+          style: GoogleFonts.cinzel(
+            fontWeight: FontWeight.w700,
+            letterSpacing: 6,
+            fontSize: 22,
+          ),
         ),
+        centerTitle: true,
         actions: [
           if (!_healthOk)
             const Padding(

@@ -306,3 +306,78 @@ class GatewayChatClient {
     _api.close();
   }
 }
+
+/// Client for the Hermes Dashboard REST API (port 9119).
+///
+/// Auto-discovers the ephemeral SPA session token by fetching the dashboard
+/// homepage. Used for Dashboard-only features: cron, memory, skills, settings.
+class DashboardClient {
+  final http.Client _http;
+  final String _baseUrl;
+  String? _token;
+
+  DashboardClient({required String host, int port = 9119})
+    : _baseUrl = 'http://$host:$port',
+      _http = http.Client();
+
+  Future<String> _getToken() async {
+    if (_token != null) return _token!;
+    final res = await _http.get(Uri.parse('$_baseUrl/'));
+    if (res.statusCode != 200) throw Exception('Dashboard not reachable');
+    final match = RegExp(r'window\.__HERMES_SESSION_TOKEN__="([^"]+)";').firstMatch(res.body);
+    if (match == null) throw Exception('Session token not found');
+    _token = match.group(1)!;
+    return _token!;
+  }
+
+  Future<Map<String, String>> _authHeaders() async => {
+    'X-Hermes-Session-Token': await _getToken(),
+    'Content-Type': 'application/json',
+  };
+
+  Future<Map<String, dynamic>> apiGet(String endpoint) async {
+    final headers = await _authHeaders();
+    final res = await _http.get(Uri.parse('$_baseUrl/api/$endpoint'), headers: headers);
+    if (res.statusCode == 401) { _token = null; return apiGet(endpoint); }
+    if (res.statusCode != 200) throw Exception('HTTP ${res.statusCode}');
+    return jsonDecode(res.body) as Map<String, dynamic>;
+  }
+
+  Future<List<dynamic>> apiGetList(String endpoint) async {
+    final headers = await _authHeaders();
+    final res = await _http.get(Uri.parse('$_baseUrl/api/$endpoint'), headers: headers);
+    if (res.statusCode == 401) { _token = null; return apiGetList(endpoint); }
+    if (res.statusCode != 200) throw Exception('HTTP ${res.statusCode}');
+    return jsonDecode(res.body) as List<dynamic>;
+  }
+
+  Future<Map<String, dynamic>> apiPost(String endpoint, {Map<String, dynamic>? body}) async {
+    final headers = await _authHeaders();
+    final res = await _http.post(
+      Uri.parse('$_baseUrl/api/$endpoint'),
+      headers: headers,
+      body: body != null ? jsonEncode(body) : null,
+    );
+    if (res.statusCode == 401) { _token = null; return apiPost(endpoint, body: body); }
+    if (res.statusCode < 200 || res.statusCode >= 300) throw Exception('HTTP ${res.statusCode}');
+    return jsonDecode(res.body) as Map<String, dynamic>;
+  }
+
+  Future<void> apiDelete(String endpoint) async {
+    final headers = await _authHeaders();
+    final res = await _http.delete(Uri.parse('$_baseUrl/api/$endpoint'), headers: headers);
+    if (res.statusCode == 401) { _token = null; return apiDelete(endpoint); }
+    if (res.statusCode < 200 || res.statusCode >= 300) throw Exception('HTTP ${res.statusCode}');
+  }
+
+  Future<Map<String, dynamic>> getModelInfo() => apiGet('model/info');
+  Future<Map<String, dynamic>> getModelOptions() => apiGet('model/options');
+  Future<List<Map<String, dynamic>>> getSkills() async {
+    final data = await apiGetList('skills');
+    return data.whereType<Map<String, dynamic>>().toList();
+  }
+  Future<Map<String, dynamic>> setModel(String scope, String provider, String model) =>
+      apiPost('model/set', body: {'scope': scope, 'provider': provider, 'model': model});
+
+  void close() => _http.close();
+}

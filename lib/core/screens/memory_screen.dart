@@ -18,7 +18,7 @@ class MemoryScreen extends StatefulWidget {
 }
 
 class _MemoryScreenState extends State<MemoryScreen> {
-  late ApiClient _client;
+  late DashboardClient _client;
   List<Map<String, dynamic>> _entries = [];
   bool _loading = true;
   String? _error;
@@ -27,7 +27,7 @@ class _MemoryScreenState extends State<MemoryScreen> {
   @override
   void initState() {
     super.initState();
-    _client = ApiClient(baseUrl: widget.connection.baseUrl, apiKey: widget.connection.apiKey);
+    _client = DashboardClient(host: widget.connection.host);
     _loadMemory();
   }
 
