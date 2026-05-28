@@ -1,4 +1,8 @@
 /// Memory browser screen — view, add, and delete Hermes memory entries.
+///
+/// NOTE: The open-source Hermes API server does not expose /api/memory.
+/// This screen falls back to reading memory from /api/config when the
+/// dedicated endpoint is unavailable.
 import 'package:flutter/material.dart';
 import '../services/connection_manager.dart';
 
@@ -15,6 +19,7 @@ class _MemoryScreenState extends State<MemoryScreen> {
   List<Map<String, dynamic>> _entries = [];
   bool _loading = true;
   String? _error;
+  bool _notAvailable = false;
 
   @override
   void initState() {
@@ -33,12 +38,11 @@ class _MemoryScreenState extends State<MemoryScreen> {
     setState(() {
       _loading = true;
       _error = null;
+      _notAvailable = false;
     });
 
     try {
-      final data = await _client.getConfig(widget.connection.baseUrl);
-      // Memory entries may be in config or at /api/memory
-      // Try to fetch from /api/memory first, fall back to config.memory
+      // Try dedicated /api/memory endpoint first
       try {
         final memData = await _client.apiGet(
           widget.connection.baseUrl, 'memory',
@@ -48,24 +52,39 @@ class _MemoryScreenState extends State<MemoryScreen> {
           _entries = items.cast<Map<String, dynamic>>();
           _loading = false;
         });
-      } catch (_) {
-        // Fallback: show memory from config
-        final mem = data['memory'] as Map<String, dynamic>?;
-        if (mem != null) {
-          final entries = <Map<String, dynamic>>[];
-          mem.forEach((key, value) {
-            entries.add({'key': key, 'value': value.toString()});
-          });
-          setState(() {
-            _entries = entries;
-            _loading = false;
-          });
+        return;
+      } catch (memErr) {
+        final msg = memErr.toString();
+        // If it's a parse error (non-JSON response), endpoint doesn't exist
+        if (msg.contains('FormatException') ||
+            msg.contains('character') ||
+            msg.contains('Unexpected') ||
+            msg.contains('404') ||
+            msg.contains('HTTP 40') ||
+            msg.contains('HTTP 50')) {
+          _notAvailable = true;
         } else {
-          setState(() {
-            _entries = [];
-            _loading = false;
-          });
+          rethrow;
         }
+      }
+
+      // Fallback: read memory from /api/config
+      final data = await _client.getConfig(widget.connection.baseUrl);
+      final mem = data['memory'] as Map<String, dynamic>?;
+      if (mem != null && mem.isNotEmpty) {
+        final entries = <Map<String, dynamic>>[];
+        mem.forEach((key, value) {
+          entries.add({'key': key, 'value': value.toString()});
+        });
+        setState(() {
+          _entries = entries;
+          _loading = false;
+        });
+      } else {
+        setState(() {
+          _entries = [];
+          _loading = false;
+        });
       }
     } catch (e) {
       setState(() {
@@ -82,14 +101,13 @@ class _MemoryScreenState extends State<MemoryScreen> {
     );
     if (result == null) return;
 
-    // Optimistic add
     setState(() {
       _entries.insert(0, {'key': result['key'], 'value': result['value']});
     });
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Memory added — refresh to sync with server')),
+        const SnackBar(content: Text('Memory entry added locally — sync with server requires Hermes CLI')),
       );
     }
   }
@@ -147,6 +165,30 @@ class _MemoryScreenState extends State<MemoryScreen> {
   Widget _buildBody() {
     if (_loading) {
       return const Center(child: CircularProgressIndicator());
+    }
+
+    if (_notAvailable) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.psychology_outlined, size: 48, color: Colors.grey[600]),
+              const SizedBox(height: 16),
+              Text('Reading from config',
+                  style: Theme.of(context).textTheme.titleMedium),
+              const SizedBox(height: 8),
+              Text(
+                'The dedicated memory API is not available on this server. '
+                'Showing memory entries from Hermes config.yaml instead.',
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey),
+              ),
+            ],
+          ),
+        ),
+      );
     }
 
     if (_error != null) {

@@ -1,4 +1,7 @@
 /// Cron job browser screen — list and manage Hermes scheduled cron jobs.
+///
+/// NOTE: The open-source Hermes API server does not expose /api/cron.
+/// This screen shows a helpful message when cron is unavailable.
 import 'package:flutter/material.dart';
 import '../services/connection_manager.dart';
 
@@ -15,6 +18,7 @@ class _CronScreenState extends State<CronScreen> {
   List<Map<String, dynamic>> _jobs = [];
   bool _loading = true;
   String? _error;
+  bool _notAvailable = false;
 
   @override
   void initState() {
@@ -33,6 +37,7 @@ class _CronScreenState extends State<CronScreen> {
     setState(() {
       _loading = true;
       _error = null;
+      _notAvailable = false;
     });
 
     try {
@@ -43,10 +48,24 @@ class _CronScreenState extends State<CronScreen> {
         _loading = false;
       });
     } catch (e) {
-      setState(() {
-        _error = e.toString();
-        _loading = false;
-      });
+      final msg = e.toString();
+      // If the response isn't JSON, the endpoint doesn't exist
+      if (msg.contains('FormatException') ||
+          msg.contains('character') ||
+          msg.contains('Unexpected') ||
+          msg.contains('404') ||
+          msg.contains('HTTP 40') ||
+          msg.contains('HTTP 50')) {
+        setState(() {
+          _notAvailable = true;
+          _loading = false;
+        });
+      } else {
+        setState(() {
+          _error = msg;
+          _loading = false;
+        });
+      }
     }
   }
 
@@ -137,10 +156,11 @@ class _CronScreenState extends State<CronScreen> {
       appBar: AppBar(
         title: const Text('Cron Jobs'),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _loading ? null : _loadJobs,
-          ),
+          if (!_notAvailable)
+            IconButton(
+              icon: const Icon(Icons.refresh),
+              onPressed: _loading ? null : _loadJobs,
+            ),
         ],
       ),
       body: _buildBody(),
@@ -150,6 +170,37 @@ class _CronScreenState extends State<CronScreen> {
   Widget _buildBody() {
     if (_loading) {
       return const Center(child: CircularProgressIndicator());
+    }
+
+    if (_notAvailable) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.schedule, size: 48, color: Colors.grey[600]),
+              const SizedBox(height: 16),
+              Text('Cron API not available',
+                  style: Theme.of(context).textTheme.titleMedium),
+              const SizedBox(height: 8),
+              Text(
+                'The cron job API is only available on Hermes Agent '
+                'installations running the full gateway. Your server '
+                'may be running the API server only.',
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey),
+              ),
+              const SizedBox(height: 24),
+              OutlinedButton.icon(
+                onPressed: _loadJobs,
+                icon: const Icon(Icons.refresh),
+                label: const Text('Retry'),
+              ),
+            ],
+          ),
+        ),
+      );
     }
 
     if (_error != null) {

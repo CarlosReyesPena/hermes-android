@@ -38,6 +38,9 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   List<SavedConnection> _connections = [];
+  bool _autoNavigated = false;
+
+  static const String _lastConnectionKey = 'last_connection_id';
 
   void _refresh() {
     setState(() {
@@ -49,6 +52,44 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _refresh();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Auto-navigate to last used server once on first frame
+    if (!_autoNavigated && _connections.isNotEmpty) {
+      _autoNavigated = true;
+      _maybeAutoNavigate();
+    }
+  }
+
+  /// Auto-navigate to the last used connection if it still exists.
+  void _maybeAutoNavigate() {
+    final lastId = widget.connManager.prefs.getString(_lastConnectionKey);
+    if (lastId == null) return;
+
+    final conn = _connections.where((c) => c.id == lastId).firstOrNull;
+    if (conn == null) return;
+
+    // Navigate after the first frame to avoid build-during-build
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _navigateToSessions(conn);
+      }
+    });
+  }
+
+  void _navigateToSessions(SavedConnection conn) {
+    // Save as last used
+    widget.connManager.prefs.setString(_lastConnectionKey, conn.id);
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => SessionListScreen(connection: conn),
+      ),
+    );
   }
 
   void _showAddDialog() {
@@ -101,14 +142,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         const PopupMenuItem(value: 'delete', child: Text('Delete')),
                       ],
                     ),
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => SessionListScreen(connection: conn),
-                        ),
-                      );
-                    },
+                    onTap: () => _navigateToSessions(conn),
                   ),
                 );
               },
