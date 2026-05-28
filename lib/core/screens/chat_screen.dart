@@ -27,7 +27,7 @@ class _ChatScreenState extends State<ChatScreen> {
   List<Map<String, dynamic>> _messages = [];
   bool _loading = true;
   String? _error;
-  ApiClient _client;
+  late final ApiClient _client;
 
   // Chat sending state
   final _textController = TextEditingController();
