@@ -322,7 +322,6 @@ class _SessionListScreenState extends State<SessionListScreen> {
       itemCount: _searchResults.length,
       itemBuilder: (context, index) {
         final result = _searchResults[index];
-        final sessionId = result['session_id'] as String? ?? '';
         final snippet = result['snippet'] as String? ?? '';
         final model = result['model'] as String? ?? '';
         final source = result['source'] as String?;

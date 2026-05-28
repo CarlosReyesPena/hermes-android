@@ -76,7 +76,7 @@ class ApiClient {
 
     // Extract window.__HERMES_SESSION_TOKEN__="..." from the <script> tag
     final body = res.body;
-    final match = RegExp(r'window\.__HERMES_SESSION_TOKEN__="([^"]+)";').firstMatch(body!);
+    final match = RegExp(r'window\.__HERMES_SESSION_TOKEN__="([^"]+)";').firstMatch(body);
     if (match == null) {
       throw Exception('Session token not found in SPA page');
     }

@@ -105,7 +105,7 @@ class WsClient {
     final result = await send('session.resume', {'session_id': sessionId});
     if (result['error'] != null) {
       final errMap = result['error'] as Map<String, dynamic>;
-      throw JsonRpcError('session.resume', errMap['message'] as String ?? 'Unknown error');
+      throw JsonRpcError('session.resume', errMap['message'] ?? 'Unknown error');
     }
     return result['result']?['session_id'] as String? ?? sessionId;
   }
@@ -115,7 +115,7 @@ class WsClient {
     final result = await send('prompt.submit', {'message': message});
     if (result['error'] != null) {
       final errMap = result['error'] as Map<String, dynamic>;
-      throw JsonRpcError('prompt.submit', errMap['message'] as String ?? 'Unknown error');
+      throw JsonRpcError('prompt.submit', errMap['message'] ?? 'Unknown error');
     }
     return result['result']?['session_id'] as String? ?? '';
   }
