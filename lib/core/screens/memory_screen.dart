@@ -1,8 +1,11 @@
-/// Memory browser screen — view, add, and delete Hermes memory entries.
+/// Memory browser screen — read memory entries from Hermes config.
 ///
-/// NOTE: The open-source Hermes API server does not expose /api/memory.
-/// This screen falls back to reading memory from /api/config when the
-/// dedicated endpoint is unavailable.
+/// Memory entries live in config.yaml under the 'memory' key as a list:
+///   memory:
+///     - target: user
+///       content: "Sam Russell..."
+///
+/// API: GET /api/config returns the full config including memory.
 import 'package:flutter/material.dart';
 import '../services/connection_manager.dart';
 
@@ -19,7 +22,7 @@ class _MemoryScreenState extends State<MemoryScreen> {
   List<Map<String, dynamic>> _entries = [];
   bool _loading = true;
   String? _error;
-  bool _notAvailable = false;
+  String? _source; // 'config' or 'api'
 
   @override
   void initState() {
@@ -38,7 +41,6 @@ class _MemoryScreenState extends State<MemoryScreen> {
     setState(() {
       _loading = true;
       _error = null;
-      _notAvailable = false;
     });
 
     try {
@@ -48,41 +50,44 @@ class _MemoryScreenState extends State<MemoryScreen> {
           widget.connection.baseUrl, 'memory',
         );
         final items = memData['entries'] as List? ?? memData['memory'] as List? ?? [];
-        setState(() {
-          _entries = items.cast<Map<String, dynamic>>();
-          _loading = false;
-        });
-        return;
-      } catch (memErr) {
-        final msg = memErr.toString();
-        // If it's a parse error (non-JSON response), endpoint doesn't exist
-        if (msg.contains('FormatException') ||
-            msg.contains('character') ||
-            msg.contains('Unexpected') ||
-            msg.contains('404') ||
-            msg.contains('HTTP 40') ||
-            msg.contains('HTTP 50')) {
-          _notAvailable = true;
-        } else {
-          rethrow;
+        if (items.isNotEmpty) {
+          setState(() {
+            _entries = items.cast<Map<String, dynamic>>();
+            _source = 'api';
+            _loading = false;
+          });
+          return;
         }
+      } catch (_) {
+        // Endpoint not available — fall through to config
       }
 
       // Fallback: read memory from /api/config
-      final data = await _client.getConfig(widget.connection.baseUrl);
-      final mem = data['memory'] as Map<String, dynamic>?;
-      if (mem != null && mem.isNotEmpty) {
-        final entries = <Map<String, dynamic>>[];
+      final config = await _client.apiGet(widget.connection.baseUrl, 'config');
+      final mem = config['memory'];
+
+      if (mem is List) {
+        // Memory is a list of {target, content}
+        setState(() {
+          _entries = mem.cast<Map<String, dynamic>>();
+          _source = 'config';
+          _loading = false;
+        });
+      } else if (mem is Map) {
+        // Memory is a map {key: value}
+        final items = <Map<String, dynamic>>[];
         mem.forEach((key, value) {
-          entries.add({'key': key, 'value': value.toString()});
+          items.add({'target': key, 'content': value.toString()});
         });
         setState(() {
-          _entries = entries;
+          _entries = items;
+          _source = 'config';
           _loading = false;
         });
       } else {
         setState(() {
           _entries = [];
+          _source = 'config';
           _loading = false;
         });
       }
@@ -94,64 +99,15 @@ class _MemoryScreenState extends State<MemoryScreen> {
     }
   }
 
-  Future<void> _addEntry() async {
-    final result = await showDialog<Map<String, String>>(
-      context: context,
-      builder: (ctx) => _MemoryFormDialog(),
-    );
-    if (result == null) return;
-
-    setState(() {
-      _entries.insert(0, {'key': result['key'], 'value': result['value']});
-    });
-
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Memory entry added locally — sync with server requires Hermes CLI')),
-      );
-    }
-  }
-
-  Future<void> _deleteEntry(int index) async {
-    final entry = _entries[index];
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Delete Memory Entry'),
-        content: Text('Delete "${entry['key']}"?'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            style: FilledButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
-    );
-
-    if (confirmed != true) return;
-
-    setState(() => _entries.removeAt(index));
-
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Memory entry removed locally')),
-      );
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Memory'),
+        subtitle: _source != null
+            ? Text('Source: $_source', style: const TextStyle(fontSize: 11))
+            : null,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.add),
-            onPressed: _loading ? null : _addEntry,
-            tooltip: 'Add memory',
-          ),
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: _loading ? null : _loadMemory,
@@ -165,30 +121,6 @@ class _MemoryScreenState extends State<MemoryScreen> {
   Widget _buildBody() {
     if (_loading) {
       return const Center(child: CircularProgressIndicator());
-    }
-
-    if (_notAvailable) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(32),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.psychology_outlined, size: 48, color: Colors.grey[600]),
-              const SizedBox(height: 16),
-              Text('Reading from config',
-                  style: Theme.of(context).textTheme.titleMedium),
-              const SizedBox(height: 8),
-              Text(
-                'The dedicated memory API is not available on this server. '
-                'Showing memory entries from Hermes config.yaml instead.',
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey),
-              ),
-            ],
-          ),
-        ),
-      );
     }
 
     if (_error != null) {
@@ -224,15 +156,10 @@ class _MemoryScreenState extends State<MemoryScreen> {
                 style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 8),
             Text(
-              'Memory entries are cross-session facts the agent remembers',
+              'Memory entries are cross-session facts the agent remembers.\n'
+              'They are configured in ~/.hermes/config.yaml',
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey),
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton.icon(
-              onPressed: _addEntry,
-              icon: const Icon(Icons.add),
-              label: const Text('Add Entry'),
             ),
           ],
         ),
@@ -246,101 +173,37 @@ class _MemoryScreenState extends State<MemoryScreen> {
         itemCount: _entries.length,
         itemBuilder: (context, index) {
           final entry = _entries[index];
-          final key = entry['key'] as String? ?? entry['target'] as String? ?? '';
-          final value = entry['value'] as String? ?? entry['content'] as String? ?? '';
-          return Dismissible(
-            key: Key('$key-$index'),
-            direction: DismissDirection.endToStart,
-            background: Container(
-              alignment: Alignment.centerRight,
-              padding: const EdgeInsets.only(right: 20),
-              color: Colors.red,
-              child: const Icon(Icons.delete, color: Colors.white),
-            ),
-            onDismissed: (_) => _deleteEntry(index),
-            child: Card(
-              margin: const EdgeInsets.only(bottom: 8),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(key, style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontFamily: 'monospace',
-                      fontSize: 13,
-                    )),
-                    const SizedBox(height: 4),
-                    Text(value, style: Theme.of(context).textTheme.bodyMedium),
-                  ],
-                ),
+          final target = entry['target'] as String? ?? 'memory';
+          final content = entry['content'] as String? ?? '';
+
+          return Card(
+            margin: const EdgeInsets.only(bottom: 8),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Chip(
+                        label: Text(target,
+                            style: const TextStyle(fontSize: 11)),
+                        padding: EdgeInsets.zero,
+                        visualDensity: VisualDensity.compact,
+                        backgroundColor: target == 'user'
+                            ? Colors.blue.shade800
+                            : Colors.grey.shade800,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(content, style: Theme.of(context).textTheme.bodyMedium),
+                ],
               ),
             ),
           );
         },
       ),
-    );
-  }
-}
-
-class _MemoryFormDialog extends StatefulWidget {
-  @override
-  State<_MemoryFormDialog> createState() => _MemoryFormDialogState();
-}
-
-class _MemoryFormDialogState extends State<_MemoryFormDialog> {
-  final _keyCtrl = TextEditingController();
-  final _valueCtrl = TextEditingController();
-
-  @override
-  void dispose() {
-    _keyCtrl.dispose();
-    _valueCtrl.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('Add Memory Entry'),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          TextField(
-            controller: _keyCtrl,
-            decoration: const InputDecoration(
-              labelText: 'Key',
-              hintText: 'e.g., user_preference',
-            ),
-            autofocus: true,
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _valueCtrl,
-            decoration: const InputDecoration(
-              labelText: 'Value',
-              hintText: 'e.g., Prefers dark mode',
-            ),
-            maxLines: 3,
-          ),
-        ],
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Cancel'),
-        ),
-        FilledButton(
-          onPressed: () {
-            final key = _keyCtrl.text.trim();
-            final value = _valueCtrl.text.trim();
-            if (key.isNotEmpty && value.isNotEmpty) {
-              Navigator.pop(context, {'key': key, 'value': value});
-            }
-          },
-          child: const Text('Add'),
-        ),
-      ],
     );
   }
 }

@@ -226,4 +226,51 @@ class ApiClient {
   }
 
   void close() => _http.close();
+
+  /// GET that returns a JSON array (for endpoints like /api/cron/jobs).
+  Future<List<dynamic>> apiGetList(String baseUrl, String endpoint) async {
+    final token = await _getSessionToken(baseUrl);
+    final url = '$baseUrl/api/$endpoint';
+    final res = await _http.get(Uri.parse(url), headers: {
+      'X-Hermes-Session-Token': token,
+    });
+    if (res.statusCode < 200 || res.statusCode >= 300) {
+      if (res.statusCode == 401) {
+        _tokenCache.remove(baseUrl);
+        final newToken = await _getSessionToken(baseUrl);
+        final retryRes = await _http.get(Uri.parse(url), headers: {
+          'X-Hermes-Session-Token': newToken,
+        });
+        if (retryRes.statusCode < 200 || retryRes.statusCode >= 300) {
+          throw Exception('HTTP ${retryRes.statusCode}: ${retryRes.body}');
+        }
+        return jsonDecode(retryRes.body) as List<dynamic>;
+      }
+      throw Exception('HTTP ${res.statusCode}: ${res.body}');
+    }
+    return jsonDecode(res.body) as List<dynamic>;
+  }
+
+  /// DELETE request.
+  Future<void> apiDelete(String baseUrl, String endpoint) async {
+    final token = await _getSessionToken(baseUrl);
+    final url = '$baseUrl/api/$endpoint';
+    final res = await _http.delete(Uri.parse(url), headers: {
+      'X-Hermes-Session-Token': token,
+    });
+    if (res.statusCode < 200 || res.statusCode >= 300) {
+      if (res.statusCode == 401) {
+        _tokenCache.remove(baseUrl);
+        final newToken = await _getSessionToken(baseUrl);
+        final retryRes = await _http.delete(Uri.parse(url), headers: {
+          'X-Hermes-Session-Token': newToken,
+        });
+        if (retryRes.statusCode < 200 || retryRes.statusCode >= 300) {
+          throw Exception('HTTP ${retryRes.statusCode}: ${retryRes.body}');
+        }
+        return;
+      }
+      throw Exception('HTTP ${res.statusCode}: ${res.body}');
+    }
+  }
 }
