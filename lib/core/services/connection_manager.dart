@@ -115,13 +115,13 @@ class ApiClient {
 
   Future<List<Session>> getSessions(String baseUrl) async {
     final data = await apiGet(baseUrl, 'sessions');
-    final list = data['sessions'] as List? ?? [];
+    final list = data['data'] as List? ?? [];
     return list.map((s) => Session.fromJson(s as Map<String, dynamic>)).toList();
   }
 
   Future<List<Map<String, dynamic>>> getMessages(String baseUrl, String sessionId) async {
     final data = await apiGet(baseUrl, 'sessions/$sessionId/messages');
-    final list = data['messages'] as List? ?? [];
+    final list = data['data'] as List? ?? [];
     return list.cast<Map<String, dynamic>>();
   }
 
@@ -275,5 +275,21 @@ class ApiClient {
       }
       throw Exception('HTTP ${res.statusCode}: ${res.body}');
     }
+  }
+
+  /// Create a new session via REST (POST /api/sessions).
+  Future<String> restCreateSession(String baseUrl, {String? model}) async {
+    Map<String, dynamic> body = {};
+    if (model != null) body['model'] = model;
+    final data = await apiPost(baseUrl, 'sessions', body);
+    // API returns {"object": "hermes.session", "session": {"id": "...", ...}}
+    final session = data['session'] as Map<String, dynamic>?;
+    return session?['id'] as String? ?? '';
+  }
+
+  /// Send a message to a session via REST (synchronous).
+  Future<Map<String, dynamic>> restSendMessage(
+      String baseUrl, String sessionId, String message) async {
+    return await apiPost(baseUrl, 'sessions/$sessionId/chat', {'message': message});
   }
 }
