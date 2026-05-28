@@ -55,7 +55,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
       setState(() {
         _modelInfo = results[0] as Map<String, dynamic>;
         _modelOptions = results[1] as Map<String, dynamic>;
-        _skills = (results[2] as List).cast<Map<String, dynamic>>();
+        // Safe cast — filter out non-map skill entries
+        final rawSkills = results[2] as List;
+        _skills = rawSkills
+            .whereType<Map<String, dynamic>>()
+            .toList();
         _loading = false;
         _parseModelOptions();
       });
@@ -75,7 +79,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _providerModels = {};
 
     for (final p in providers) {
-      final pMap = p as Map<String, dynamic>;
+      if (p is! Map<String, dynamic>) continue;
+      final pMap = p;
       final providerId = pMap['id'] as String? ?? '';
       final models = (pMap['models'] as List<dynamic>?)
               ?.map((m) => m as Map<String, dynamic>)
