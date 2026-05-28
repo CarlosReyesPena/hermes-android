@@ -86,7 +86,7 @@ class ApiClient {
     return token;
   }
 
-  Future<Map<String, dynamic>> _get(String baseUrl, String endpoint) async {
+  Future<Map<String, dynamic>> apiGet(String baseUrl, String endpoint) async {
     final token = await _getSessionToken(baseUrl);
     final url = '$baseUrl/api/$endpoint';
     final res = await _http.get(Uri.parse(url), headers: {
@@ -111,28 +111,28 @@ class ApiClient {
   }
 
   Future<List<Session>> getSessions(String baseUrl) async {
-    final data = await _get(baseUrl, 'sessions');
+    final data = await apiGet(baseUrl, 'sessions');
     final list = data['sessions'] as List? ?? [];
     return list.map((s) => Session.fromJson(s as Map<String, dynamic>)).toList();
   }
 
   Future<List<Map<String, dynamic>>> getMessages(String baseUrl, String sessionId) async {
-    final data = await _get(baseUrl, 'sessions/$sessionId/messages');
+    final data = await apiGet(baseUrl, 'sessions/$sessionId/messages');
     final list = data['messages'] as List? ?? [];
     return list.cast<Map<String, dynamic>>();
   }
 
   Future<Map<String, dynamic>> getModelInfo(String baseUrl) async {
-    return await _get(baseUrl, 'model/info');
+    return await apiGet(baseUrl, 'model/info');
   }
 
   Future<Map<String, dynamic>> getModelOptions(String baseUrl) async {
-    return await _get(baseUrl, 'model/options');
+    return await apiGet(baseUrl, 'model/options');
   }
 
   Future<Map<String, dynamic>> setModel(String baseUrl, String provider, String model,
       {String scope = 'main', String task = ''}) async {
-    return await _post(baseUrl, 'model/set', {
+    return await apiPost(baseUrl, 'model/set', {
       'scope': scope,
       'provider': provider,
       'model': model,
@@ -141,7 +141,7 @@ class ApiClient {
   }
 
   Future<Map<String, dynamic>> getConfig(String baseUrl) async {
-    return await _get(baseUrl, 'config');
+    return await apiGet(baseUrl, 'config');
   }
 
   Future<List<dynamic>> getSkills(String baseUrl) async {
@@ -192,7 +192,7 @@ class ApiClient {
     }
   }
 
-  Future<Map<String, dynamic>> _post(String baseUrl, String endpoint, Map<String, dynamic> body) async {
+  Future<Map<String, dynamic>> apiPost(String baseUrl, String endpoint, Map<String, dynamic> body) async {
     final token = await _getSessionToken(baseUrl);
     final url = '$baseUrl/api/$endpoint';
     final res = await _http.post(

@@ -1,6 +1,9 @@
-/// WebSocket client for the Hermes dashboard JSON-RPC gateway (/api/ws).
-/// Provides session management (resume, list) and chat (send, stream).
+/// WebSocket client for the Hermes gateway JSON-RPC API (/api/ws).
+/// Supports both request-response calls AND server-pushed streaming events.
+///
 /// Wire protocol: newline-delimited JSON-RPC 2.0, same as the TUI gateway.
+/// After submitting a prompt, the server pushes stream events and finally
+/// a JSON-RPC response with the same id.
 import 'dart:async';
 import 'dart:convert';
 import 'package:web_socket_channel/io.dart';
@@ -30,6 +33,8 @@ class StreamEvent {
   });
 }
 
+typedef StreamCallback = void Function(StreamEvent event);
+
 /// WebSocket client for the Hermes JSON-RPC gateway.
 class WsClient {
   final String baseUrl;
@@ -39,6 +44,12 @@ class WsClient {
 
   /// Pending requests: id -> (completer, timer).
   final Map<int, _Pending> _pending = {};
+
+  /// Active stream subscriptions: id -> callback.
+  final Map<int, List<StreamCallback>> _streams = {};
+
+  /// Global stream listener (receives all untargeted events).
+  StreamCallback? onStreamEvent;
 
   WsClient(this.baseUrl);
 
@@ -51,6 +62,14 @@ class WsClient {
     _channel!.stream.listen(_handleMessage, onDone: () {
       _connected = false;
       _channel = null;
+      // Reject all pending requests
+      for (var entry in _pending.values) {
+        entry.timer?.cancel();
+        if (!entry.completer.isCompleted) {
+          entry.completer.completeError(Exception('Connection closed'));
+        }
+      }
+      _pending.clear();
     });
   }
 
@@ -67,9 +86,23 @@ class WsClient {
       }
 
       final id = data['id'];
+      final method = data['method'] as String?;
+      final params = data['params'];
+
+      // Server-pushed event (has method but no id)
+      if (method != null && id == null && params != null) {
+        _dispatchEvent(method, params is Map<String, dynamic> ? params : {});
+        return;
+      }
+
+      // Response to a request (has id, may have method for streaming completion)
       if (id != null) {
         final pending = _pending[id];
         if (pending != null) {
+          // If this is a stream completion (method field present), also dispatch
+          if (method != null && params != null) {
+            _dispatchStreamEvent(id, method, params is Map<String, dynamic> ? params : {});
+          }
           _pending.remove(id);
           pending.timer?.cancel();
           pending.completer.complete(data);
@@ -77,7 +110,23 @@ class WsClient {
         }
       }
     } catch (_) {
-      // Ignore parse errors for event pass-through
+      // Ignore parse errors
+    }
+  }
+
+  /// Dispatch a server-pushed event to registered listeners.
+  void _dispatchEvent(String type, Map<String, dynamic> data) {
+    final event = StreamEvent(type: type, data: data, isComplete: type == 'done' || type == 'error');
+    onStreamEvent?.call(event);
+  }
+
+  /// Dispatch a streaming event to a specific request's subscribers.
+  void _dispatchStreamEvent(int id, String type, Map<String, dynamic> data) {
+    final listeners = _streams[id];
+    if (listeners == null) return;
+    final event = StreamEvent(type: type, data: data, isComplete: type == 'done' || type == 'error');
+    for (var listener in listeners) {
+      listener(event);
     }
   }
 
@@ -111,6 +160,43 @@ class WsClient {
     return completer.future;
   }
 
+  /// Send a JSON-RPC method call and receive streaming events.
+  /// Returns the final response when the stream completes.
+  Future<Map<String, dynamic>> sendStreaming(
+    String method,
+    Map<String, dynamic> params, {
+    StreamCallback? onEvent,
+    Duration timeout = const Duration(seconds: 120),
+  }) async {
+    if (!_connected || _channel == null) {
+      throw Exception('Not connected');
+    }
+
+    final id = _nextId++;
+    if (onEvent != null) {
+      _streams[id] = [onEvent];
+    }
+
+    _channel!.sink.add(jsonEncode({
+      'jsonrpc': '2.0',
+      'method': method,
+      'params': params,
+      'id': id,
+    }));
+
+    final completer = Completer<Map<String, dynamic>>();
+    final timer = Timer(timeout, () {
+      _pending.remove(id);
+      _streams.remove(id);
+      if (!completer.isCompleted) {
+        completer.completeError(JsonRpcError(method, 'Timeout'));
+      }
+    });
+
+    _pending[id] = _Pending(completer, timer);
+    return completer.future;
+  }
+
   /// Resume an existing session.
   Future<String> resumeSession(String sessionId) async {
     final result = await send('session.resume', {'session_id': sessionId});
@@ -122,7 +208,22 @@ class WsClient {
     return result['result']?['session_id'] as String? ?? sessionId;
   }
 
-  /// Submit a message to the active session.
+  /// Submit a message to the active session with streaming.
+  /// Returns the final response and streams events via callback.
+  Future<String> sendMessageStreaming(
+    String message, {
+    StreamCallback? onEvent,
+  }) async {
+    final result = await sendStreaming('prompt.submit', {'message': message}, onEvent: onEvent);
+    if (result['error'] != null) {
+      final errMap = result['error'] as Map<String, dynamic>;
+      final errorMsg = errMap['message'] as String?;
+      throw JsonRpcError('prompt.submit', errorMsg ?? 'Unknown error');
+    }
+    return result['result']?['session_id'] as String? ?? '';
+  }
+
+  /// Submit a message to the active session (non-streaming, backward-compatible).
   Future<String> sendMessage(String message) async {
     final result = await send('prompt.submit', {'message': message});
     if (result['error'] != null) {
@@ -133,6 +234,8 @@ class WsClient {
     return result['result']?['session_id'] as String? ?? '';
   }
 
+  bool get isConnected => _connected;
+
   /// Close the connection.
   void close() {
     for (var entry in _pending.values) {
@@ -142,6 +245,7 @@ class WsClient {
       }
     }
     _pending.clear();
+    _streams.clear();
     _connected = false;
     _channel?.sink.close();
     _channel = null;

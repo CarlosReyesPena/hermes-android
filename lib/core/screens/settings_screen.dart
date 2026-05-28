@@ -356,7 +356,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 Text('Hermes Agent for Android',
                     style: TextStyle(fontWeight: FontWeight.bold)),
                 SizedBox(height: 4),
-                Text('Version 0.0.3'),
+                Text('Version 0.1.0'),
                 SizedBox(height: 8),
                 Text(
                   'Browse and manage your Hermes Agent sessions from your phone. '

@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import '../services/connection_manager.dart';
 import 'chat_screen.dart';
 import 'settings_screen.dart';
+import 'memory_screen.dart';
+import 'cron_screen.dart';
 
 class SessionListScreen extends StatefulWidget {
   final SavedConnection connection;
@@ -199,6 +201,30 @@ class _SessionListScreenState extends State<SessionListScreen> {
     return AppBar(
       title: Text(widget.connection.label),
       actions: [
+        IconButton(
+          icon: const Icon(Icons.psychology),
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => MemoryScreen(connection: widget.connection),
+              ),
+            );
+          },
+          tooltip: 'Memory',
+        ),
+        IconButton(
+          icon: const Icon(Icons.schedule),
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => CronScreen(connection: widget.connection),
+              ),
+            );
+          },
+          tooltip: 'Cron Jobs',
+        ),
         IconButton(
           icon: const Icon(Icons.search),
           onPressed: () => setState(() => _searching = true),
