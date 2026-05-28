@@ -108,6 +108,7 @@ class _ChatScreenState extends State<ChatScreen> {
         _messages = messages;
         _loading = false;
       });
+      _scrollToBottom();
     } catch (e) {
       if (!mounted) return;
       final errStr = e.toString();
