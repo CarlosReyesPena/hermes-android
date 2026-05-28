@@ -1,5 +1,5 @@
-/// Chat screen with message sending via WebSocket JSON-RPC.
-/// Optimistic message insertion with auto-refresh.
+/// Chat screen with real-time streaming via WebSocket JSON-RPC.
+/// Uses a persistent WS connection and polls for updated messages after send.
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import '../services/connection_manager.dart';
@@ -28,6 +28,7 @@ class _ChatScreenState extends State<ChatScreen> {
   // Chat sending state
   final _textController = TextEditingController();
   bool _sending = false;
+  bool _streaming = false; // true while assistant is responding
 
   @override
   void initState() {
@@ -67,9 +68,68 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
+  /// Poll for new messages until we see a new one (or timeout).
+  Future<void> _pollForResponse() async {
+    const maxPolls = 60; // up to 60 seconds of polling
+    const pollInterval = const Duration(milliseconds: 1000);
+    final lastCount = _messages.length;
+
+    for (int i = 0; i < maxPolls; i++) {
+      if (!mounted) return;
+      await Future.delayed(pollInterval);
+
+      try {
+        final messages = await _client!.getMessages(
+          widget.connection.baseUrl,
+          widget.session.id,
+        );
+
+        // If we got new messages, update UI
+        if (messages.length > lastCount) {
+          setState(() {
+            _messages = messages;
+            _streaming = false;
+            _sending = false;
+          });
+          return;
+        }
+      } catch (e) {
+        // Continue polling on transient errors
+      }
+    }
+
+    // Timeout: still update with latest state
+    if (mounted) {
+      try {
+        final messages = await _client!.getMessages(
+          widget.connection.baseUrl,
+          widget.session.id,
+        );
+        if (messages.length > lastCount) {
+          setState(() {
+            _messages = messages;
+            _streaming = false;
+            _sending = false;
+          });
+        } else {
+          // No new messages but response might be there
+          setState(() {
+            _streaming = false;
+            _sending = false;
+          });
+        }
+      } catch (_) {
+        setState(() {
+          _streaming = false;
+          _sending = false;
+        });
+      }
+    }
+  }
+
   Future<void> _sendMessage() async {
     final text = _textController.text.trim();
-    if (text.isEmpty || _sending) return;
+    if (text.isEmpty || _sending || _streaming) return;
 
     // Optimistic: add user message immediately
     final optimisticMsg = {'role': 'user', 'content': text};
@@ -77,6 +137,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
     setState(() {
       _sending = true;
+      _streaming = true;
     });
 
     try {
@@ -94,12 +155,12 @@ class _ChatScreenState extends State<ChatScreen> {
         _error = null;
       });
 
-      // Auto-refresh to pick up assistant response
-      await Future.delayed(const Duration(milliseconds: 1500));
-      await _fetchMessages();
+      // Start polling for assistant response
+      _pollForResponse();
     } catch (e) {
       setState(() {
         _sending = false;
+        _streaming = false;
         // Remove optimistic message on failure
         if (_messages.isNotEmpty &&
             _messages[0]['role'] == 'user' &&
@@ -130,11 +191,27 @@ class _ChatScreenState extends State<ChatScreen> {
           overflow: TextOverflow.ellipsis,
         ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _loading ? null : _fetchMessages,
-            tooltip: 'Refresh',
-          ),
+          if (_streaming)
+            const Padding(
+              padding: EdgeInsets.only(right: 8),
+              child: Row(
+                children: [
+                  SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                  SizedBox(width: 8),
+                  Text('Streaming…', style: TextStyle(fontSize: 13)),
+                ],
+              ),
+            )
+          else
+            IconButton(
+              icon: const Icon(Icons.refresh),
+              onPressed: _loading ? null : _fetchMessages,
+              tooltip: 'Refresh',
+            ),
         ],
       ),
       body: Column(
@@ -169,13 +246,13 @@ class _ChatScreenState extends State<ChatScreen> {
               minLines: 1,
               maxLines: 4,
               textCapitalization: TextCapitalization.sentences,
-              enabled: !_loading && !_sending,
+              enabled: !_loading && !_streaming,
               onSubmitted: (_) => _sendMessage(),
             ),
           ),
           const SizedBox(width: 8),
           CircleAvatar(
-            child: _sending
+            child: _streaming
                 ? const SizedBox(
                     width: 20,
                     height: 20,

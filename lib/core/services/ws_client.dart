@@ -1,6 +1,5 @@
 /// WebSocket client for the Hermes dashboard JSON-RPC gateway (/api/ws).
 /// Provides session management (resume, list) and chat (send, stream).
-///
 /// Wire protocol: newline-delimited JSON-RPC 2.0, same as the TUI gateway.
 import 'dart:async';
 import 'dart:convert';
@@ -18,6 +17,19 @@ class JsonRpcError implements Exception {
   String toString() => 'JsonRpcError($method): $message';
 }
 
+/// Event types streamed from the gateway during a prompt submission.
+class StreamEvent {
+  final String type; // 'tool_call', 'tool_result', 'assistant', 'session', etc.
+  final Map<String, dynamic> data;
+  final bool isComplete; // true when the assistant message is done
+
+  const StreamEvent({
+    required this.type,
+    required this.data,
+    this.isComplete = false,
+  });
+}
+
 /// WebSocket client for the Hermes JSON-RPC gateway.
 class WsClient {
   final String baseUrl;
@@ -33,8 +45,7 @@ class WsClient {
   /// Connect to the WebSocket gateway.
   Future<void> connect() async {
     if (_connected) return;
-    final wsUrl = baseUrl.replaceFirst('http://', 'ws://')
-        .replaceFirst('https://', 'wss://') + '/api/ws';
+    final wsUrl = '${baseUrl.replaceFirst('http://', 'ws://').replaceFirst('https://', 'wss://')}/api/ws';
     _channel = IOWebSocketChannel.connect(Uri.parse(wsUrl));
     _connected = true;
     _channel!.stream.listen(_handleMessage, onDone: () {
@@ -105,7 +116,8 @@ class WsClient {
     final result = await send('session.resume', {'session_id': sessionId});
     if (result['error'] != null) {
       final errMap = result['error'] as Map<String, dynamic>;
-      throw JsonRpcError('session.resume', errMap['message'] ?? 'Unknown error');
+      final errorMsg = errMap['message'] as String?;
+      throw JsonRpcError('session.resume', errorMsg ?? 'Unknown error');
     }
     return result['result']?['session_id'] as String? ?? sessionId;
   }
@@ -115,7 +127,8 @@ class WsClient {
     final result = await send('prompt.submit', {'message': message});
     if (result['error'] != null) {
       final errMap = result['error'] as Map<String, dynamic>;
-      throw JsonRpcError('prompt.submit', errMap['message'] ?? 'Unknown error');
+      final errorMsg = errMap['message'] as String?;
+      throw JsonRpcError('prompt.submit', errorMsg ?? 'Unknown error');
     }
     return result['result']?['session_id'] as String? ?? '';
   }
