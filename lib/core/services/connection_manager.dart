@@ -229,8 +229,11 @@ class GatewayChatClient {
           'content': msg['content'] ?? '',
         });
       }
+    } else {
+      // Only add the user message if history is null/empty
+      // (when history is provided, the user message is already the last entry)
+      messages.add({'role': 'user', 'content': message});
     }
-    messages.add({'role': 'user', 'content': message});
 
     final body = {
       'model': model ?? 'hermes-agent',
@@ -378,6 +381,32 @@ class DashboardClient {
   }
   Future<Map<String, dynamic>> setModel(String scope, String provider, String model) =>
       apiPost('model/set', body: {'scope': scope, 'provider': provider, 'model': model});
+
+  // ── Cron job management ──────────────────────────────────────────────
+
+  Future<Map<String, dynamic>> createJob({
+    required String prompt,
+    required String schedule,
+    String name = '',
+    String deliver = 'local',
+  }) => apiPost('cron/jobs', body: {
+    'prompt': prompt,
+    'schedule': schedule,
+    'name': name,
+    'deliver': deliver,
+  });
+
+  Future<Map<String, dynamic>> updateJob(String jobId, Map<String, dynamic> updates) async {
+    final headers = await _authHeaders();
+    final res = await _http.put(
+      Uri.parse('$_baseUrl/api/cron/jobs/$jobId'),
+      headers: headers,
+      body: jsonEncode({'updates': updates}),
+    );
+    if (res.statusCode == 401) { _token = null; return updateJob(jobId, updates); }
+    if (res.statusCode < 200 || res.statusCode >= 300) throw Exception('HTTP ${res.statusCode}');
+    return jsonDecode(res.body) as Map<String, dynamic>;
+  }
 
   void close() => _http.close();
 }
