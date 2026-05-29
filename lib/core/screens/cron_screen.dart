@@ -204,10 +204,14 @@ class _CronScreenState extends State<CronScreen> {
     final controllerPrompt = TextEditingController(
       text: job?['prompt'] as String? ?? '',
     );
-    final controllerSchedule = TextEditingController(
-      text: job?['schedule_display'] as String? ??
-          (job['schedule'] is Map ? job['schedule']['display'] as String? ?? '' : ''),
-    );
+    
+    // Handle schedule display safely
+    String scheduleDisplay = '';
+    if (job != null) {
+      scheduleDisplay = job['schedule_display'] as String? ??
+          (job['schedule'] is Map ? job['schedule']['display'] as String? ?? '' : '');
+    }
+    final controllerSchedule = TextEditingController(text: scheduleDisplay);
     bool isNoAgent = job?['no_agent'] == true;
 
     await showDialog<Map<String, dynamic>>(
@@ -286,7 +290,7 @@ class _CronScreenState extends State<CronScreen> {
                   'name': name,
                   'prompt': prompt,
                   'schedule': {
-                    'kind': 'cron', // Simple approach - could be enhanced
+                    'kind': 'cron',
                     'run_at': schedule,
                   },
                   'no_agent': isNoAgent,
@@ -295,7 +299,7 @@ class _CronScreenState extends State<CronScreen> {
                 try {
                   if (isEdit) {
                     final jobId = job!['id'] as String;
-                    await _client.apiPut('cron/jobs/$jobId', jobData);
+                    await _client.updateJob(jobId, jobData);
                     if (mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(content: Text('Job updated')),
