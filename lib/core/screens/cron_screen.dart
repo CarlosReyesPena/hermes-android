@@ -3,6 +3,8 @@
 /// API: GET /api/cron/jobs — returns JSON array of job objects
 ///      POST /api/cron/jobs/{id}/pause | resume | trigger
 ///      DELETE /api/cron/jobs/{id}
+///      POST /api/cron/jobs — create new job
+///      PUT /api/cron/jobs/{id} — update existing job
 import 'package:flutter/material.dart';
 import '../services/connection_manager.dart';
 
@@ -194,6 +196,145 @@ class _CronScreenState extends State<CronScreen> {
     }
   }
 
+  Future<void> _showAddEditJobDialog({Map<String, dynamic>? job}) async {
+    final isEdit = job != null;
+    final controllerName = TextEditingController(
+      text: job?['name'] as String? ?? '',
+    );
+    final controllerPrompt = TextEditingController(
+      text: job?['prompt'] as String? ?? '',
+    );
+    final controllerSchedule = TextEditingController(
+      text: job?['schedule_display'] as String? ??
+          (job['schedule'] is Map ? job['schedule']['display'] as String? ?? '' : ''),
+    );
+    bool isNoAgent = job?['no_agent'] == true;
+
+    await showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setState) => AlertDialog(
+          title: Text(isEdit ? 'Edit Cron Job' : 'Add Cron Job'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: controllerName,
+                  decoration: const InputDecoration(
+                    labelText: 'Job Name',
+                    hintText: 'Enter a descriptive name',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: controllerPrompt,
+                  decoration: const InputDecoration(
+                    labelText: 'Prompt',
+                    hintText: 'What should the job do?',
+                    border: OutlineInputBorder(),
+                  ),
+                  maxLines: 3,
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: controllerSchedule,
+                  decoration: const InputDecoration(
+                    labelText: 'Schedule',
+                    hintText: 'e.g., "0 9 * * *" for daily at 9am, or "every 2h"',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Checkbox(
+                      value: isNoAgent,
+                      onChanged: (value) => setState(() => isNoAgent = value!),
+                    ),
+                    const Expanded(
+                      child: Text(
+                        'Run as script (no LLM agent)',
+                        style: TextStyle(fontSize: 12),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () async {
+                final name = controllerName.text.trim();
+                final prompt = controllerPrompt.text.trim();
+                final schedule = controllerSchedule.text.trim();
+
+                if (name.isEmpty || prompt.isEmpty || schedule.isEmpty) {
+                  ScaffoldMessenger.of(ctx).showSnackBar(
+                    const SnackBar(content: Text('Please fill all fields')),
+                  );
+                  return;
+                }
+
+                final jobData = {
+                  'name': name,
+                  'prompt': prompt,
+                  'schedule': {
+                    'kind': 'cron', // Simple approach - could be enhanced
+                    'run_at': schedule,
+                  },
+                  'no_agent': isNoAgent,
+                };
+
+                try {
+                  if (isEdit) {
+                    final jobId = job!['id'] as String;
+                    await _client.apiPut('cron/jobs/$jobId', jobData);
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Job updated')),
+                      );
+                    }
+                  } else {
+                    final response = await _client.apiPost('cron/jobs', jobData);
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Job created')),
+                      );
+                    }
+                  }
+                  if (mounted) {
+                    Navigator.pop(ctx);
+                    await _loadJobs();
+                  }
+                } catch (e) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(ctx).showSnackBar(
+                      SnackBar(
+                        content: Text('Failed: $e'),
+                        backgroundColor: Colors.orange,
+                      ),
+                    );
+                  }
+                }
+              },
+              child: Text(isEdit ? 'Update' : 'Create'),
+              style: FilledButton.styleFrom(
+                backgroundColor: Theme.of(ctx).colorScheme.primary,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -209,6 +350,11 @@ class _CronScreenState extends State<CronScreen> {
         ],
       ),
       body: _buildBody(),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => _showAddEditJobDialog(),
+        child: const Icon(Icons.add),
+        tooltip: 'Add new cron job',
+      ),
     );
   }
 
@@ -280,129 +426,133 @@ class _CronScreenState extends State<CronScreen> {
 
           return Card(
             margin: const EdgeInsets.only(bottom: 8),
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Icon(
-                        paused ? Icons.pause_circle : Icons.play_circle,
-                        color: paused ? Colors.orange : Colors.green,
-                        size: 20,
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          name,
-                          style: const TextStyle(fontWeight: FontWeight.bold),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+            child: InkWell(
+              onTap: () => _showAddEditJobDialog(job: job),
+              borderRadius: BorderRadius.circular(4),
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          paused ? Icons.pause_circle : Icons.play_circle,
+                          color: paused ? Colors.orange : Colors.green,
+                          size: 20,
                         ),
-                      ),
-                      if (isNoAgent)
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 2,
-                          ),
-                          margin: const EdgeInsets.only(right: 4),
-                          decoration: BoxDecoration(
-                            color: Colors.blue.withValues(alpha: 0.2),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: const Text(
-                            'script',
-                            style: TextStyle(fontSize: 10, color: Colors.blue),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            name,
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                      PopupMenuButton<String>(
-                        onSelected: (action) {
-                          if (action == 'trigger') _triggerJob(job);
-                          if (action == 'toggle') _togglePause(job);
-                          if (action == 'delete') _deleteJob(job);
-                        },
-                        itemBuilder: (_) => [
-                          PopupMenuItem(
-                            value: 'trigger',
-                            child: const Row(children: [
-                              Icon(Icons.play_arrow, size: 18),
-                              SizedBox(width: 8),
-                              Text('Trigger now'),
-                            ]),
+                        if (isNoAgent)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
+                            margin: const EdgeInsets.only(right: 4),
+                            decoration: BoxDecoration(
+                              color: Colors.blue.withValues(alpha: 0.2),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: const Text(
+                              'script',
+                              style: TextStyle(fontSize: 10, color: Colors.blue),
+                            ),
                           ),
-                          PopupMenuItem(
-                            value: 'toggle',
-                            child: Row(children: [
-                              Icon(
-                                paused ? Icons.play_arrow : Icons.pause,
-                                size: 18,
+                        PopupMenuButton<String>(
+                          onSelected: (action) {
+                            if (action == 'trigger') _triggerJob(job);
+                            if (action == 'toggle') _togglePause(job);
+                            if (action == 'delete') _deleteJob(job);
+                          },
+                          itemBuilder: (_) => [
+                            PopupMenuItem(
+                              value: 'trigger',
+                              child: const Row(children: [
+                                Icon(Icons.play_arrow, size: 18),
+                                SizedBox(width: 8),
+                                Text('Trigger now'),
+                              ]),
+                            ),
+                            PopupMenuItem(
+                              value: 'toggle',
+                              child: Row(children: [
+                                Icon(
+                                  paused ? Icons.play_arrow : Icons.pause,
+                                  size: 18,
+                                ),
+                                const SizedBox(width: 8),
+                                Text(paused ? 'Resume' : 'Pause'),
+                              ]),
+                            ),
+                            const PopupMenuItem(
+                              value: 'delete',
+                              child: Row(children: [
+                                Icon(Icons.delete, size: 18, color: Colors.red),
+                                SizedBox(width: 8),
+                                Text(
+                                  'Delete',
+                                  style: TextStyle(color: Colors.red),
+                                ),
+                              ]),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                    if (prompt.isNotEmpty) ...[
+                      const SizedBox(height: 6),
+                      Text(
+                        prompt,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey[500],
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                    if (schedule.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Icon(Icons.schedule, size: 14, color: Colors.grey[600]),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              schedule,
+                              style: TextStyle(
+                                fontFamily: 'monospace',
+                                fontSize: 12,
+                                color: Colors.grey[500],
                               ),
-                              const SizedBox(width: 8),
-                              Text(paused ? 'Resume' : 'Pause'),
-                            ]),
-                          ),
-                          const PopupMenuItem(
-                            value: 'delete',
-                            child: Row(children: [
-                              Icon(Icons.delete, size: 18, color: Colors.red),
-                              SizedBox(width: 8),
-                              Text(
-                                'Delete',
-                                style: TextStyle(color: Colors.red),
-                              ),
-                            ]),
+                            ),
                           ),
                         ],
                       ),
                     ],
-                  ),
-                  if (prompt.isNotEmpty) ...[
-                    const SizedBox(height: 6),
-                    Text(
-                      prompt,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey[500],
+                    if (lastRun != null && lastRun.isNotEmpty) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        'Last: $lastRun',
+                        style: TextStyle(fontSize: 11, color: Colors.grey[600]),
                       ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
+                    ],
+                    if (nextRun != null && nextRun.isNotEmpty) ...[
+                      Text(
+                        'Next: $nextRun',
+                        style: TextStyle(fontSize: 11, color: Colors.grey[600]),
+                      ),
+                    ],
                   ],
-                  if (schedule.isNotEmpty) ...[
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        Icon(Icons.schedule, size: 14, color: Colors.grey[600]),
-                        const SizedBox(width: 4),
-                        Expanded(
-                          child: Text(
-                            schedule,
-                            style: TextStyle(
-                              fontFamily: 'monospace',
-                              fontSize: 12,
-                              color: Colors.grey[500],
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                  if (lastRun != null && lastRun.isNotEmpty) ...[
-                    const SizedBox(height: 2),
-                    Text(
-                      'Last: $lastRun',
-                      style: TextStyle(fontSize: 11, color: Colors.grey[600]),
-                    ),
-                  ],
-                  if (nextRun != null && nextRun.isNotEmpty) ...[
-                    Text(
-                      'Next: $nextRun',
-                      style: TextStyle(fontSize: 11, color: Colors.grey[600]),
-                    ),
-                  ],
-                ],
+                ),
               ),
             ),
           );
