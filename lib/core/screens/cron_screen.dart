@@ -306,7 +306,7 @@ class _CronScreenState extends State<CronScreen> {
                       );
                     }
                   } else {
-                    final response = await _client.apiPost('cron/jobs', jobData);
+                    final response = await _client.apiPost('cron/jobs', body: jobData);
                     if (mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(content: Text('Job created')),
