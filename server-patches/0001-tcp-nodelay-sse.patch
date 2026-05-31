@@ -1,5 +1,5 @@
 From 4385a0ead08d1c40087804d689998acd9191fd7a Mon Sep 17 00:00:00 2001
-From: rusty4444 <rusty4444@users.noreply.github.com>
+From: Hermes Agent <agent@hermes-agent.local>
 Date: Fri, 29 May 2026 08:50:46 +1000
 Subject: [PATCH] perf: set TCP_NODELAY on SSE response sockets for real-time
  streaming

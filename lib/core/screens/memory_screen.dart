@@ -3,7 +3,7 @@
 // Memory entries live in config.yaml under the 'memory' key as a list:
 //   memory:
 //     - target: user
-//       content: "Sam Russell..."
+//       content: "User name..."
 //
 // API: GET /api/config returns the full config including memory.
 import 'package:flutter/material.dart';
