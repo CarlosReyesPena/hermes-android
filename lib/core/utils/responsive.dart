@@ -1,5 +1,5 @@
-/// Responsive layout helpers.
-/// Breakpoints: phone < 600dp, tablet >= 600dp.
+// Responsive layout helpers.
+// Breakpoints: phone < 600dp, tablet >= 600dp.
 import 'package:flutter/material.dart';
 
 class Responsive {

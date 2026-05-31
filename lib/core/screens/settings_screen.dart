@@ -1,4 +1,4 @@
-/// Settings screen for model selection, theme toggle, and app info.
+// Settings screen for model selection, theme toggle, and app info.
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/connection_manager.dart';
@@ -17,7 +17,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
   late DashboardClient _client;
   Map<String, dynamic>? _modelInfo;
   Map<String, dynamic>? _modelOptions;
-  List<Map<String, dynamic>> _skills = [];
   bool _loading = true;
   String? _error;
   String? _successMsg;
@@ -51,17 +50,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
       final results = await Future.wait([
         _client.getModelInfo(),
         _client.getModelOptions(),
-        _client.getSkills(),
       ]);
 
       setState(() {
-        _modelInfo = results[0] as Map<String, dynamic>;
-        _modelOptions = results[1] as Map<String, dynamic>;
-        // Safe cast — filter out non-map skill entries
-        final rawSkills = results[2] as List;
-        _skills = rawSkills
-            .whereType<Map<String, dynamic>>()
-            .toList();
+        _modelInfo = results[0];
+        _modelOptions = results[1];
         _loading = false;
         _parseModelOptions();
       });
@@ -84,7 +77,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
       if (p is! Map<String, dynamic>) continue;
       final pMap = p;
       // Provider key is 'slug', not 'id'
-      final providerId = (pMap['slug'] as String?) ?? (pMap['id'] as String?) ?? '';
+      final providerId =
+          (pMap['slug'] as String?) ?? (pMap['id'] as String?) ?? '';
       final rawModels = pMap['models'] as List<dynamic>? ?? [];
       if (providerId.isEmpty || rawModels.isEmpty) continue;
 
@@ -120,11 +114,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     });
 
     try {
-      await _client.setModel(
-        'main',
-        _selectedProvider,
-        _selectedModel,
-      );
+      await _client.setModel('main', _selectedProvider, _selectedModel);
       setState(() {
         _successMsg = 'Model set to $_selectedModel — applies to new sessions';
       });
@@ -166,11 +156,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
             children: [
               const Icon(Icons.error_outline, size: 48, color: Colors.orange),
               const SizedBox(height: 16),
-              Text('Failed to load settings',
-                  style: Theme.of(context).textTheme.titleMedium),
+              Text(
+                'Failed to load settings',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
               const SizedBox(height: 8),
-              Text(_error!, style: Theme.of(context).textTheme.bodySmall,
-                  textAlign: TextAlign.center),
+              Text(
+                _error!,
+                style: Theme.of(context).textTheme.bodySmall,
+                textAlign: TextAlign.center,
+              ),
               const SizedBox(height: 24),
               ElevatedButton(onPressed: _loadData, child: const Text('Retry')),
             ],
@@ -191,12 +186,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(children: [
-                    Icon(Icons.smart_toy, color: Theme.of(context).colorScheme.primary),
-                    const SizedBox(width: 8),
-                    Text('Current Model',
-                        style: Theme.of(context).textTheme.titleSmall),
-                  ]),
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.smart_toy,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Current Model',
+                        style: Theme.of(context).textTheme.titleSmall,
+                      ),
+                    ],
+                  ),
                   const SizedBox(height: 8),
                   Text(
                     '${_modelInfo!['model'] ?? '???'}  \nvia `${_modelInfo!['provider'] ?? '???'}`',
@@ -208,7 +210,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       padding: const EdgeInsets.only(top: 4),
                       child: Text(
                         'Context: ${_modelInfo!['effective_context_length']} tokens',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey),
+                        style: Theme.of(
+                          context,
+                        ).textTheme.bodySmall?.copyWith(color: Colors.grey),
                       ),
                     ),
                 ],
@@ -221,11 +225,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
         if (_providers.isNotEmpty) ...[
           _buildDropdown<String>(
             label: 'Provider',
-            value: _selectedProvider.isNotEmpty &&
+            value:
+                _selectedProvider.isNotEmpty &&
                     _providers.contains(_selectedProvider)
                 ? _selectedProvider
                 : null,
-            items: _providers.map((p) => DropdownMenuItem(value: p, child: Text(p))).toList(),
+            items: _providers
+                .map((p) => DropdownMenuItem(value: p, child: Text(p)))
+                .toList(),
             onChanged: (val) {
               setState(() {
                 _selectedProvider = val!;
@@ -248,13 +255,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
           _buildDropdown<String>(
             label: 'Model',
             value: _selectedModel,
-            items: _providerModels[_selectedProvider]!
-                .map((m) {
-                  final id = m['id'] as String? ?? '';
-                  final name = m['name'] as String? ?? id;
-                  return DropdownMenuItem(value: id, child: Text(name));
-                })
-                .toList(),
+            items: _providerModels[_selectedProvider]!.map((m) {
+              final id = m['id'] as String? ?? '';
+              final name = m['name'] as String? ?? id;
+              return DropdownMenuItem(value: id, child: Text(name));
+            }).toList(),
             onChanged: (val) {
               setState(() => _selectedModel = val!);
             },
@@ -277,8 +282,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
             color: Colors.green.shade900,
             child: Padding(
               padding: const EdgeInsets.all(12),
-              child: Text(_successMsg!,
-                  style: const TextStyle(color: Colors.white)),
+              child: Text(
+                _successMsg!,
+                style: const TextStyle(color: Colors.white),
+              ),
             ),
           ),
         if (_error != null && _modelOptions != null)
@@ -286,8 +293,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             color: Colors.red.shade900,
             child: Padding(
               padding: const EdgeInsets.all(12),
-              child: Text(_error!,
-                  style: const TextStyle(color: Colors.white)),
+              child: Text(_error!, style: const TextStyle(color: Colors.white)),
             ),
           ),
 
@@ -331,11 +337,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget _buildSectionHeader(String title) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
-      child: Text(title,
-          style: Theme.of(context)
-              .textTheme
-              .titleSmall
-              ?.copyWith(color: Theme.of(context).colorScheme.primary)),
+      child: Text(
+        title,
+        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+          color: Theme.of(context).colorScheme.primary,
+        ),
+      ),
     );
   }
 
@@ -344,9 +351,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
       children: [
         SizedBox(
           width: 80,
-          child: Text(label,
-              style: const TextStyle(
-                  fontWeight: FontWeight.w500, color: Colors.grey)),
+          child: Text(
+            label,
+            style: const TextStyle(
+              fontWeight: FontWeight.w500,
+              color: Colors.grey,
+            ),
+          ),
         ),
         Expanded(child: Text(value, overflow: TextOverflow.ellipsis)),
       ],
@@ -360,11 +371,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
     required ValueChanged<T?> onChanged,
   }) {
     return DropdownButtonFormField<T>(
-      value: value,
+      initialValue: value,
       decoration: InputDecoration(
         labelText: label,
         border: const OutlineInputBorder(),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 12,
+          vertical: 10,
+        ),
       ),
       items: items,
       onChanged: onChanged,
@@ -404,8 +418,10 @@ class _AboutCardState extends State<_AboutCard> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Hermes Agent for Android',
-                style: TextStyle(fontWeight: FontWeight.bold)),
+            const Text(
+              'Hermes Agent for Android',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
             const SizedBox(height: 4),
             Text('Version ${_version.isNotEmpty ? _version : '…'}'),
             const SizedBox(height: 8),
@@ -483,6 +499,7 @@ class _ThemeToggleState extends State<_ThemeToggle> {
   Future<void> _setMode(String mode) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('theme_mode', mode);
+    if (!mounted) return;
     setState(() => _mode = mode);
     final rootCtx = context.findAncestorStateOfType<HermesAppState>();
     rootCtx?.setState(() {});
@@ -494,15 +511,25 @@ class _ThemeToggleState extends State<_ThemeToggle> {
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: SegmentedButton<String>(
         segments: const [
-          ButtonSegment(value: 'system', label: Text('System'), icon: Icon(Icons.brightness_auto, size: 18)),
-          ButtonSegment(value: 'dark', label: Text('Dark'), icon: Icon(Icons.dark_mode, size: 18)),
-          ButtonSegment(value: 'light', label: Text('Light'), icon: Icon(Icons.light_mode, size: 18)),
+          ButtonSegment(
+            value: 'system',
+            label: Text('System'),
+            icon: Icon(Icons.brightness_auto, size: 18),
+          ),
+          ButtonSegment(
+            value: 'dark',
+            label: Text('Dark'),
+            icon: Icon(Icons.dark_mode, size: 18),
+          ),
+          ButtonSegment(
+            value: 'light',
+            label: Text('Light'),
+            icon: Icon(Icons.light_mode, size: 18),
+          ),
         ],
         selected: {_mode},
         onSelectionChanged: (s) => _setMode(s.first),
-        style: ButtonStyle(
-          visualDensity: VisualDensity.compact,
-        ),
+        style: ButtonStyle(visualDensity: VisualDensity.compact),
       ),
     );
   }

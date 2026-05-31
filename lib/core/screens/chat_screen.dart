@@ -1,12 +1,10 @@
-/// Chat screen with real-time streaming via REST API.
-/// Uses REST endpoints: POST /api/sessions/{id}/chat and 
-/// GET /api/sessions/{id}/messages.
+// Chat screen with real-time streaming via REST API.
+// Uses REST endpoints: POST /api/sessions/{id}/chat and
+// GET /api/sessions/{id}/messages.
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'dart:io';
+
 import '../services/connection_manager.dart';
 import '../utils/responsive.dart';
 
@@ -38,10 +36,6 @@ class _ChatScreenState extends State<ChatScreen> {
 
   // Verbose mode
   bool _verboseMode = false;
-
-  // Media attachments
-  final ImagePicker _picker = ImagePicker();
-  List<XFile> _attachments = [];
 
   // Scroll management
   final _scrollController = ScrollController();
@@ -75,7 +69,8 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   void _onScroll() {
-    final atBottom = _scrollController.hasClients &&
+    final atBottom =
+        _scrollController.hasClients &&
         _scrollController.position.pixels >=
             _scrollController.position.maxScrollExtent - 200;
     if (atBottom != !_showScrollToBottom && _streaming) {
@@ -100,9 +95,7 @@ class _ChatScreenState extends State<ChatScreen> {
     });
 
     try {
-      final messages = await _client.getMessages(
-        widget.session.id,
-      );
+      final messages = await _client.getMessages(widget.session.id);
       if (!mounted) return;
       setState(() {
         _messages = messages;
@@ -161,7 +154,8 @@ class _ChatScreenState extends State<ChatScreen> {
         if (!mounted) return;
         setState(() {
           if (_messages.isNotEmpty && _messages[0]['role'] == 'assistant') {
-            _messages[0]['content'] = (_messages[0]['content'] as String) + token;
+            _messages[0]['content'] =
+                (_messages[0]['content'] as String) + token;
           }
         });
       },
@@ -285,8 +279,13 @@ class _ChatScreenState extends State<ChatScreen> {
                 controller: _textController,
                 decoration: InputDecoration(
                   hintText: 'Type a message…',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(24)),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(24),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
                   isDense: true,
                 ),
                 minLines: 1,
@@ -398,9 +397,7 @@ class _MessageBubble extends StatelessWidget {
     final assistantBubbleColor = isDark
         ? const Color(0xFF2A2A2A)
         : const Color(0xFFEAEAEA);
-    final assistantTextColor = isDark
-        ? Colors.white
-        : Colors.black87;
+    final assistantTextColor = isDark ? Colors.white : Colors.black87;
 
     // Collect extra metadata for verbose mode
     final List<String> metaLines = [];
@@ -439,22 +436,28 @@ class _MessageBubble extends StatelessWidget {
               margin: const EdgeInsets.only(bottom: 8),
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: (isUser ? Colors.white : Colors.black).withValues(alpha: 0.1),
+                color: (isUser ? Colors.white : Colors.black).withValues(
+                  alpha: 0.1,
+                ),
                 borderRadius: BorderRadius.circular(6),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
-                children: metaLines.map((line) => Text(
-                  line,
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontFamily: 'monospace',
-                    color: isUser
-                        ? Colors.white.withValues(alpha: 0.8)
-                        : (isDark ? Colors.grey[400] : Colors.grey[600]),
-                  ),
-                )).toList(),
+                children: metaLines
+                    .map(
+                      (line) => Text(
+                        line,
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontFamily: 'monospace',
+                          color: isUser
+                              ? Colors.white.withValues(alpha: 0.8)
+                              : (isDark ? Colors.grey[400] : Colors.grey[600]),
+                        ),
+                      ),
+                    )
+                    .toList(),
               ),
             ),
           ],
@@ -464,13 +467,18 @@ class _MessageBubble extends StatelessWidget {
             styleSheet: MarkdownStyleSheet(
               p: (isUser
                   ? theme.textTheme.bodyMedium?.copyWith(color: Colors.white)
-                  : theme.textTheme.bodyMedium?.copyWith(color: assistantTextColor)),
+                  : theme.textTheme.bodyMedium?.copyWith(
+                      color: assistantTextColor,
+                    )),
               code: TextStyle(
-                backgroundColor: (isUser ? Colors.white : Colors.black).withValues(alpha: 0.12),
+                backgroundColor: (isUser ? Colors.white : Colors.black)
+                    .withValues(alpha: 0.12),
                 fontFamily: 'monospace',
                 color: isUser ? Colors.white : null,
               ),
-              a: TextStyle(color: isUser ? Colors.white70 : theme.colorScheme.primary),
+              a: TextStyle(
+                color: isUser ? Colors.white70 : theme.colorScheme.primary,
+              ),
               h1: isUser
                   ? theme.textTheme.headlineSmall?.copyWith(color: Colors.white)
                   : theme.textTheme.headlineSmall,
@@ -494,12 +502,20 @@ class _MessageBubble extends StatelessWidget {
               ),
               em: isUser
                   ? theme.textTheme.bodyMedium?.copyWith(
-                      fontStyle: FontStyle.italic, color: Colors.white)
-                  : theme.textTheme.bodyMedium?.copyWith(fontStyle: FontStyle.italic),
+                      fontStyle: FontStyle.italic,
+                      color: Colors.white,
+                    )
+                  : theme.textTheme.bodyMedium?.copyWith(
+                      fontStyle: FontStyle.italic,
+                    ),
               strong: isUser
                   ? theme.textTheme.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.bold, color: Colors.white)
-                  : theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold),
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    )
+                  : theme.textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
             ),
           ),
         ],
@@ -507,7 +523,9 @@ class _MessageBubble extends StatelessWidget {
     );
 
     return Row(
-      mainAxisAlignment: isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
+      mainAxisAlignment: isUser
+          ? MainAxisAlignment.end
+          : MainAxisAlignment.start,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [bubble],
     );

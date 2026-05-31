@@ -1,3 +1,5 @@
+// ignore_for_file: prefer_initializing_formals
+
 import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
@@ -27,11 +29,12 @@ class ConnectionManager {
   }
 
   void saveConnection(String label, String host, int port, String apiKey) {
+    final normalized = SavedConnection.normalizeHostAndPort(host, port);
     final conn = SavedConnection(
       id: _uuid.v4(),
       label: label,
-      host: host,
-      port: port,
+      host: normalized.host,
+      port: normalized.port,
       apiKey: apiKey,
     );
     final current = getConnections();
@@ -60,10 +63,7 @@ class ConnectionManager {
   }
 
   void _saveAll(List<SavedConnection> list) {
-    prefs.setStringList(
-      _key,
-      list.map((c) => jsonEncode(c.toMap())).toList(),
-    );
+    prefs.setStringList(_key, list.map((c) => jsonEncode(c.toMap())).toList());
   }
 }
 
@@ -75,9 +75,12 @@ class ApiClient {
   final String baseUrl;
   final String _apiKey;
 
+  // Keep the public parameter name `apiKey` while storing it privately.
   ApiClient({required String baseUrl, required String apiKey})
-    : baseUrl = baseUrl.endsWith('/') ? baseUrl.substring(0, baseUrl.length - 1) : baseUrl,
-      _apiKey = apiKey,
+    : _apiKey = apiKey,
+      baseUrl = baseUrl.endsWith('/')
+          ? baseUrl.substring(0, baseUrl.length - 1)
+          : baseUrl,
       _http = http.Client();
 
   Map<String, String> get _headers => {
@@ -152,18 +155,27 @@ class ApiClient {
   // ── Generic HTTP helpers (for Dashboard API compatibility) ────────────
 
   Future<Map<String, dynamic>> apiGet(String endpoint) async {
-    final res = await _http.get(Uri.parse('$baseUrl/$endpoint'), headers: _headers);
+    final res = await _http.get(
+      Uri.parse('$baseUrl/$endpoint'),
+      headers: _headers,
+    );
     if (res.statusCode != 200) throw Exception('HTTP ${res.statusCode}');
     return jsonDecode(res.body) as Map<String, dynamic>;
   }
 
   Future<List<dynamic>> apiGetList(String endpoint) async {
-    final res = await _http.get(Uri.parse('$baseUrl/$endpoint'), headers: _headers);
+    final res = await _http.get(
+      Uri.parse('$baseUrl/$endpoint'),
+      headers: _headers,
+    );
     if (res.statusCode != 200) throw Exception('HTTP ${res.statusCode}');
     return jsonDecode(res.body) as List<dynamic>;
   }
 
-  Future<Map<String, dynamic>> apiPost(String endpoint, {Map<String, dynamic>? body}) async {
+  Future<Map<String, dynamic>> apiPost(
+    String endpoint, {
+    Map<String, dynamic>? body,
+  }) async {
     final res = await _http.post(
       Uri.parse('$baseUrl/$endpoint'),
       headers: _headers,
@@ -176,7 +188,10 @@ class ApiClient {
   }
 
   Future<void> apiDelete(String endpoint) async {
-    final res = await _http.delete(Uri.parse('$baseUrl/$endpoint'), headers: _headers);
+    final res = await _http.delete(
+      Uri.parse('$baseUrl/$endpoint'),
+      headers: _headers,
+    );
     if (res.statusCode < 200 || res.statusCode >= 300) {
       throw Exception('HTTP ${res.statusCode}');
     }
@@ -190,8 +205,15 @@ class ApiClient {
     final data = await apiGetList('api/skills');
     return data.whereType<Map<String, dynamic>>().toList();
   }
-  Future<Map<String, dynamic>> setModel(String scope, String provider, String model) =>
-      apiPost('api/model/set', body: {'scope': scope, 'provider': provider, 'model': model});
+
+  Future<Map<String, dynamic>> setModel(
+    String scope,
+    String provider,
+    String model,
+  ) => apiPost(
+    'api/model/set',
+    body: {'scope': scope, 'provider': provider, 'model': model},
+  );
 
   void close() => _http.close();
 }
@@ -203,7 +225,7 @@ class GatewayChatClient {
 
   GatewayChatClient(this._api) : _baseUrl = _api.baseUrl;
 
-  /// Generate a client-side session ID: mob-<timestamp>-<uuid>
+  /// Generate a client-side session ID: `mob-<timestamp>-<uuid>`.
   static String generateSessionId() {
     return 'mob-${DateTime.now().millisecondsSinceEpoch}-${const Uuid().v4()}';
   }
@@ -224,10 +246,7 @@ class GatewayChatClient {
         final role = (msg['role'] == 'agent' || msg['role'] == 'assistant')
             ? 'assistant'
             : 'user';
-        messages.add({
-          'role': role,
-          'content': msg['content'] ?? '',
-        });
+        messages.add({'role': role, 'content': msg['content'] ?? ''});
       }
     } else {
       // Only add the user message if history is null/empty
@@ -241,13 +260,13 @@ class GatewayChatClient {
       'stream': true,
     };
 
-    final headers = {
-      ..._api._headers,
-      'X-Hermes-Session-Id': sessionId,
-    };
+    final headers = {..._api._headers, 'X-Hermes-Session-Id': sessionId};
 
     try {
-      final request = http.Request('POST', Uri.parse('$_baseUrl/v1/chat/completions'));
+      final request = http.Request(
+        'POST',
+        Uri.parse('$_baseUrl/v1/chat/completions'),
+      );
       request.headers.addAll(headers);
       request.body = jsonEncode(body);
 
@@ -258,7 +277,10 @@ class GatewayChatClient {
         String errorMsg;
         try {
           final err = jsonDecode(errorBody);
-          errorMsg = err['error']?['message'] ?? err['message'] ?? 'HTTP ${response.statusCode}';
+          errorMsg =
+              err['error']?['message'] ??
+              err['message'] ??
+              'HTTP ${response.statusCode}';
         } catch (_) {
           errorMsg = 'HTTP ${response.statusCode}';
         }
@@ -267,9 +289,7 @@ class GatewayChatClient {
       }
 
       String buffer = '';
-      await response.stream
-          .transform(utf8.decoder)
-          .forEach((chunk) {
+      await response.stream.transform(utf8.decoder).forEach((chunk) {
         buffer += chunk;
         while (buffer.contains('\n\n')) {
           final eventEnd = buffer.indexOf('\n\n');
@@ -327,7 +347,9 @@ class DashboardClient {
     if (_token != null) return _token!;
     final res = await _http.get(Uri.parse('$_baseUrl/'));
     if (res.statusCode != 200) throw Exception('Dashboard not reachable');
-    final match = RegExp(r'window\.__HERMES_SESSION_TOKEN__="([^"]+)";').firstMatch(res.body);
+    final match = RegExp(
+      r'window\.__HERMES_SESSION_TOKEN__="([^"]+)";',
+    ).firstMatch(res.body);
     if (match == null) throw Exception('Session token not found');
     _token = match.group(1)!;
     return _token!;
@@ -338,39 +360,108 @@ class DashboardClient {
     'Content-Type': 'application/json',
   };
 
-  Future<Map<String, dynamic>> apiGet(String endpoint) async {
-    final headers = await _authHeaders();
-    final res = await _http.get(Uri.parse('$_baseUrl/api/$endpoint'), headers: headers);
-    if (res.statusCode == 401) { _token = null; return apiGet(endpoint); }
-    if (res.statusCode != 200) throw Exception('HTTP ${res.statusCode}');
-    return jsonDecode(res.body) as Map<String, dynamic>;
+  Map<String, dynamic> _decodeMapResponse(http.Response res) {
+    final trimmed = res.body.trim();
+    if (trimmed.isEmpty) return <String, dynamic>{};
+    final decoded = jsonDecode(trimmed);
+    if (decoded is Map<String, dynamic>) return decoded;
+    return {'data': decoded};
   }
 
-  Future<List<dynamic>> apiGetList(String endpoint) async {
+  Future<Map<String, dynamic>> apiGet(
+    String endpoint, {
+    bool retried = false,
+  }) async {
     final headers = await _authHeaders();
-    final res = await _http.get(Uri.parse('$_baseUrl/api/$endpoint'), headers: headers);
-    if (res.statusCode == 401) { _token = null; return apiGetList(endpoint); }
+    final res = await _http.get(
+      Uri.parse('$_baseUrl/api/$endpoint'),
+      headers: headers,
+    );
+    if (res.statusCode == 401 && !retried) {
+      _token = null;
+      return apiGet(endpoint, retried: true);
+    }
     if (res.statusCode != 200) throw Exception('HTTP ${res.statusCode}');
-    return jsonDecode(res.body) as List<dynamic>;
+    return _decodeMapResponse(res);
   }
 
-  Future<Map<String, dynamic>> apiPost(String endpoint, {Map<String, dynamic>? body}) async {
+  Future<List<dynamic>> apiGetList(
+    String endpoint, {
+    bool retried = false,
+  }) async {
+    final headers = await _authHeaders();
+    final res = await _http.get(
+      Uri.parse('$_baseUrl/api/$endpoint'),
+      headers: headers,
+    );
+    if (res.statusCode == 401 && !retried) {
+      _token = null;
+      return apiGetList(endpoint, retried: true);
+    }
+    if (res.statusCode != 200) throw Exception('HTTP ${res.statusCode}');
+    final decoded = jsonDecode(res.body);
+    if (decoded is List<dynamic>) return decoded;
+    if (decoded is Map<String, dynamic> && decoded['data'] is List<dynamic>) {
+      return decoded['data'] as List<dynamic>;
+    }
+    throw Exception('Expected list response');
+  }
+
+  Future<Map<String, dynamic>> apiPost(
+    String endpoint, {
+    Map<String, dynamic>? body,
+    bool retried = false,
+  }) async {
     final headers = await _authHeaders();
     final res = await _http.post(
       Uri.parse('$_baseUrl/api/$endpoint'),
       headers: headers,
       body: body != null ? jsonEncode(body) : null,
     );
-    if (res.statusCode == 401) { _token = null; return apiPost(endpoint, body: body); }
-    if (res.statusCode < 200 || res.statusCode >= 300) throw Exception('HTTP ${res.statusCode}');
-    return jsonDecode(res.body) as Map<String, dynamic>;
+    if (res.statusCode == 401 && !retried) {
+      _token = null;
+      return apiPost(endpoint, body: body, retried: true);
+    }
+    if (res.statusCode < 200 || res.statusCode >= 300) {
+      throw Exception('HTTP ${res.statusCode}');
+    }
+    return _decodeMapResponse(res);
   }
 
-  Future<void> apiDelete(String endpoint) async {
+  Future<void> apiDelete(String endpoint, {bool retried = false}) async {
     final headers = await _authHeaders();
-    final res = await _http.delete(Uri.parse('$_baseUrl/api/$endpoint'), headers: headers);
-    if (res.statusCode == 401) { _token = null; return apiDelete(endpoint); }
-    if (res.statusCode < 200 || res.statusCode >= 300) throw Exception('HTTP ${res.statusCode}');
+    final res = await _http.delete(
+      Uri.parse('$_baseUrl/api/$endpoint'),
+      headers: headers,
+    );
+    if (res.statusCode == 401 && !retried) {
+      _token = null;
+      return apiDelete(endpoint, retried: true);
+    }
+    if (res.statusCode < 200 || res.statusCode >= 300) {
+      throw Exception('HTTP ${res.statusCode}');
+    }
+  }
+
+  Future<Map<String, dynamic>> apiPut(
+    String endpoint, {
+    Map<String, dynamic>? body,
+    bool retried = false,
+  }) async {
+    final headers = await _authHeaders();
+    final res = await _http.put(
+      Uri.parse('$_baseUrl/api/$endpoint'),
+      headers: headers,
+      body: body != null ? jsonEncode(body) : null,
+    );
+    if (res.statusCode == 401 && !retried) {
+      _token = null;
+      return apiPut(endpoint, body: body, retried: true);
+    }
+    if (res.statusCode < 200 || res.statusCode >= 300) {
+      throw Exception('HTTP ${res.statusCode}');
+    }
+    return _decodeMapResponse(res);
   }
 
   Future<Map<String, dynamic>> getModelInfo() => apiGet('model/info');
@@ -379,8 +470,15 @@ class DashboardClient {
     final data = await apiGetList('skills');
     return data.whereType<Map<String, dynamic>>().toList();
   }
-  Future<Map<String, dynamic>> setModel(String scope, String provider, String model) =>
-      apiPost('model/set', body: {'scope': scope, 'provider': provider, 'model': model});
+
+  Future<Map<String, dynamic>> setModel(
+    String scope,
+    String provider,
+    String model,
+  ) => apiPost(
+    'model/set',
+    body: {'scope': scope, 'provider': provider, 'model': model},
+  );
 
   // ── Cron job management ──────────────────────────────────────────────
 
@@ -389,22 +487,33 @@ class DashboardClient {
     required String schedule,
     String name = '',
     String deliver = 'local',
-  }) => apiPost('cron/jobs', body: {
-    'prompt': prompt,
-    'schedule': schedule,
-    'name': name,
-    'deliver': deliver,
-  });
+  }) => apiPost(
+    'cron/jobs',
+    body: {
+      'prompt': prompt,
+      'schedule': schedule,
+      'name': name,
+      'deliver': deliver,
+    },
+  );
 
-  Future<Map<String, dynamic>> updateJob(String jobId, Map<String, dynamic> updates) async {
+  Future<Map<String, dynamic>> updateJob(
+    String jobId,
+    Map<String, dynamic> updates,
+  ) async {
     final headers = await _authHeaders();
     final res = await _http.put(
       Uri.parse('$_baseUrl/api/cron/jobs/$jobId'),
       headers: headers,
       body: jsonEncode({'updates': updates}),
     );
-    if (res.statusCode == 401) { _token = null; return updateJob(jobId, updates); }
-    if (res.statusCode < 200 || res.statusCode >= 300) throw Exception('HTTP ${res.statusCode}');
+    if (res.statusCode == 401) {
+      _token = null;
+      return updateJob(jobId, updates);
+    }
+    if (res.statusCode < 200 || res.statusCode >= 300) {
+      throw Exception('HTTP ${res.statusCode}');
+    }
     return jsonDecode(res.body) as Map<String, dynamic>;
   }
 

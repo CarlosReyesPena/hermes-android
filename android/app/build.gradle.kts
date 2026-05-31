@@ -17,8 +17,8 @@ android {
        applicationId = "com.hermesagent.hermes_android"
        minSdk = 24
        targetSdk = 36
-       versionCode = 1
-       versionName = "0.0.1"
+       versionCode = flutter.versionCode
+       versionName = flutter.versionName
    }
 
    buildTypes {

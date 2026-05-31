@@ -22,14 +22,24 @@ class HermesApp extends StatefulWidget {
   static ThemeMode getThemeMode(SharedPreferences prefs) {
     final stored = prefs.getString('theme_mode') ?? 'system';
     switch (stored) {
-      case 'dark': return ThemeMode.dark;
-      case 'light': return ThemeMode.light;
-      default: return ThemeMode.system;
+      case 'dark':
+        return ThemeMode.dark;
+      case 'light':
+        return ThemeMode.light;
+      default:
+        return ThemeMode.system;
     }
   }
 
-  static Future<void> setThemeMode(SharedPreferences prefs, ThemeMode mode) async {
-    final value = mode == ThemeMode.dark ? 'dark' : mode == ThemeMode.light ? 'light' : 'system';
+  static Future<void> setThemeMode(
+    SharedPreferences prefs,
+    ThemeMode mode,
+  ) async {
+    final value = mode == ThemeMode.dark
+        ? 'dark'
+        : mode == ThemeMode.light
+        ? 'light'
+        : 'system';
     await prefs.setString('theme_mode', value);
   }
 }
@@ -192,10 +202,12 @@ class _HomeScreenState extends State<HomeScreen> {
   void _showAddDialog() {
     showDialog(
       context: context,
-      builder: (_) => _AddDialog(onSave: (label, host, port, apiKey) {
-        widget.connManager.saveConnection(label, host, port, apiKey);
-        _refresh();
-      }),
+      builder: (_) => _AddDialog(
+        onSave: (label, host, port, apiKey) {
+          widget.connManager.saveConnection(label, host, port, apiKey);
+          _refresh();
+        },
+      ),
     );
   }
 
@@ -220,14 +232,26 @@ class _HomeScreenState extends State<HomeScreen> {
                   decoration: BoxDecoration(
                     color: Colors.red.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
+                    border: Border.all(
+                      color: Colors.red.withValues(alpha: 0.3),
+                    ),
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.error_outline, color: Colors.red, size: 18),
+                      const Icon(
+                        Icons.error_outline,
+                        color: Colors.red,
+                        size: 18,
+                      ),
                       const SizedBox(width: 8),
                       Expanded(
-                        child: Text(error!, style: const TextStyle(color: Colors.red, fontSize: 13)),
+                        child: Text(
+                          error!,
+                          style: const TextStyle(
+                            color: Colors.red,
+                            fontSize: 13,
+                          ),
+                        ),
                       ),
                     ],
                   ),
@@ -288,8 +312,12 @@ class _HomeScreenState extends State<HomeScreen> {
                     },
               child: validating
                   ? const SizedBox(
-                      width: 18, height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
                     )
                   : const Text('Save'),
             ),
@@ -320,7 +348,10 @@ class _HomeScreenState extends State<HomeScreen> {
           },
           itemBuilder: (_) => [
             const PopupMenuItem(value: 'apikey', child: Text('Update API Key')),
-            const PopupMenuItem(value: 'delete', child: Text('Delete', style: TextStyle(color: Colors.red))),
+            const PopupMenuItem(
+              value: 'delete',
+              child: Text('Delete', style: TextStyle(color: Colors.red)),
+            ),
           ],
         ),
         onTap: () => _navigateToSessions(conn),
@@ -349,11 +380,16 @@ class _HomeScreenState extends State<HomeScreen> {
                 children: [
                   Icon(Icons.cloud_outlined, size: 64, color: Colors.grey[800]),
                   const SizedBox(height: 16),
-                  Text('No connections', style: Theme.of(context).textTheme.headlineSmall),
+                  Text(
+                    'No connections',
+                    style: Theme.of(context).textTheme.headlineSmall,
+                  ),
                   const SizedBox(height: 8),
                   Text(
                     'Tap + to add a remote Hermes Gateway\n(API Server, port 8642)',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
                     textAlign: TextAlign.center,
                   ),
                 ],
@@ -371,7 +407,8 @@ class _HomeScreenState extends State<HomeScreen> {
                       mainAxisSpacing: 12,
                     ),
                     itemCount: _connections.length,
-                    itemBuilder: (_, i) => _buildConnectionCard(_connections[i]),
+                    itemBuilder: (_, i) =>
+                        _buildConnectionCard(_connections[i]),
                   );
                 }
                 return ListView.builder(
@@ -390,7 +427,8 @@ class _HomeScreenState extends State<HomeScreen> {
 }
 
 class _AddDialog extends StatefulWidget {
-  final void Function(String label, String host, int port, String apiKey) onSave;
+  final void Function(String label, String host, int port, String apiKey)
+  onSave;
   const _AddDialog({required this.onSave});
 
   @override
@@ -399,7 +437,7 @@ class _AddDialog extends StatefulWidget {
 
 class _AddDialogState extends State<_AddDialog> {
   final _label = TextEditingController(text: 'Home');
-  final _host = TextEditingController(text: '192.168.68.188');
+  final _host = TextEditingController();
   final _port = TextEditingController(text: '8642');
   final _apiKey = TextEditingController();
   bool _validating = false;
@@ -466,27 +504,44 @@ class _AddDialogState extends State<_AddDialog> {
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.error_outline, color: Colors.red, size: 18),
+                    const Icon(
+                      Icons.error_outline,
+                      color: Colors.red,
+                      size: 18,
+                    ),
                     const SizedBox(width: 8),
                     Expanded(
-                      child: Text(_error!, style: const TextStyle(color: Colors.red, fontSize: 13)),
+                      child: Text(
+                        _error!,
+                        style: const TextStyle(color: Colors.red, fontSize: 13),
+                      ),
                     ),
                   ],
                 ),
               ),
             ],
-            TextField(controller: _label, decoration: const InputDecoration(labelText: 'Label')),
+            TextField(
+              controller: _label,
+              decoration: const InputDecoration(labelText: 'Label'),
+            ),
             const SizedBox(height: 12),
             TextField(
               controller: _host,
-              decoration: const InputDecoration(labelText: 'Host'),
+              decoration: const InputDecoration(
+                labelText: 'Host',
+                hintText:
+                    '192.168.1.50, 100.x.y.z, or hermes-machine.tailnet.ts.net',
+              ),
               keyboardType: TextInputType.text,
               autocorrect: false,
             ),
             const SizedBox(height: 12),
             TextField(
               controller: _port,
-              decoration: const InputDecoration(labelText: 'Port', hintText: '8642 (API Server)'),
+              decoration: const InputDecoration(
+                labelText: 'Port',
+                hintText: '8642 (API Server)',
+              ),
               keyboardType: TextInputType.number,
             ),
             const SizedBox(height: 12),
@@ -510,8 +565,12 @@ class _AddDialogState extends State<_AddDialog> {
           onPressed: _validating ? null : _validateAndSave,
           child: _validating
               ? const SizedBox(
-                  width: 18, height: 18,
-                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
                 )
               : const Text('Connect'),
         ),

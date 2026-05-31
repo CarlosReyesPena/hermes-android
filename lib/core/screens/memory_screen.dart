@@ -1,11 +1,11 @@
-/// Memory browser screen — read memory entries from Hermes config.
-///
-/// Memory entries live in config.yaml under the 'memory' key as a list:
-///   memory:
-///     - target: user
-///       content: "Sam Russell..."
-///
-/// API: GET /api/config returns the full config including memory.
+// Memory browser screen — read memory entries from Hermes config.
+//
+// Memory entries live in config.yaml under the 'memory' key as a list:
+//   memory:
+//     - target: user
+//       content: "Sam Russell..."
+//
+// API: GET /api/config returns the full config including memory.
 import 'package:flutter/material.dart';
 import '../services/connection_manager.dart';
 
@@ -46,8 +46,9 @@ class _MemoryScreenState extends State<MemoryScreen> {
     try {
       // Try dedicated /api/memory endpoint first
       try {
-        final memData = await _client.apiGet('api/memory');
-        final items = memData['entries'] as List? ?? memData['memory'] as List? ?? [];
+        final memData = await _client.apiGet('memory');
+        final items =
+            memData['entries'] as List? ?? memData['memory'] as List? ?? [];
         if (items.isNotEmpty) {
           setState(() {
             _entries = items.cast<Map<String, dynamic>>();
@@ -106,7 +107,10 @@ class _MemoryScreenState extends State<MemoryScreen> {
           children: [
             const Text('Memory'),
             if (_source != null)
-              Text('Source: $_source', style: const TextStyle(fontSize: 11, color: Colors.grey)),
+              Text(
+                'Source: $_source',
+                style: const TextStyle(fontSize: 11, color: Colors.grey),
+              ),
           ],
         ),
         actions: [
@@ -134,13 +138,21 @@ class _MemoryScreenState extends State<MemoryScreen> {
             children: [
               const Icon(Icons.error_outline, size: 48, color: Colors.orange),
               const SizedBox(height: 16),
-              Text('Failed to load memory',
-                  style: Theme.of(context).textTheme.titleMedium),
+              Text(
+                'Failed to load memory',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
               const SizedBox(height: 8),
-              Text(_error!, style: Theme.of(context).textTheme.bodySmall,
-                  textAlign: TextAlign.center),
+              Text(
+                _error!,
+                style: Theme.of(context).textTheme.bodySmall,
+                textAlign: TextAlign.center,
+              ),
               const SizedBox(height: 24),
-              ElevatedButton(onPressed: _loadMemory, child: const Text('Retry')),
+              ElevatedButton(
+                onPressed: _loadMemory,
+                child: const Text('Retry'),
+              ),
             ],
           ),
         ),
@@ -154,14 +166,18 @@ class _MemoryScreenState extends State<MemoryScreen> {
           children: [
             Icon(Icons.psychology, size: 48, color: Colors.grey),
             const SizedBox(height: 16),
-            Text('No memory entries',
-                style: Theme.of(context).textTheme.titleLarge),
+            Text(
+              'No memory entries',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
             const SizedBox(height: 8),
             Text(
               'Memory entries are cross-session facts the agent remembers.\n'
               'They are configured in ~/.hermes/config.yaml',
               textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey),
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: Colors.grey),
             ),
           ],
         ),
@@ -188,8 +204,10 @@ class _MemoryScreenState extends State<MemoryScreen> {
                   Row(
                     children: [
                       Chip(
-                        label: Text(target,
-                            style: const TextStyle(fontSize: 11)),
+                        label: Text(
+                          target,
+                          style: const TextStyle(fontSize: 11),
+                        ),
                         padding: EdgeInsets.zero,
                         visualDensity: VisualDensity.compact,
                         backgroundColor: target == 'user'

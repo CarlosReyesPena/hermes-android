@@ -1,9 +1,9 @@
-/// WebSocket client for the Hermes gateway JSON-RPC API (/api/ws).
-/// Supports both request-response calls AND server-pushed streaming events.
-///
-/// Wire protocol: newline-delimited JSON-RPC 2.0, same as the TUI gateway.
-/// After submitting a prompt, the server pushes stream events and finally
-/// a JSON-RPC response with the same id.
+// WebSocket client for the Hermes gateway JSON-RPC API (/api/ws).
+// Supports both request-response calls AND server-pushed streaming events.
+//
+// Wire protocol: newline-delimited JSON-RPC 2.0, same as the TUI gateway.
+// After submitting a prompt, the server pushes stream events and finally
+// a JSON-RPC response with the same id.
 import 'dart:async';
 import 'dart:convert';
 import 'package:web_socket_channel/io.dart';
@@ -52,30 +52,37 @@ class WsClient {
   /// Global stream listener (receives all untargeted events).
   StreamCallback? onStreamEvent;
 
+  // Keep the public parameter name `token` while storing it privately.
+  // ignore: prefer_initializing_formals
   WsClient(this.baseUrl, {String? token}) : _token = token;
 
   /// Connect to the WebSocket gateway.
   Future<void> connect() async {
     if (_connected) return;
-    var wsUrl = '${baseUrl.replaceFirst('http://', 'ws://').replaceFirst('https://', 'wss://')}/api/ws';
-    // Pass session token as query param if available
-    if (_token != null && _token!.isNotEmpty) {
-      wsUrl = '$wsUrl?token=${Uri.encodeQueryComponent(_token!)}';
+    var wsUrl =
+        '${baseUrl.replaceFirst('http://', 'ws://').replaceFirst('https://', 'wss://')}/api/ws';
+    // Pass session token as query param if available.
+    final token = _token;
+    if (token != null && token.isNotEmpty) {
+      wsUrl = '$wsUrl?token=${Uri.encodeQueryComponent(token)}';
     }
     _channel = IOWebSocketChannel.connect(Uri.parse(wsUrl));
     _connected = true;
-    _channel!.stream.listen(_handleMessage, onDone: () {
-      _connected = false;
-      _channel = null;
-      // Reject all pending requests
-      for (var entry in _pending.values) {
-        entry.timer?.cancel();
-        if (!entry.completer.isCompleted) {
-          entry.completer.completeError(Exception('Connection closed'));
+    _channel!.stream.listen(
+      _handleMessage,
+      onDone: () {
+        _connected = false;
+        _channel = null;
+        // Reject all pending requests
+        for (var entry in _pending.values) {
+          entry.timer?.cancel();
+          if (!entry.completer.isCompleted) {
+            entry.completer.completeError(Exception('Connection closed'));
+          }
         }
-      }
-      _pending.clear();
-    });
+        _pending.clear();
+      },
+    );
   }
 
   /// Handle inbound messages.
@@ -106,7 +113,11 @@ class WsClient {
         if (pending != null) {
           // If this is a stream completion (method field present), also dispatch
           if (method != null && params != null) {
-            _dispatchStreamEvent(id, method, params is Map<String, dynamic> ? params : {});
+            _dispatchStreamEvent(
+              id,
+              method,
+              params is Map<String, dynamic> ? params : {},
+            );
           }
           _pending.remove(id);
           pending.timer?.cancel();
@@ -121,7 +132,11 @@ class WsClient {
 
   /// Dispatch a server-pushed event to registered listeners.
   void _dispatchEvent(String type, Map<String, dynamic> data) {
-    final event = StreamEvent(type: type, data: data, isComplete: type == 'done' || type == 'error');
+    final event = StreamEvent(
+      type: type,
+      data: data,
+      isComplete: type == 'done' || type == 'error',
+    );
     onStreamEvent?.call(event);
   }
 
@@ -129,7 +144,11 @@ class WsClient {
   void _dispatchStreamEvent(int id, String type, Map<String, dynamic> data) {
     final listeners = _streams[id];
     if (listeners == null) return;
-    final event = StreamEvent(type: type, data: data, isComplete: type == 'done' || type == 'error');
+    final event = StreamEvent(
+      type: type,
+      data: data,
+      isComplete: type == 'done' || type == 'error',
+    );
     for (var listener in listeners) {
       listener(event);
     }
@@ -146,13 +165,6 @@ class WsClient {
     }
 
     final id = _nextId++;
-    _channel!.sink.add(jsonEncode({
-      'jsonrpc': '2.0',
-      'method': method,
-      'params': params,
-      'id': id,
-    }));
-
     final completer = Completer<Map<String, dynamic>>();
     final timer = Timer(timeout, () {
       _pending.remove(id);
@@ -162,6 +174,14 @@ class WsClient {
     });
 
     _pending[id] = _Pending(completer, timer);
+    _channel!.sink.add(
+      jsonEncode({
+        'jsonrpc': '2.0',
+        'method': method,
+        'params': params,
+        'id': id,
+      }),
+    );
     return completer.future;
   }
 
@@ -181,14 +201,6 @@ class WsClient {
     if (onEvent != null) {
       _streams[id] = [onEvent];
     }
-
-    _channel!.sink.add(jsonEncode({
-      'jsonrpc': '2.0',
-      'method': method,
-      'params': params,
-      'id': id,
-    }));
-
     final completer = Completer<Map<String, dynamic>>();
     final timer = Timer(timeout, () {
       _pending.remove(id);
@@ -199,6 +211,14 @@ class WsClient {
     });
 
     _pending[id] = _Pending(completer, timer);
+    _channel!.sink.add(
+      jsonEncode({
+        'jsonrpc': '2.0',
+        'method': method,
+        'params': params,
+        'id': id,
+      }),
+    );
     return completer.future;
   }
 
@@ -219,7 +239,9 @@ class WsClient {
     String message, {
     StreamCallback? onEvent,
   }) async {
-    final result = await sendStreaming('prompt.submit', {'message': message}, onEvent: onEvent);
+    final result = await sendStreaming('prompt.submit', {
+      'message': message,
+    }, onEvent: onEvent);
     if (result['error'] != null) {
       final errMap = result['error'] as Map<String, dynamic>;
       final errorMsg = errMap['message'] as String?;

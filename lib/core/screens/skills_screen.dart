@@ -1,4 +1,4 @@
-/// Skills browser — list installed skills with enabled/disabled status.
+// Skills browser — list installed skills with enabled/disabled status.
 import 'package:flutter/material.dart';
 import '../services/connection_manager.dart';
 
@@ -30,7 +30,10 @@ class _SkillsScreenState extends State<SkillsScreen> {
   }
 
   Future<void> _load() async {
-    setState(() { _loading = true; _error = null; });
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
     try {
       final raw = await _client.getSkills();
       if (!mounted) return;
@@ -40,7 +43,10 @@ class _SkillsScreenState extends State<SkillsScreen> {
       });
     } catch (e) {
       if (!mounted) return;
-      setState(() { _error = e.toString(); _loading = false; });
+      setState(() {
+        _error = e.toString();
+        _loading = false;
+      });
     }
   }
 
@@ -63,25 +69,45 @@ class _SkillsScreenState extends State<SkillsScreen> {
   Widget _buildBody() {
     if (_loading) return const Center(child: CircularProgressIndicator());
     if (_error != null) {
-      return Center(child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          const Icon(Icons.error_outline, size: 48, color: Colors.orange),
-          const SizedBox(height: 16),
-          Text('Failed to load skills', style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: 8),
-          Text(_error!, style: Theme.of(context).textTheme.bodySmall, textAlign: TextAlign.center),
-          const SizedBox(height: 24),
-          ElevatedButton(onPressed: _load, child: const Text('Retry')),
-        ]),
-      ));
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.error_outline, size: 48, color: Colors.orange),
+              const SizedBox(height: 16),
+              Text(
+                'Failed to load skills',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                _error!,
+                style: Theme.of(context).textTheme.bodySmall,
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton(onPressed: _load, child: const Text('Retry')),
+            ],
+          ),
+        ),
+      );
     }
     if (_skills.isEmpty) {
-      return Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-        Icon(Icons.extension_off, size: 48, color: Colors.grey[600]),
-        const SizedBox(height: 16),
-        Text('No skills found', style: Theme.of(context).textTheme.titleLarge),
-      ]));
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.extension_off, size: 48, color: Colors.grey[600]),
+            const SizedBox(height: 16),
+            Text(
+              'No skills found',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+          ],
+        ),
+      );
     }
     return RefreshIndicator(
       onRefresh: _load,
@@ -97,9 +123,17 @@ class _SkillsScreenState extends State<SkillsScreen> {
             margin: const EdgeInsets.only(bottom: 6),
             child: ListTile(
               dense: true,
-              title: Text(name, style: const TextStyle(fontFamily: 'monospace', fontSize: 13)),
+              title: Text(
+                name,
+                style: const TextStyle(fontFamily: 'monospace', fontSize: 13),
+              ),
               subtitle: description.isNotEmpty
-                  ? Text(description, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12))
+                  ? Text(
+                      description,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontSize: 12),
+                    )
                   : null,
               trailing: Icon(
                 enabled ? Icons.check_circle : Icons.block,

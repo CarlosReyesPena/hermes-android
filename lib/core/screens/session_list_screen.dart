@@ -45,14 +45,23 @@ class _SessionListScreenState extends State<SessionListScreen> {
   }
 
   Future<void> _fetchSessions() async {
-    setState(() { _loading = true; _error = null; });
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
     try {
       final sessions = await _client.getSessions();
       if (!mounted) return;
-      setState(() { _sessions = sessions; _loading = false; });
+      setState(() {
+        _sessions = sessions;
+        _loading = false;
+      });
     } catch (e) {
       if (!mounted) return;
-      setState(() { _error = e.toString(); _loading = false; });
+      setState(() {
+        _error = e.toString();
+        _loading = false;
+      });
     }
   }
 
@@ -71,7 +80,8 @@ class _SessionListScreenState extends State<SessionListScreen> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => ChatScreen(connection: widget.connection, session: session),
+        builder: (_) =>
+            ChatScreen(connection: widget.connection, session: session),
       ),
     );
   }
@@ -159,23 +169,27 @@ class _SessionListScreenState extends State<SessionListScreen> {
             ListTile(
               leading: const Icon(Icons.memory),
               title: const Text('Memory'),
-              onTap: () => _openScreen(MemoryScreen(connection: widget.connection)),
+              onTap: () =>
+                  _openScreen(MemoryScreen(connection: widget.connection)),
             ),
             ListTile(
               leading: const Icon(Icons.schedule),
               title: const Text('Cron Jobs'),
-              onTap: () => _openScreen(CronScreen(connection: widget.connection)),
+              onTap: () =>
+                  _openScreen(CronScreen(connection: widget.connection)),
             ),
             ListTile(
               leading: const Icon(Icons.auto_awesome),
               title: const Text('Skills'),
-              onTap: () => _openScreen(SkillsScreen(connection: widget.connection)),
+              onTap: () =>
+                  _openScreen(SkillsScreen(connection: widget.connection)),
             ),
             const Divider(),
             ListTile(
               leading: const Icon(Icons.settings),
               title: const Text('Settings'),
-              onTap: () => _openScreen(SettingsScreen(connection: widget.connection)),
+              onTap: () =>
+                  _openScreen(SettingsScreen(connection: widget.connection)),
             ),
           ],
         ),
@@ -189,10 +203,16 @@ class _SessionListScreenState extends State<SessionListScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const SizedBox(width: 48, height: 48, child: CircularProgressIndicator()),
+            const SizedBox(
+              width: 48,
+              height: 48,
+              child: CircularProgressIndicator(),
+            ),
             const SizedBox(height: 16),
-            Text('Connecting to ${widget.connection.baseUrl}...',
-                style: Theme.of(context).textTheme.titleMedium),
+            Text(
+              'Connecting to ${widget.connection.baseUrl}...',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
             const SizedBox(height: 8),
             Text(
               'Make sure the Gateway API Server is running\n(hermes gateway status)',
@@ -215,15 +235,24 @@ class _SessionListScreenState extends State<SessionListScreen> {
           children: [
             Icon(Icons.error_outline, size: 48, color: Colors.orange),
             const SizedBox(height: 16),
-            Text('Connection issue', style: Theme.of(context).textTheme.titleLarge),
+            Text(
+              'Connection issue',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
             const SizedBox(height: 8),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 32),
-              child: Text(_error!, textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.bodyMedium),
+              child: Text(
+                _error!,
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
             ),
             const SizedBox(height: 24),
-            ElevatedButton(onPressed: _fetchSessions, child: const Text('Retry')),
+            ElevatedButton(
+              onPressed: _fetchSessions,
+              child: const Text('Retry'),
+            ),
           ],
         ),
       );
@@ -236,10 +265,16 @@ class _SessionListScreenState extends State<SessionListScreen> {
           children: [
             Icon(Icons.chat_bubble_outline, size: 48, color: Colors.grey),
             const SizedBox(height: 16),
-            Text('No sessions yet', style: Theme.of(context).textTheme.titleLarge),
+            Text(
+              'No sessions yet',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
             const SizedBox(height: 8),
-            Text('Tap the + button to start a new chat',
-                textAlign: TextAlign.center, style: Theme.of(context).textTheme.bodyMedium),
+            Text(
+              'Tap the + button to start a new chat',
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
           ],
         ),
       );
@@ -259,7 +294,11 @@ class _SessionListScreenState extends State<SessionListScreen> {
                 session.isActive ? Icons.chat : Icons.chat_bubble_outline,
                 color: session.isActive ? const Color(0xFFD4AF37) : Colors.grey,
               ),
-              title: Text(session.title, maxLines: 1, overflow: TextOverflow.ellipsis),
+              title: Text(
+                session.title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
               subtitle: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -272,8 +311,9 @@ class _SessionListScreenState extends State<SessionListScreen> {
                       session.preview,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.bodySmall
-                          ?.copyWith(color: Colors.grey[500]),
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodySmall?.copyWith(color: Colors.grey[500]),
                     ),
                 ],
               ),
@@ -282,7 +322,10 @@ class _SessionListScreenState extends State<SessionListScreen> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => ChatScreen(connection: widget.connection, session: session),
+                    builder: (_) => ChatScreen(
+                      connection: widget.connection,
+                      session: session,
+                    ),
                   ),
                 );
               },

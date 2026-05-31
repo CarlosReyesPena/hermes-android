@@ -1,11 +1,12 @@
-/// Cron job browser — list and manage Hermes scheduled cron jobs.
-///
-/// API: GET /api/cron/jobs — returns JSON array of job objects
-///      POST /api/cron/jobs/{id}/pause | resume | trigger
-///      DELETE /api/cron/jobs/{id}
-///      POST /api/cron/jobs — create new job
-///      PUT /api/cron/jobs/{id} — update existing job
+// Cron job browser — list and manage Hermes scheduled cron jobs.
+//
+// API: GET /api/cron/jobs — returns JSON array of job objects
+//      POST /api/cron/jobs/{id}/pause | resume | trigger
+//      DELETE /api/cron/jobs/{id}
+//      POST /api/cron/jobs — create new job
+//      PUT /api/cron/jobs/{id} — update existing job
 import 'package:flutter/material.dart';
+
 import '../services/connection_manager.dart';
 
 class CronScreen extends StatefulWidget {
@@ -42,9 +43,7 @@ class _CronScreenState extends State<CronScreen> {
     });
 
     try {
-      // The endpoint returns a bare JSON array
       final data = await _client.apiGetList('cron/jobs');
-
       final items = <Map<String, dynamic>>[];
       for (final item in data) {
         if (item is Map<String, dynamic>) items.add(item);
@@ -64,7 +63,6 @@ class _CronScreenState extends State<CronScreen> {
     }
   }
 
-  /// API field is `paused_at` (timestamp when paused) or `state` field.
   bool _isPaused(Map<String, dynamic> job) {
     return job['paused_at'] != null ||
         job['state'] == 'paused' ||
@@ -72,13 +70,15 @@ class _CronScreenState extends State<CronScreen> {
   }
 
   String _scheduleDisplay(Map<String, dynamic> job) {
-    // Prefer schedule_display string, fall back to schedule object display
     final display = job['schedule_display'] as String?;
     if (display != null && display.isNotEmpty) return display;
 
     final schedule = job['schedule'];
+    if (schedule is String) return schedule;
     if (schedule is Map) {
-      return schedule['display'] as String? ?? schedule.toString();
+      return schedule['display'] as String? ??
+          schedule['run_at'] as String? ??
+          schedule.toString();
     }
     return '';
   }
@@ -101,7 +101,6 @@ class _CronScreenState extends State<CronScreen> {
 
     try {
       await _client.apiPost('cron/jobs/$jobId/$action');
-      // Update local state immediately
       if (paused) {
         job.remove('paused_at');
         job['state'] = 'active';
@@ -111,18 +110,15 @@ class _CronScreenState extends State<CronScreen> {
         job['state'] = 'paused';
       }
       if (mounted) {
+        setState(() {});
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(paused ? 'Job resumed' : 'Job paused')),
         );
       }
-      setState(() {});
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed: $e'),
-            backgroundColor: Colors.orange,
-          ),
+          SnackBar(content: Text('Failed: $e'), backgroundColor: Colors.orange),
         );
       }
     }
@@ -156,11 +152,11 @@ class _CronScreenState extends State<CronScreen> {
 
     try {
       await _client.apiDelete('cron/jobs/$jobId');
-      setState(() => _jobs.removeWhere((j) => j['id'] == jobId));
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Deleted "$name"')),
-        );
+        setState(() => _jobs.removeWhere((j) => j['id'] == jobId));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Deleted "$name"')));
       }
     } catch (e) {
       if (mounted) {
@@ -180,15 +176,38 @@ class _CronScreenState extends State<CronScreen> {
     try {
       await _client.apiPost('cron/jobs/$jobId/trigger');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Job triggered')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Job triggered')));
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed: $e'), backgroundColor: Colors.orange),
+        );
+      }
+    }
+  }
+
+  Future<void> _showAddJobDialog() async {
+    final result = await _showJobDialog(
+      title: 'Add Cron Job',
+      actionLabel: 'Add',
+    );
+    if (result == null || !mounted) return;
+
+    try {
+      await _client.apiPost('cron/jobs', body: result);
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Cron job added')));
+      await _loadJobs();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed: $e'),
+            content: Text('Failed to add job: $e'),
             backgroundColor: Colors.orange,
           ),
         );
@@ -196,147 +215,139 @@ class _CronScreenState extends State<CronScreen> {
     }
   }
 
-  Future<void> _showAddEditJobDialog({Map<String, dynamic>? job}) async {
-    final isEdit = job != null;
-    final controllerName = TextEditingController(
-      text: job?['name'] as String? ?? '',
+  Future<void> _showEditJobDialog(Map<String, dynamic> job) async {
+    final result = await _showJobDialog(
+      title: 'Edit Cron Job',
+      actionLabel: 'Save',
+      initialName: _jobName(job),
+      initialPrompt: job['prompt'] as String? ?? '',
+      initialSchedule: _scheduleDisplay(job),
+      initialNoAgent: job['no_agent'] == true,
     );
-    final controllerPrompt = TextEditingController(
-      text: job?['prompt'] as String? ?? '',
-    );
-    
-    // Handle schedule display safely
-    String scheduleDisplay = '';
-    if (job != null) {
-      scheduleDisplay = job['schedule_display'] as String? ??
-          (job['schedule'] is Map ? job['schedule']['display'] as String? ?? '' : '');
-    }
-    final controllerSchedule = TextEditingController(text: scheduleDisplay);
-    bool isNoAgent = job?['no_agent'] == true;
+    if (result == null || !mounted) return;
 
-    await showDialog<Map<String, dynamic>>(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setState) => AlertDialog(
-          title: Text(isEdit ? 'Edit Cron Job' : 'Add Cron Job'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: controllerName,
-                  decoration: const InputDecoration(
-                    labelText: 'Job Name',
-                    hintText: 'Enter a descriptive name',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: controllerPrompt,
-                  decoration: const InputDecoration(
-                    labelText: 'Prompt',
-                    hintText: 'What should the job do?',
-                    border: OutlineInputBorder(),
-                  ),
-                  maxLines: 3,
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: controllerSchedule,
-                  decoration: const InputDecoration(
-                    labelText: 'Schedule',
-                    hintText: 'e.g., "0 9 * * *" for daily at 9am, or "every 2h"',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Checkbox(
-                      value: isNoAgent,
-                      onChanged: (value) => setState(() => isNoAgent = value!),
-                    ),
-                    const Expanded(
-                      child: Text(
-                        'Run as script (no LLM agent)',
-                        style: TextStyle(fontSize: 12),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
+    final jobId = job['id'] as String? ?? '';
+    if (jobId.isEmpty) return;
+
+    try {
+      await _client.apiPut('cron/jobs/$jobId', body: result);
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Cron job updated')));
+      await _loadJobs();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to update job: $e'),
+            backgroundColor: Colors.orange,
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Cancel'),
-            ),
-            FilledButton(
-              onPressed: () async {
-                final name = controllerName.text.trim();
-                final prompt = controllerPrompt.text.trim();
-                final schedule = controllerSchedule.text.trim();
+        );
+      }
+    }
+  }
 
-                if (name.isEmpty || prompt.isEmpty || schedule.isEmpty) {
-                  ScaffoldMessenger.of(ctx).showSnackBar(
-                    const SnackBar(content: Text('Please fill all fields')),
-                  );
-                  return;
-                }
+  Future<Map<String, dynamic>?> _showJobDialog({
+    required String title,
+    required String actionLabel,
+    String initialName = '',
+    String initialPrompt = '',
+    String initialSchedule = '',
+    bool initialNoAgent = false,
+  }) async {
+    final nameCtrl = TextEditingController(text: initialName);
+    final promptCtrl = TextEditingController(text: initialPrompt);
+    final scheduleCtrl = TextEditingController(text: initialSchedule);
+    var noAgent = initialNoAgent;
 
-                final jobData = {
-                  'name': name,
-                  'prompt': prompt,
-                  'schedule': {
-                    'kind': 'cron',
-                    'run_at': schedule,
-                  },
-                  'no_agent': isNoAgent,
-                };
-
-                try {
-                  if (isEdit) {
-                    final jobId = job!['id'] as String;
-                    await _client.updateJob(jobId, jobData);
-                    if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Job updated')),
-                      );
-                    }
-                  } else {
-                    final response = await _client.apiPost('cron/jobs', body: jobData);
-                    if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Job created')),
-                      );
-                    }
-                  }
-                  if (mounted) {
-                    Navigator.pop(ctx);
-                    await _loadJobs();
-                  }
-                } catch (e) {
-                  if (mounted) {
-                    ScaffoldMessenger.of(ctx).showSnackBar(
-                      SnackBar(
-                        content: Text('Failed: $e'),
-                        backgroundColor: Colors.orange,
-                      ),
-                    );
-                  }
-                }
-              },
-              child: Text(isEdit ? 'Update' : 'Create'),
-              style: FilledButton.styleFrom(
-                backgroundColor: Theme.of(ctx).colorScheme.primary,
+    try {
+      return await showDialog<Map<String, dynamic>>(
+        context: context,
+        builder: (ctx) => StatefulBuilder(
+          builder: (ctx, setDialogState) => AlertDialog(
+            title: Text(title),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: nameCtrl,
+                    decoration: const InputDecoration(
+                      labelText: 'Name',
+                      hintText: 'e.g., Daily backup',
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: promptCtrl,
+                    decoration: const InputDecoration(
+                      labelText: 'Prompt',
+                      hintText: 'What should the agent do?',
+                    ),
+                    maxLines: 3,
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: scheduleCtrl,
+                    decoration: const InputDecoration(
+                      labelText: 'Schedule',
+                      hintText: 'e.g., 0 9 * * * or every 2h',
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  SwitchListTile(
+                    value: noAgent,
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Script only (no agent)'),
+                    subtitle: const Text(
+                      'Use for cron jobs backed by scripts.',
+                    ),
+                    onChanged: (value) => setDialogState(() => noAgent = value),
+                  ),
+                ],
               ),
             ),
-          ],
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Cancel'),
+              ),
+              FilledButton(
+                onPressed: () {
+                  final name = nameCtrl.text.trim();
+                  final prompt = promptCtrl.text.trim();
+                  final schedule = scheduleCtrl.text.trim();
+
+                  if (name.isEmpty || prompt.isEmpty || schedule.isEmpty) {
+                    ScaffoldMessenger.of(ctx).showSnackBar(
+                      const SnackBar(
+                        content: Text(
+                          'Name, prompt, and schedule are required',
+                        ),
+                      ),
+                    );
+                    return;
+                  }
+
+                  Navigator.pop(ctx, {
+                    'name': name,
+                    'prompt': prompt,
+                    'schedule': schedule,
+                    'no_agent': noAgent,
+                  });
+                },
+                child: Text(actionLabel),
+              ),
+            ],
+          ),
         ),
-      ),
-    );
+      );
+    } finally {
+      nameCtrl.dispose();
+      promptCtrl.dispose();
+      scheduleCtrl.dispose();
+    }
   }
 
   @override
@@ -355,9 +366,9 @@ class _CronScreenState extends State<CronScreen> {
       ),
       body: _buildBody(),
       floatingActionButton: FloatingActionButton(
-        onPressed: () => _showAddEditJobDialog(),
-        child: const Icon(Icons.add),
         tooltip: 'Add new cron job',
+        onPressed: _loading ? null : _showAddJobDialog,
+        child: const Icon(Icons.add),
       ),
     );
   }
@@ -387,10 +398,7 @@ class _CronScreenState extends State<CronScreen> {
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 24),
-              ElevatedButton(
-                onPressed: _loadJobs,
-                child: const Text('Retry'),
-              ),
+              ElevatedButton(onPressed: _loadJobs, child: const Text('Retry')),
             ],
           ),
         ),
@@ -404,10 +412,7 @@ class _CronScreenState extends State<CronScreen> {
           children: [
             Icon(Icons.schedule, size: 48, color: Colors.grey[600]),
             const SizedBox(height: 16),
-            Text(
-              'No cron jobs',
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
+            Text('No cron jobs', style: Theme.of(context).textTheme.titleLarge),
           ],
         ),
       );
@@ -431,7 +436,7 @@ class _CronScreenState extends State<CronScreen> {
           return Card(
             margin: const EdgeInsets.only(bottom: 8),
             child: InkWell(
-              onTap: () => _showAddEditJobDialog(job: job),
+              onTap: () => _showEditJobDialog(job),
               borderRadius: BorderRadius.circular(4),
               child: Padding(
                 padding: const EdgeInsets.all(12),
@@ -467,45 +472,69 @@ class _CronScreenState extends State<CronScreen> {
                             ),
                             child: const Text(
                               'script',
-                              style: TextStyle(fontSize: 10, color: Colors.blue),
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: Colors.blue,
+                              ),
                             ),
                           ),
                         PopupMenuButton<String>(
                           onSelected: (action) {
                             if (action == 'trigger') _triggerJob(job);
+                            if (action == 'edit') _showEditJobDialog(job);
                             if (action == 'toggle') _togglePause(job);
                             if (action == 'delete') _deleteJob(job);
                           },
                           itemBuilder: (_) => [
-                            PopupMenuItem(
+                            const PopupMenuItem(
                               value: 'trigger',
-                              child: const Row(children: [
-                                Icon(Icons.play_arrow, size: 18),
-                                SizedBox(width: 8),
-                                Text('Trigger now'),
-                              ]),
+                              child: Row(
+                                children: [
+                                  Icon(Icons.play_arrow, size: 18),
+                                  SizedBox(width: 8),
+                                  Text('Trigger now'),
+                                ],
+                              ),
+                            ),
+                            const PopupMenuItem(
+                              value: 'edit',
+                              child: Row(
+                                children: [
+                                  Icon(Icons.edit, size: 18),
+                                  SizedBox(width: 8),
+                                  Text('Edit'),
+                                ],
+                              ),
                             ),
                             PopupMenuItem(
                               value: 'toggle',
-                              child: Row(children: [
-                                Icon(
-                                  paused ? Icons.play_arrow : Icons.pause,
-                                  size: 18,
-                                ),
-                                const SizedBox(width: 8),
-                                Text(paused ? 'Resume' : 'Pause'),
-                              ]),
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    paused ? Icons.play_arrow : Icons.pause,
+                                    size: 18,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(paused ? 'Resume' : 'Pause'),
+                                ],
+                              ),
                             ),
                             const PopupMenuItem(
                               value: 'delete',
-                              child: Row(children: [
-                                Icon(Icons.delete, size: 18, color: Colors.red),
-                                SizedBox(width: 8),
-                                Text(
-                                  'Delete',
-                                  style: TextStyle(color: Colors.red),
-                                ),
-                              ]),
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.delete,
+                                    size: 18,
+                                    color: Colors.red,
+                                  ),
+                                  SizedBox(width: 8),
+                                  Text(
+                                    'Delete',
+                                    style: TextStyle(color: Colors.red),
+                                  ),
+                                ],
+                              ),
                             ),
                           ],
                         ),
@@ -515,10 +544,7 @@ class _CronScreenState extends State<CronScreen> {
                       const SizedBox(height: 6),
                       Text(
                         prompt,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey[500],
-                        ),
+                        style: TextStyle(fontSize: 12, color: Colors.grey[500]),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -527,7 +553,11 @@ class _CronScreenState extends State<CronScreen> {
                       const SizedBox(height: 4),
                       Row(
                         children: [
-                          Icon(Icons.schedule, size: 14, color: Colors.grey[600]),
+                          Icon(
+                            Icons.schedule,
+                            size: 14,
+                            color: Colors.grey[600],
+                          ),
                           const SizedBox(width: 4),
                           Expanded(
                             child: Text(
@@ -549,12 +579,11 @@ class _CronScreenState extends State<CronScreen> {
                         style: TextStyle(fontSize: 11, color: Colors.grey[600]),
                       ),
                     ],
-                    if (nextRun != null && nextRun.isNotEmpty) ...[
+                    if (nextRun != null && nextRun.isNotEmpty)
                       Text(
                         'Next: $nextRun',
                         style: TextStyle(fontSize: 11, color: Colors.grey[600]),
                       ),
-                    ],
                   ],
                 ),
               ),
