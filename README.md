@@ -4,7 +4,7 @@ Android client for [Hermes Agent](https://hermes-agent.nousresearch.com/) — ch
 
 ## Current release
 
-- Version: **1.0.0**
+- Version: **1.0.3**
 - Package: `com.hermesagent.hermes_android`
 - Recommended APK for most modern phones: `app-arm64-v8a-release.apk`
 - Other APKs: `app-armeabi-v7a-release.apk`, `app-x86_64-release.apk`
@@ -14,7 +14,7 @@ Android client for [Hermes Agent](https://hermes-agent.nousresearch.com/) — ch
 - **Hermes chat on Android** — browse sessions, create new chats, and send prompts to your Hermes Agent.
 - **Streaming responses** — chat uses the Hermes Gateway OpenAI-compatible streaming endpoint: `POST /v1/chat/completions`.
 - **Messaging-style UI** — dark/light/system themes, gold Hermes accent color, markdown rendering, relative timestamps, and responsive phone/tablet layouts.
-- **Gateway API integration** — sessions and chat run through the Hermes Gateway API Server, normally on port `8642`.
+- **Gateway API integration** — sessions and chat run through the Hermes Gateway API Server, normally on port `8642`, with HTTP and HTTPS endpoints supported.
 - **Dashboard integrations** — Memory, Cron Jobs, Skills, and Settings screens use the Hermes dashboard API, normally on port `9119`, on the same host.
 - **Model settings** — view and change the configured Hermes model where the dashboard exposes model settings.
 - **Cron management** — list, trigger, pause/resume, create, edit, and delete scheduled Hermes cron jobs.
@@ -150,12 +150,24 @@ In the Android app connection dialog:
 
 If using Memory/Cron/Skills/Settings remotely, keep the dashboard reachable on the same Tailscale host at port `9119`.
 
+## Connect over HTTPS
+
+For hosted/reverse-proxy deployments, enter the full HTTPS URL in the **Host** field:
+
+```text
+https://your-hermes-host.example.com
+```
+
+If no port is included, the app uses port `443`. If your HTTPS service uses a custom port, either include it in the URL (`https://host.example.com:8443`) or set the Port field to that value before connecting.
+
+For HTTPS connections, dashboard drawer screens use the same external HTTPS port. For local HTTP/LAN connections, chat uses port `8642` and dashboard screens use port `9119`.
+
 ### Security notes
 
 - Prefer Tailscale/VPN for remote use.
 - Do not port-forward the Gateway API Server or dashboard directly to the public internet.
 - Rotate `API_SERVER_KEY` if it is shared or exposed.
-- The app currently connects over HTTP to local/Tailscale addresses, so the private network boundary matters.
+- Local/Tailscale examples use HTTP, so the private network boundary matters. Use HTTPS for public or hosted endpoints.
 
 ## Architecture
 
@@ -239,6 +251,8 @@ The app accepts any of these forms and normalizes them when saving:
 http://192.168.1.50:8642
 100.64.12.34
 hermes-machine.tailnet-name.ts.net
+https://your-hermes-host.example.com
+https://your-hermes-host.example.com:8443
 ```
 
 ## Project structure

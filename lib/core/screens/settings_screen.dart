@@ -32,7 +32,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     super.initState();
     _client = DashboardClient(
       host: widget.connection.host,
-      port: widget.connection.port,
+      port: widget.connection.dashboardPort,
       useHttps: widget.connection.useHttps,
     );
     _loadData();

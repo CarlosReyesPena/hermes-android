@@ -29,7 +29,7 @@ class _MemoryScreenState extends State<MemoryScreen> {
     super.initState();
     _client = DashboardClient(
       host: widget.connection.host,
-      port: widget.connection.port,
+      port: widget.connection.dashboardPort,
       useHttps: widget.connection.useHttps,
     );
     _loadMemory();

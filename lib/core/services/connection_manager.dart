@@ -78,12 +78,15 @@ class ApiClient {
   final String _apiKey;
 
   // Keep the public parameter name `apiKey` while storing it privately.
-  ApiClient({required String baseUrl, required String apiKey})
-    : _apiKey = apiKey,
-      baseUrl = baseUrl.endsWith('/')
-          ? baseUrl.substring(0, baseUrl.length - 1)
-          : baseUrl,
-      _http = http.Client();
+  ApiClient({
+    required String baseUrl,
+    required String apiKey,
+    http.Client? httpClient,
+  }) : _apiKey = apiKey,
+       baseUrl = baseUrl.endsWith('/')
+           ? baseUrl.substring(0, baseUrl.length - 1)
+           : baseUrl,
+       _http = httpClient ?? http.Client();
 
   Map<String, String> get _headers => {
     'Authorization': 'Bearer $_apiKey',
@@ -145,10 +148,19 @@ class ApiClient {
 
   Future<bool> healthCheck() async {
     try {
-      final res = await _http
-          .get(Uri.parse('$baseUrl/health'))
+      final health = await _http
+          .get(Uri.parse('$baseUrl/health'), headers: _headers)
           .timeout(const Duration(seconds: 5));
-      return res.statusCode == 200;
+      if (health.statusCode == 401 || health.statusCode == 403) return false;
+      if (health.statusCode != 200) return false;
+
+      // /health may be intentionally public on some deployments. Confirm that
+      // the saved API key can also reach an authenticated endpoint before the
+      // add/update connection dialogs accept it as valid.
+      final sessions = await _http
+          .get(Uri.parse('$baseUrl/api/sessions'), headers: _headers)
+          .timeout(const Duration(seconds: 5));
+      return sessions.statusCode == 200;
     } catch (_) {
       return false;
     }
@@ -395,6 +407,8 @@ class DashboardClient {
   final String _baseUrl;
   String? _token;
 
+  String get baseUrl => _baseUrl;
+
   DashboardClient({
     required String host,
     int port = 9119,
@@ -562,17 +576,18 @@ class DashboardClient {
 
   Future<Map<String, dynamic>> updateJob(
     String jobId,
-    Map<String, dynamic> updates,
-  ) async {
+    Map<String, dynamic> updates, {
+    bool retried = false,
+  }) async {
     final headers = await _authHeaders();
     final res = await _http.put(
       Uri.parse('$_baseUrl/api/cron/jobs/$jobId'),
       headers: headers,
       body: jsonEncode(buildCronUpdateBody(updates)),
     );
-    if (res.statusCode == 401) {
+    if (res.statusCode == 401 && !retried) {
       _token = null;
-      return updateJob(jobId, updates);
+      return updateJob(jobId, updates, retried: true);
     }
     if (res.statusCode < 200 || res.statusCode >= 300) {
       throw Exception('HTTP ${res.statusCode}');

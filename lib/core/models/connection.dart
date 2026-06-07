@@ -33,6 +33,12 @@ class SavedConnection {
     return '$scheme://$host:$port';
   }
 
+  /// Dashboard/API-server topology differs between local LAN and HTTPS proxy
+  /// setups. Local Gateway chat connections normally use 8642 while the
+  /// dashboard lives on 9119. HTTPS reverse-proxy deployments usually expose
+  /// both API surfaces on the same external HTTPS port.
+  int get dashboardPort => useHttps ? port : 9119;
+
   /// Parses [input] as a URI and extracts host, port, and HTTPS flag.
   ///
   /// When the user provides an explicit port inside the URL (e.g.
@@ -65,9 +71,15 @@ class SavedConnection {
       );
     }
 
+    final normalizedPort = uri.hasPort
+        ? uri.port
+        : detectedHttps && fallbackPort == 8642
+        ? 443
+        : fallbackPort;
+
     return NormalizedConnectionHost(
       host: uri.host,
-      port: uri.hasPort ? uri.port : fallbackPort,
+      port: normalizedPort,
       useHttps: detectedHttps || (uri.scheme == 'https'),
     );
   }
