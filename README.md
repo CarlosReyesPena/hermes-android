@@ -4,20 +4,33 @@ Android client for [Hermes Agent](https://hermes-agent.nousresearch.com/) — ch
 
 ## Current release
 
-- Version: **1.0.3**
+- Version: **1.0.5**
 - Package: `com.hermesagent.hermes_android`
 - Recommended APK for most modern phones: `app-arm64-v8a-release.apk`
 - Other APKs: `app-armeabi-v7a-release.apk`, `app-x86_64-release.apk`
+- Download: [GitHub Releases](https://github.com/rusty4444/hermes-android/releases/latest)
+
+## What's new in v1.0.5
+
+- **Fixed chat message order** — new messages now appear at the bottom of the chat (fixes #60)
+- Streaming responses auto-scroll to bottom on send and refresh
+- Tool progress messages appear inline in the conversation
 
 ## Features
 
 - **Hermes chat on Android** — browse sessions, create new chats, and send prompts to your Hermes Agent.
-- **Streaming responses** — chat uses the Hermes Gateway OpenAI-compatible streaming endpoint: `POST /v1/chat/completions`.
-- **Messaging-style UI** — dark/light/system themes, gold Hermes accent color, markdown rendering, relative timestamps, and responsive phone/tablet layouts.
+- **Streaming responses** — chat uses the Hermes Gateway OpenAI-compatible streaming endpoint: `POST /v1/chat/completions`. Tokens appear in real-time with smooth auto-scroll.
+- **Messaging-style UI** — dark/light/system themes, gold Hermes accent color (`#D4AF37`), markdown rendering, relative timestamps, and responsive phone/tablet layouts.
+- **Gold/black Hermes branding** — distinctive gold accent on black background, custom app icon with mipmap densities, agent messages use grey bubbles.
 - **Gateway API integration** — sessions and chat run through the Hermes Gateway API Server, normally on port `8642`, with HTTP and HTTPS endpoints supported.
 - **Dashboard integrations** — Memory, Cron Jobs, Skills, and Settings screens use the Hermes dashboard API, normally on port `9119`, on the same host.
 - **Model settings** — view and change the configured Hermes model where the dashboard exposes model settings.
 - **Cron management** — list, trigger, pause/resume, create, edit, and delete scheduled Hermes cron jobs.
+- **Skills browser** — view available Hermes skills with descriptions and trigger conditions.
+- **Memory viewer** — inspect conversation memory across sessions.
+- **Verbose mode toggle** — show raw message metadata (role, tool calls, timestamps) in chat.
+- **Three-way theme toggle** — Dark / Light / System default.
+- **Keyboard handling** — auto-scroll on keyboard open, send action on Enter, FAB to scroll to bottom.
 
 ## Screenshots
 
@@ -37,29 +50,29 @@ Android client for [Hermes Agent](https://hermes-agent.nousresearch.com/) — ch
   </tr>
 </table>
 
-## Requirements
+## Quick start
 
-- Android device or emulator.
+### Prerequisites
+
+- Android device or emulator (Android 8+).
 - Hermes Agent installed on the host machine.
 - Hermes Gateway API Server reachable from the Android device.
-- `API_SERVER_KEY` from the Hermes host environment.
+- `API_SERVER_KEY` from the Hermes host environment (`~/.hermes/.env`).
 - Optional: Hermes dashboard reachable for Memory/Cron/Skills/Settings screens.
 
 Hermes Agent docs: <https://hermes-agent.nousresearch.com/docs>
 
-## Install the APK
+### Install the APK
 
-Download the latest APK from the GitHub release page.
+Download the latest APK from the [GitHub Releases](https://github.com/rusty4444/hermes-android/releases/latest) page.
 
-For most Android phones:
+For most Android phones, install the arm64 APK:
 
 ```bash
 adb install app-arm64-v8a-release.apk
 ```
 
 If sideloading directly on Android, enable **Install unknown apps** for your browser or file manager, then open the downloaded APK.
-
-## Set up your Hermes machine
 
 ### 1. Start the Gateway API Server
 
@@ -81,9 +94,9 @@ hermes dashboard --insecure --host 0.0.0.0 --tui --port 9119
 
 > `--host 0.0.0.0` is required when connecting from another device. A localhost-only dashboard cannot be reached from Android.
 
-## Connect over local Wi-Fi
+### 3. Connect the app
 
-1. Put the Android device and Hermes host on the same Wi-Fi/LAN.
+1. Put the Android device and Hermes host on the same Wi-Fi/LAN (or connect via Tailscale — see below).
 2. Find the Hermes host IP:
 
    ```bash
@@ -95,13 +108,14 @@ hermes dashboard --insecure --host 0.0.0.0 --tui --port 9119
    ```
 
 3. Open the Hermes Android app.
-4. Tap **+**.
+4. Tap **+** to add a connection.
 5. Enter:
    - **Label:** any name, e.g. `Home`
    - **Host:** the host IP, e.g. `192.168.1.50`
    - **Port:** `8642`
    - **API Key:** `API_SERVER_KEY` from the Hermes machine
 6. Tap the saved connection to browse sessions.
+7. Tap a session to start chatting, or create a new one.
 
 ## Connect remotely with Tailscale
 
@@ -152,7 +166,7 @@ If using Memory/Cron/Skills/Settings remotely, keep the dashboard reachable on t
 
 ## Connect over HTTPS
 
-For hosted/reverse-proxy deployments, enter the full HTTPS URL in the **Host** field:
+For hosted/reverse-proxy deployments (e.g., Hugging Face Spaces, VPS with nginx/Caddy), enter the full HTTPS URL in the **Host** field:
 
 ```text
 https://your-hermes-host.example.com
@@ -183,6 +197,49 @@ Android app (Flutter)
    ├─ /api/skills
    └─ /api/model/*
 ```
+
+## Using the app
+
+### Chat screen
+
+- **Send messages** — Type in the input field and tap the send button or press Enter.
+- **Streaming responses** — The agent's response appears token-by-token in real-time. The chat auto-scrolls to the bottom as new tokens arrive.
+- **Tool progress** — When the agent uses tools, inline progress messages show the tool name, status, and progress.
+- **Verbose mode** — Toggle in the app settings to show raw message metadata (role, tool call IDs, timestamps).
+- **Markdown rendering** — Assistant messages render markdown (code blocks, tables, lists, links).
+- **Relative timestamps** — Messages show "2m ago", "3h ago", etc.
+
+### Session list
+
+- Browse all Hermes sessions.
+- Tap a session to open its chat.
+- Pull to refresh the session list.
+- Create a new session from the session list header.
+
+### Navigation drawer (☰)
+
+Access these dashboard-powered screens:
+
+- **Memory** — View conversation memory across sessions. Shows stored facts, preferences, and project context.
+- **Cron Jobs** — List all scheduled cron jobs. Trigger, pause/resume, create, edit, or delete jobs.
+- **Skills** — Browse available Hermes skills with descriptions and trigger conditions.
+- **Settings** — View and change the configured Hermes model, theme preference, and verbose mode.
+
+### Theme
+
+- Three-way toggle: **Dark** / **Light** / **System default**.
+- Gold Hermes accent (`#D4AF37`) on dark mode; adapted for light mode.
+
+### Cron job management
+
+The Cron Jobs screen supports full CRUD:
+
+- **List** — See all jobs with status (enabled/disabled), next run, and schedule.
+- **Create** — Tap **+** to add a new job with schedule (cron expression or interval), prompt, and optional skills.
+- **Edit** — Tap a job to modify its schedule, prompt, skills, or status.
+- **Trigger** — Manually run a job immediately.
+- **Pause/Resume** — Toggle job enabled state.
+- **Delete** — Remove a job (with confirmation).
 
 ## Development
 
@@ -233,13 +290,26 @@ Chat/session features use port `8642`. Memory, Cron Jobs, Skills, and Settings u
 
 ### Chat fails with an auth error
 
-Check that the Android connection's API key matches `API_SERVER_KEY` from the Hermes machine.
+Check that the Android connection's API key matches `API_SERVER_KEY` from the Hermes machine (`~/.hermes/.env`).
 
 ### The app cannot find the host
 
 - Verify phone and host are on the same Wi-Fi or same Tailscale tailnet.
 - Try the raw IP before a hostname.
 - Check local firewall rules for ports `8642` and `9119`.
+- On Android, ensure the app has network permission (granted by default).
+
+### Streaming stops or messages don't appear
+
+- The SSE connection may have timed out. Pull to refresh the session list and re-enter the chat.
+- Check that the Gateway API Server is running and responsive: `curl http://<host>:8642/api/sessions`.
+- If using a reverse proxy, ensure it supports long-lived SSE connections (no aggressive timeouts).
+
+### Dashboard screens show empty or error
+
+- Verify the dashboard is running with `--host 0.0.0.0 --insecure`.
+- Check the dashboard port matches the connection (port `9119` for local/Tailscale, same HTTPS port for hosted).
+- The dashboard must be on the same host as the Gateway API Server for the app's drawer to reach it.
 
 ### Host field examples
 
