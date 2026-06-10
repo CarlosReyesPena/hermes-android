@@ -81,7 +81,7 @@ class _ChatScreenState extends State<ChatScreen> {
   void _scrollToBottom() {
     if (_scrollController.hasClients) {
       _scrollController.animateTo(
-        0,
+        _scrollController.position.maxScrollExtent,
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeOut,
       );
@@ -138,9 +138,9 @@ class _ChatScreenState extends State<ChatScreen> {
       _sending = true;
       _streaming = true;
       _showScrollToBottom = false;
-      _messages.insert(0, {'role': 'user', 'content': text});
+      _messages.add({'role': 'user', 'content': text});
       // Insert a placeholder streaming message
-      _messages.insert(0, {'role': 'assistant', 'content': ''});
+      _messages.add({'role': 'assistant', 'content': ''});
     });
 
     WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
@@ -153,9 +153,9 @@ class _ChatScreenState extends State<ChatScreen> {
       onToken: (token) {
         if (!mounted) return;
         setState(() {
-          if (_messages.isNotEmpty && _messages[0]['role'] == 'assistant') {
-            _messages[0]['content'] =
-                (_messages[0]['content'] as String) + token;
+          if (_messages.isNotEmpty && _messages.last['role'] == 'assistant') {
+            _messages.last['content'] =
+                (_messages.last['content'] as String) + token;
           }
         });
       },
@@ -175,6 +175,7 @@ class _ChatScreenState extends State<ChatScreen> {
             _sending = false;
             _showScrollToBottom = false;
           });
+          _scrollToBottom();
         } catch (e) {
           setState(() {
             _streaming = false;
@@ -186,8 +187,8 @@ class _ChatScreenState extends State<ChatScreen> {
         if (!mounted) return;
         // Remove the placeholder assistant message
         setState(() {
-          if (_messages.isNotEmpty && _messages[0]['role'] == 'assistant') {
-            _messages.removeAt(0);
+          if (_messages.isNotEmpty && _messages.last['role'] == 'assistant') {
+            _messages.removeLast();
           }
         });
         _handleSendError(text, error);
@@ -200,9 +201,9 @@ class _ChatScreenState extends State<ChatScreen> {
       _sending = false;
       _streaming = false;
       if (_messages.isNotEmpty &&
-          _messages[0]['role'] == 'user' &&
-          _messages[0]['content'] == text) {
-        _messages.removeAt(0);
+          _messages.last['role'] == 'user' &&
+          _messages.last['content'] == text) {
+        _messages.removeLast();
       }
     });
 
@@ -251,7 +252,9 @@ class _ChatScreenState extends State<ChatScreen> {
         _messages[idx] = payload;
       } else {
         final insertAt =
-            _messages.isNotEmpty && _messages[0]['role'] == 'assistant' ? 1 : 0;
+            _messages.isNotEmpty && _messages.last['role'] == 'assistant'
+                ? _messages.length - 1
+                : _messages.length;
         _messages.insert(insertAt, payload);
       }
     });
@@ -401,7 +404,6 @@ class _ChatScreenState extends State<ChatScreen> {
     return ListView.builder(
       controller: _scrollController,
       padding: const EdgeInsets.only(bottom: 4),
-      reverse: true,
       itemCount: _messages.length,
       itemBuilder: (context, index) {
         final msg = _messages[index];
