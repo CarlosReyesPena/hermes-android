@@ -210,6 +210,42 @@ Android app (Flutter)
 - **Markdown rendering** — Assistant messages render markdown (code blocks, tables, lists, links).
 - **Relative timestamps** — Messages show "2m ago", "3h ago", etc.
 
+### Voice chat
+
+The chat input bar has two voice controls:
+
+| Button | Icon | What it does |
+|--------|------|-------------|
+| **Mic** | 🎤 / 🎤🔴 | Tap to start voice dictation. Speak your message — it appears in the input field and sends automatically when you pause. Tap again (or the red stop icon) to cancel. |
+| **Voice reply toggle** | 🔊 / 🔇 | Toggles whether Hermes reads its response aloud after a voice-input message. On = 🔊 (volume up), Off = 🔇 (volume off). |
+
+**How voice replies work:**
+
+1. Tap the mic, speak your question, and wait for the recognition to finish (the text appears and auto-sends).
+2. Hermes streams its response as text in the chat as usual.
+3. After the full response arrives, if the voice reply toggle is on (🔊), the app reads the response aloud using text-to-speech.
+
+Voice replies **only** trigger when you send a message via the mic button. Typed messages produce text responses only.
+
+#### Setting up text-to-speech (Android)
+
+Spoken replies require Google Text-to-Speech to be installed and configured on your device. The app uses the device's built-in TTS engine — it does not bundle its own voices.
+
+**Step-by-step:**
+
+1. **Install Google Text-to-Speech** — If not already on your device, install from the Play Store: [Google Text-to-Speech](https://play.google.com/store/apps/details?id=com.google.android.tts)
+2. **Set as default engine** — Settings → Accessibility → Text-to-speech output → Preferred engine → **Google Text-to-Speech**
+3. **Download voice data** — In the same TTS settings screen, tap the gear icon ⚙️ next to Google Text-to-Speech → Install voice data → select **English (Australia)** or your preferred English voice → download
+4. **Check media volume** — TTS uses the **media** audio stream, not the ringer. Turn up media volume and make sure your phone isn't in silent/vibrate-only mode.
+5. **Test TTS** — In the TTS settings screen, tap "Play" to hear a test phrase. If you hear it, the app should work.
+
+**Troubleshooting voice:**
+
+- **Mic button does nothing** — Speech recognition may be unavailable on your device. Ensure Google app is installed and has microphone permission.
+- **Voice reply toggle is on (🔊) but Hermes doesn't speak** — Google TTS is likely not installed or has no voice data downloaded. Follow the TTS setup steps above.
+- **Hermes speaks quietly or too fast** — Adjust speech rate and volume in Settings → Accessibility → Text-to-speech output.
+- **Recognition is inaccurate** — Speak clearly, reduce background noise, and check that the device's system language includes English.
+
 ### Session list
 
 - Browse all Hermes sessions.
@@ -311,6 +347,14 @@ Check that the Android connection's API key matches `API_SERVER_KEY` from the He
 - Verify the dashboard is running with `--host 0.0.0.0 --insecure`.
 - Check the dashboard port matches the connection (port `9119` for local/Tailscale, same HTTPS port for hosted).
 - The dashboard must be on the same host as the Gateway API Server for the app's drawer to reach it.
+
+### Voice dictation or spoken replies aren't working
+
+- **Spoken replies not working** — Install Google Text-to-Speech, set it as the default engine, and download English voice data. See [Setting up text-to-speech](#setting-up-text-to-speech-android) above for step-by-step instructions.
+- **Speech recognition not working** — Ensure the Google app is installed and has microphone permission (Settings → Apps → Hermes → Permissions → Microphone).
+- **Voice reply toggle is off** — Check the speaker icon in the chat input bar: 🔊 = on, 🔇 = off. Tap it to enable spoken replies.
+- **Media volume is zero** — TTS uses the media audio stream, not the ringer. Turn up media volume with the physical volume buttons while on the home screen.
+- **Hermes speaks but audio is quiet or fast** — Adjust speech rate and volume in Settings → Accessibility → Text-to-speech output.
 
 ### Host field examples
 
