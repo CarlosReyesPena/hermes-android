@@ -109,7 +109,7 @@ hermes dashboard --insecure --host 0.0.0.0 --tui --port 9119
 
 Password-protected dashboard (recommended on shared networks) — start it with a
 basic-auth provider instead of `--insecure`, then enter the username/password in
-the app's **Dashboard Login** dialog (see [Dashboard access](#4-optional-configure-dashboard-access)).
+the app's **Dashboard / Proxy Settings** dialog (see [Dashboard access](#4-optional-configure-dashboard-access)).
 
 > `--host 0.0.0.0` is required when connecting from another device. A localhost-only dashboard cannot be reached from Android.
 

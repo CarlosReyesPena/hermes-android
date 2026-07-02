@@ -4,6 +4,24 @@ All notable changes to this project are documented here. This project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html). Release notes for
 versions prior to 1.0.7 are in the **What's new** sections of the [README](README.md).
 
+## [1.0.8]
+
+### Added
+- **Reverse-proxy path prefixes** for Gateway API and dashboard routes. Gateway
+  prefixes are applied before `/api` and `/v1` routes; dashboard prefixes are
+  applied before dashboard `/api` routes.
+- **Proxied dashboard mode** for deployments where nginx/Caddy/another proxy
+  injects dashboard authentication. In this mode the app sends clean dashboard
+  requests without scraping the SPA token or using password login.
+- **Dashboard / Proxy Settings** can edit gateway prefix, dashboard prefix,
+  proxied-dashboard mode, dashboard port, and dashboard credentials after a
+  connection is created.
+
+### Fixed
+- Existing chat history, streaming chat completions, session browsing, API-key
+  validation, and dashboard validation now consistently use configured path
+  prefixes.
+
 ## [1.0.7]
 
 ### Added
