@@ -465,6 +465,10 @@ lib/
         └── icon.png                   # App icon source
 ```
 
+## Credits
+
+- **grunjol** — contributed PR #68: reverse-proxy path prefix and proxied dashboard support.
+
 ## License
 
 MIT
