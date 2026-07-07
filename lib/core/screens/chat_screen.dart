@@ -54,6 +54,8 @@ class _ChatScreenState extends State<ChatScreen> {
   // Scroll management
   final _scrollController = ScrollController();
   bool _showScrollToBottom = false;
+  double _lastPixels = 0;
+  static final Map<String, double> _savedPositions = {};
 
   @override
   void initState() {
@@ -77,6 +79,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
   @override
   void dispose() {
+    _savedPositions[widget.session.id] = _lastPixels;
     _speechToText.cancel();
     _flutterTts.stop();
     _client.close();
@@ -209,6 +212,9 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   void _onScroll() {
+    if (_scrollController.hasClients) {
+      _lastPixels = _scrollController.position.pixels;
+    }
     final atBottom =
         _scrollController.hasClients &&
         _scrollController.position.pixels >=
@@ -241,7 +247,24 @@ class _ChatScreenState extends State<ChatScreen> {
         _messages = messages;
         _loading = false;
       });
-      _scrollToBottom();
+      final saved = _savedPositions[widget.session.id];
+      if (saved != null) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (_scrollController.hasClients) {
+            _scrollController.jumpTo(
+              saved.clamp(0.0, _scrollController.position.maxScrollExtent),
+            );
+          }
+        });
+      } else {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (_scrollController.hasClients) {
+            _scrollController.jumpTo(
+              _scrollController.position.maxScrollExtent,
+            );
+          }
+        });
+      }
     } catch (e) {
       if (!mounted) return;
       final errStr = e.toString();
@@ -327,7 +350,24 @@ class _ChatScreenState extends State<ChatScreen> {
               await _speakAssistantText(assistantText);
             }
           }
-          _scrollToBottom();
+          final saved = _savedPositions[widget.session.id];
+      if (saved != null) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (_scrollController.hasClients) {
+            _scrollController.jumpTo(
+              saved.clamp(0.0, _scrollController.position.maxScrollExtent),
+            );
+          }
+        });
+      } else {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (_scrollController.hasClients) {
+            _scrollController.jumpTo(
+              _scrollController.position.maxScrollExtent,
+            );
+          }
+        });
+      }
         } catch (e) {
           setState(() {
             _streaming = false;
