@@ -171,6 +171,20 @@ class ApiClient {
     return list.whereType<Map<String, dynamic>>().toList();
   }
 
+  Future<void> deleteSession(String sessionId) async {
+    final encodedId = Uri.encodeComponent(sessionId);
+    final res = await _http.delete(
+      Uri.parse('$baseUrl/api/sessions/$encodedId'),
+      headers: _headers,
+    );
+    // Treat a stale local row as already synced: the remote no longer has it,
+    // so the UI can safely remove it from history.
+    if (res.statusCode == 404) return;
+    if (res.statusCode < 200 || res.statusCode >= 300) {
+      throw Exception('HTTP ${res.statusCode}: ${res.body}');
+    }
+  }
+
   // ── Models ───────────────────────────────────────────────────────────
 
   Future<List<String>> getModels() async {

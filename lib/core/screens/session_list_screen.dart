@@ -21,6 +21,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
   bool _loading = true;
   String? _error;
   bool _healthOk = false;
+  final Set<String> _deletingSessionIds = {};
 
   @override
   void initState() {
@@ -63,6 +64,61 @@ class _SessionListScreenState extends State<SessionListScreen> {
         _error = e.toString();
         _loading = false;
       });
+    }
+  }
+
+  Future<void> _confirmDeleteSession(Session session) async {
+    final title = session.title.trim().isEmpty
+        ? 'Untitled session'
+        : session.title;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Delete session?'),
+        content: Text(
+          'Delete "$title" from the remote Hermes history? This cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            style: TextButton.styleFrom(
+              foregroundColor: Theme.of(dialogContext).colorScheme.error,
+            ),
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      await _deleteSession(session);
+    }
+  }
+
+  Future<void> _deleteSession(Session session) async {
+    if (_deletingSessionIds.contains(session.id)) return;
+    setState(() => _deletingSessionIds.add(session.id));
+
+    try {
+      await _client.deleteSession(session.id);
+      if (!mounted) return;
+      setState(() {
+        _sessions.removeWhere((item) => item.id == session.id);
+        _deletingSessionIds.remove(session.id);
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Session deleted from remote Hermes.')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _deletingSessionIds.remove(session.id));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Could not delete session: $e')));
     }
   }
 
@@ -288,13 +344,22 @@ class _SessionListScreenState extends State<SessionListScreen> {
         itemCount: _sessions.length,
         itemBuilder: (context, index) {
           final session = _sessions[index];
+          final isDeleting = _deletingSessionIds.contains(session.id);
           return Card(
             margin: const EdgeInsets.only(bottom: 8),
             child: ListTile(
+              enabled: !isDeleting,
               leading: Icon(
                 session.isActive ? Icons.chat : Icons.chat_bubble_outline,
                 color: session.isActive ? const Color(0xFFD4AF37) : Colors.grey,
               ),
+              trailing: isDeleting
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : null,
               title: Text(
                 session.title,
                 maxLines: 1,
@@ -319,17 +384,22 @@ class _SessionListScreenState extends State<SessionListScreen> {
                 ],
               ),
               isThreeLine: session.preview.isNotEmpty,
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => ChatScreen(
-                      connection: widget.connection,
-                      session: session,
-                    ),
-                  ),
-                );
-              },
+              onLongPress: isDeleting
+                  ? null
+                  : () => _confirmDeleteSession(session),
+              onTap: isDeleting
+                  ? null
+                  : () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => ChatScreen(
+                            connection: widget.connection,
+                            session: session,
+                          ),
+                        ),
+                      );
+                    },
             ),
           );
         },

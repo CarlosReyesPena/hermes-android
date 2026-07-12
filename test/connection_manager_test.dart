@@ -266,6 +266,37 @@ void main() {
       expect(await client.healthCheck(), isFalse);
       client.close();
     });
+
+    test('deleteSession deletes a remote Hermes session', () async {
+      final client = ApiClient(
+        baseUrl: 'http://hermes.local:8642',
+        apiKey: 'valid-key',
+        httpClient: MockClient((request) async {
+          expect(request.method, 'DELETE');
+          expect(request.url.path, '/api/sessions/mob-123');
+          expect(request.headers['authorization'], 'Bearer valid-key');
+          return http.Response('{"object":"hermes.session.deleted"}', 200);
+        }),
+      );
+
+      await client.deleteSession('mob-123');
+      client.close();
+    });
+
+    test('deleteSession treats already-missing sessions as synced', () async {
+      final client = ApiClient(
+        baseUrl: 'http://hermes.local:8642',
+        apiKey: 'valid-key',
+        httpClient: MockClient((request) async {
+          expect(request.method, 'DELETE');
+          expect(request.url.path, '/api/sessions/mob-absent');
+          return http.Response('not found', 404);
+        }),
+      );
+
+      await client.deleteSession('mob-absent');
+      client.close();
+    });
   });
 
   group('GatewayChatClient', () {
