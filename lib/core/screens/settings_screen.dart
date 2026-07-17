@@ -322,6 +322,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
         _VoicePicker(),
         const SizedBox(height: 16),
 
+        // ---- Section: Session Sources ----
+        _buildSectionHeader('Session Sources'),
+        _SessionSourcesFilter(connectionId: widget.connection.id),
+        const SizedBox(height: 16),
+
         // ---- Section: Connection ----
         _buildSectionHeader('Connection'),
         Card(
@@ -690,6 +695,90 @@ class _VoicePickerState extends State<_VoicePicker> {
       ),
       items: items,
       onChanged: _set,
+    );
+  }
+}
+
+/// Checkbox list of session sources. Unchecked sources are filtered
+/// client-side from the fetched session list by `Session.source`.
+class _SessionSourcesFilter extends StatefulWidget {
+  final String connectionId;
+  const _SessionSourcesFilter({required this.connectionId});
+
+  @override
+  State<_SessionSourcesFilter> createState() => _SessionSourcesFilterState();
+}
+
+class _SessionSourcesFilterState extends State<_SessionSourcesFilter> {
+  /// Known session source types. Hermes Gateway persists `session.source` for
+  /// every session. Sources not in this list are always shown (whitelisted).
+  static const Map<String, String> _knownSources = {
+    'acp': 'Autonomous agents',
+    'api_server': 'External API clients',
+    'cli': 'Command-line chats',
+    'cron': 'Scheduled tasks',
+    'desktop': 'Desktop app',
+    'discord': 'Discord chats',
+    'gateway': 'Gateway API access',
+    'mobile': 'Phone or tablet',
+    'signal': 'Signal messages',
+    'slack': 'Slack chats',
+    'telegram': 'Telegram messages',
+    'tool': 'Developer tool calls',
+    'tui': 'Terminal sessions',
+    'whatsapp': 'WhatsApp messages',
+  };
+
+  Set<String> _excluded = {};
+
+  String get _prefsKey =>
+      'excluded_session_sources_${widget.connectionId}';
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _excluded =
+          prefs.getStringList(_prefsKey)?.toSet() ?? {};
+    });
+  }
+
+  Future<void> _toggle(String source, bool enabled) async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      if (enabled) {
+        _excluded.remove(source);
+      } else {
+        _excluded.add(source);
+      }
+    });
+    await prefs.setStringList(_prefsKey, _excluded.toList());
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Column(
+        children: _knownSources.entries.map((entry) {
+          final source = entry.key;
+          final label = entry.value;
+          final isVisible = !_excluded.contains(source);
+          return CheckboxListTile(
+            title: Text(label),
+            subtitle: Text(source,
+                style: const TextStyle(fontSize: 12, color: Colors.grey)),
+            value: isVisible,
+            onChanged: (val) => _toggle(source, val ?? true),
+            dense: true,
+            controlAffinity: ListTileControlAffinity.leading,
+          );
+        }).toList(),
+      ),
     );
   }
 }

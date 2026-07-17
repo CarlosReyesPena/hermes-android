@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../services/connection_manager.dart';
 import 'chat_screen.dart';
 import 'settings_screen.dart';
@@ -54,8 +55,14 @@ class _SessionListScreenState extends State<SessionListScreen> {
     try {
       final sessions = await _client.getSessions();
       if (!mounted) return;
+      final prefs = await SharedPreferences.getInstance();
+      final key = 'excluded_session_sources_${widget.connection.id}';
+      final excluded = prefs.getStringList(key) ?? [];
+      final filtered =
+          sessions.where((s) => !excluded.contains(s.source)).toList();
+      if (!mounted) return;
       setState(() {
-        _sessions = sessions;
+        _sessions = filtered;
         _loading = false;
       });
     } catch (e) {
