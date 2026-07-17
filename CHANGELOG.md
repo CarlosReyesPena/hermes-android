@@ -4,6 +4,19 @@ All notable changes to this project are documented here. This project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html). Release notes for
 versions prior to 1.0.7 are in the **What's new** sections of the [README](README.md).
 
+## [1.0.12]
+
+### Added
+- **Session source filters** in Settings. Mobile users can now choose which
+  Hermes session origins appear in the session list, including scheduled tasks,
+  developer tool calls, CLI chats, desktop sessions, and messaging platforms.
+- Filter preferences are scoped per saved connection so settings for one Hermes
+  gateway do not affect another.
+
+### Changed
+- Session filtering is performed client-side against each session's recorded
+  source, so it works without any Hermes Gateway API changes.
+
 ## [1.0.8]
 
 ### Added
