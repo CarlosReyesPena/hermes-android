@@ -467,6 +467,7 @@ lib/
 
 ## Credits
 
+- **louquillio** — contributed PR #74: session source filters in Settings.
 - **grunjol** — contributed PR #68: reverse-proxy path prefix and proxied dashboard support.
 - **sternbergm** — contributed PR #67: password-protected dashboards and configurable dashboard port.
 
