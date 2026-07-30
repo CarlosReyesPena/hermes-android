@@ -82,7 +82,7 @@ local operator logs are intentionally excluded.
 ## Validation
 
 - 110 Flutter tests pass.
-- Static analysis reports no errors or warnings; four style suggestions remain.
+- Static analysis passes with `--fatal-infos`.
 - The synthetic gateway contract test covers authentication, session lifecycle,
   model/reasoning configuration, files, streaming, interruption, interactive
   prompts, activity, notifications, and subagents.

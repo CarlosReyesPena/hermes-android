@@ -39,11 +39,7 @@ class DesktopGatewayClient {
     'subagent.complete',
   };
 
-  DesktopGatewayClient._({
-    required String baseUrl,
-    required DashboardClient dashboard,
-  }) : _baseUrl = baseUrl,
-       _dashboard = dashboard;
+  DesktopGatewayClient._({required this._baseUrl, required this._dashboard});
 
   factory DesktopGatewayClient.fromConnection(SavedConnection connection) {
     final raw = connection.desktopGatewayUrl?.trim() ?? '';

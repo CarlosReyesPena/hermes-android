@@ -75,11 +75,11 @@ class WsClient {
   StreamCallback? onStreamEvent;
   ConnectionCallback? onConnectionChanged;
 
-  // Keep the public parameter name `token` while storing it privately.
-  // ignore: prefer_initializing_formals
-  WsClient(this.baseUrl, {String? token, String? ticket})
-    : _token = token,
-      _ticket = ticket;
+  factory WsClient(String baseUrl, {String? token, String? ticket}) {
+    return WsClient._(baseUrl, token, ticket);
+  }
+
+  WsClient._(this.baseUrl, this._token, this._ticket);
 
   /// Connect to the WebSocket gateway.
   Future<void> connect() async {
