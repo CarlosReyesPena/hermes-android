@@ -28,6 +28,7 @@ android {
        targetSdk = 36
        versionCode = flutter.versionCode
        versionName = flutter.versionName
+       manifestPlaceholders["appLabel"] = "Hermes Agent"
    }
 
    signingConfigs {
@@ -42,8 +43,19 @@ android {
    }
 
    buildTypes {
+       debug {
+           applicationIdSuffix = ".dev"
+           versionNameSuffix = "-dev"
+           manifestPlaceholders["appLabel"] = "Hermes Agent Dev"
+       }
        release {
-           signingConfig = signingConfigs.getByName("release")
+           // CI/local analysis may build a release artifact without access to
+           // the private distribution keystore. Never fall back to the debug
+           // key: leave the APK explicitly unsigned until the real
+           // key.properties file is supplied.
+           if (keystorePath.exists()) {
+               signingConfig = signingConfigs.getByName("release")
+           }
        }
    }
 }

@@ -166,6 +166,19 @@ class _HomeScreenState extends State<HomeScreen> {
     setState(() => _connections = widget.connManager.getConnections());
   }
 
+  Future<void> _closeDialogAndRefresh(BuildContext dialogContext) async {
+    // Let editable controls detach from the IME before removing their route.
+    // Rebuilding HomeScreen while the dialog still owns focus can deactivate
+    // inherited dependencies out of order on Android.
+    FocusManager.instance.primaryFocus?.unfocus();
+    await WidgetsBinding.instance.endOfFrame;
+    if (!dialogContext.mounted) return;
+    Navigator.of(dialogContext).pop();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _refresh();
+    });
+  }
+
   @override
   void initState() {
     super.initState();
@@ -219,6 +232,7 @@ class _HomeScreenState extends State<HomeScreen> {
               gatewayPrefix,
               dashboardPrefix,
               dashboardProxied = false,
+              desktopGatewayUrl,
               dashboardPort,
               dashboardUsername,
               dashboardPassword,
@@ -232,6 +246,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   gatewayPrefix: gatewayPrefix,
                   dashboardPrefix: dashboardPrefix,
                   dashboardProxied: dashboardProxied,
+                  desktopGatewayUrl: desktopGatewayUrl,
                   dashboardPort: dashboardPort,
                   dashboardUsername: dashboardUsername,
                   dashboardPassword: dashboardPassword,
@@ -246,6 +261,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   gatewayPrefix: gatewayPrefix,
                   dashboardPrefix: dashboardPrefix,
                   dashboardProxied: dashboardProxied,
+                  desktopGatewayUrl: desktopGatewayUrl,
                   dashboardPort: dashboardPort,
                   dashboardUsername: dashboardUsername,
                   dashboardPassword: dashboardPassword,
@@ -344,8 +360,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
                         if (ok) {
                           widget.connManager.updateApiKey(conn.id, key);
-                          _refresh();
-                          Navigator.pop(ctx);
+                          await _closeDialogAndRefresh(ctx);
                         } else {
                           setDialogState(() {
                             error = 'Invalid API key. Server returned 401.';
@@ -575,8 +590,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           dashboardPrefix: dashboardPrefix,
                           dashboardProxied: proxied,
                         );
-                        _refresh();
-                        Navigator.pop(ctx);
+                        await _closeDialogAndRefresh(ctx);
                       } catch (e) {
                         client.close();
                         if (!ctx.mounted) return;
@@ -731,6 +745,7 @@ class _AddDialog extends StatefulWidget {
     String? gatewayPrefix,
     String? dashboardPrefix,
     bool dashboardProxied,
+    String? desktopGatewayUrl,
     int? dashboardPort,
     String? dashboardUsername,
     String? dashboardPassword,
@@ -752,6 +767,7 @@ class _AddDialogState extends State<_AddDialog> {
   late final TextEditingController _dashPort;
   late final TextEditingController _dashUser;
   late final TextEditingController _dashPass;
+  late final TextEditingController _desktopGatewayUrl;
   late bool _showDashboard;
   late bool _dashboardProxied;
   bool _validating = false;
@@ -780,6 +796,9 @@ class _AddDialogState extends State<_AddDialog> {
     );
     _dashUser = TextEditingController(text: conn?.dashboardUsername ?? '');
     _dashPass = TextEditingController(text: conn?.dashboardPassword ?? '');
+    _desktopGatewayUrl = TextEditingController(
+      text: conn?.desktopGatewayUrl ?? '',
+    );
     _dashboardProxied = conn?.dashboardProxied ?? false;
     _showDashboard =
         conn?.gatewayPrefix?.isNotEmpty == true ||
@@ -787,7 +806,8 @@ class _AddDialogState extends State<_AddDialog> {
         conn?.dashboardPortOverride != null ||
         conn?.dashboardUsername?.isNotEmpty == true ||
         conn?.dashboardPassword?.isNotEmpty == true ||
-        _dashboardProxied;
+        _dashboardProxied ||
+        conn?.desktopGatewayUrl?.isNotEmpty == true;
   }
 
   Future<void> _validateAndSave() async {
@@ -838,6 +858,7 @@ class _AddDialogState extends State<_AddDialog> {
       final dashPortText = _dashPort.text.trim();
       final dashUser = _dashUser.text.trim();
       final dashPass = _dashPass.text.trim();
+      final desktopGatewayUrl = _desktopGatewayUrl.text.trim();
       final dashPort = dashPortText.isEmpty ? null : int.tryParse(dashPortText);
 
       // If the user supplied any dashboard details, validate them before saving
@@ -891,6 +912,7 @@ class _AddDialogState extends State<_AddDialog> {
         gatewayPrefix: gatewayPrefix.isEmpty ? null : gatewayPrefix,
         dashboardPrefix: dashboardPrefix.isEmpty ? null : dashboardPrefix,
         dashboardProxied: _dashboardProxied,
+        desktopGatewayUrl: desktopGatewayUrl.isEmpty ? null : desktopGatewayUrl,
         dashboardPort: dashPort,
         dashboardUsername: dashUser.isEmpty ? null : dashUser,
         dashboardPassword: dashPass.isEmpty ? null : dashPass,
@@ -1061,6 +1083,18 @@ class _AddDialogState extends State<_AddDialog> {
                 ),
                 obscureText: true,
               ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _desktopGatewayUrl,
+                decoration: const InputDecoration(
+                  labelText: 'Desktop Gateway URL (optional)',
+                  hintText: 'https://hermes-desktop.example.lan',
+                  helperText:
+                      'Enables file attachments through the Desktop remote gateway.',
+                ),
+                keyboardType: TextInputType.url,
+                autocorrect: false,
+              ),
             ],
           ],
         ),
@@ -1098,6 +1132,7 @@ class _AddDialogState extends State<_AddDialog> {
     _dashPort.dispose();
     _dashUser.dispose();
     _dashPass.dispose();
+    _desktopGatewayUrl.dispose();
     super.dispose();
   }
 }

@@ -36,6 +36,7 @@ class ConnectionManager {
     String? gatewayPrefix,
     String? dashboardPrefix,
     bool dashboardProxied = false,
+    String? desktopGatewayUrl,
     int? dashboardPort,
     String? dashboardUsername,
     String? dashboardPassword,
@@ -51,6 +52,7 @@ class ConnectionManager {
       gatewayPrefix: gatewayPrefix,
       dashboardPrefix: dashboardPrefix,
       dashboardProxied: dashboardProxied,
+      desktopGatewayUrl: desktopGatewayUrl?.trim(),
       dashboardPortOverride: dashboardPort,
       dashboardUsername: dashboardUsername,
       dashboardPassword: dashboardPassword,
@@ -71,6 +73,7 @@ class ConnectionManager {
     String? gatewayPrefix,
     String? dashboardPrefix,
     bool dashboardProxied = false,
+    String? desktopGatewayUrl,
     int? dashboardPort,
     String? dashboardUsername,
     String? dashboardPassword,
@@ -84,6 +87,7 @@ class ConnectionManager {
     final dashboard = dashboardPrefix?.trim();
     final dashUser = dashboardUsername?.trim();
     final dashPass = dashboardPassword?.trim();
+    final desktopGateway = desktopGatewayUrl?.trim();
 
     current[idx] = current[idx].copyWith(
       label: label,
@@ -98,6 +102,10 @@ class ConnectionManager {
           : dashboard,
       clearDashboardPrefix: dashboard != null && dashboard.isEmpty,
       dashboardProxied: dashboardProxied,
+      desktopGatewayUrl: desktopGateway == null || desktopGateway.isEmpty
+          ? null
+          : desktopGateway,
+      clearDesktopGatewayUrl: desktopGateway != null && desktopGateway.isEmpty,
       dashboardPortOverride: dashboardPort,
       clearDashboardPort: dashboardPort == null,
       dashboardUsername: dashUser == null || dashUser.isEmpty ? null : dashUser,
@@ -345,6 +353,9 @@ typedef ToolProgressCallback = void Function(Map<String, dynamic> progress);
 class GatewayChatClient {
   final ApiClient _api;
   final String _baseUrl;
+  StreamSubscription<String>? _activeStreamSubscription;
+  Completer<void>? _activeStreamCompletion;
+  bool _activeStreamCancelled = false;
 
   GatewayChatClient(this._api) : _baseUrl = _api.baseUrl;
 
@@ -358,6 +369,7 @@ class GatewayChatClient {
   static List<Map<String, dynamic>> buildChatCompletionMessages({
     required String message,
     List<Map<String, dynamic>>? history,
+    String? imageDataUrl,
   }) {
     final messages = <Map<String, dynamic>>[];
     if (history != null && history.isNotEmpty) {
@@ -365,19 +377,31 @@ class GatewayChatClient {
         final role = (msg['role'] == 'agent' || msg['role'] == 'assistant')
             ? 'assistant'
             : 'user';
-        final content = msg['content']?.toString() ?? '';
-        if (content.isEmpty) continue;
+        final content = msg['content'];
+        if (content == null || (content is String && content.isEmpty)) {
+          continue;
+        }
         messages.add({'role': role, 'content': content});
       }
     }
 
     final latest = message.trim();
+    final latestContent = imageDataUrl == null
+        ? latest
+        : <Map<String, dynamic>>[
+            if (latest.isNotEmpty) {'type': 'text', 'text': latest},
+            {
+              'type': 'image_url',
+              'image_url': {'url': imageDataUrl},
+            },
+          ];
     final alreadyLast =
+        imageDataUrl == null &&
         messages.isNotEmpty &&
         messages.last['role'] == 'user' &&
         messages.last['content'] == latest;
-    if (latest.isNotEmpty && !alreadyLast) {
-      messages.add({'role': 'user', 'content': latest});
+    if ((latest.isNotEmpty || imageDataUrl != null) && !alreadyLast) {
+      messages.add({'role': 'user', 'content': latestContent});
     }
     return messages;
   }
@@ -437,6 +461,7 @@ class GatewayChatClient {
     required String sessionId,
     String? model,
     List<Map<String, dynamic>>? history,
+    String? imageDataUrl,
     required void Function(String token) onToken,
     ToolProgressCallback? onToolProgress,
     required void Function() onDone,
@@ -445,6 +470,7 @@ class GatewayChatClient {
     final messages = buildChatCompletionMessages(
       message: message,
       history: history,
+      imageDataUrl: imageDataUrl,
     );
 
     final body = {
@@ -454,6 +480,9 @@ class GatewayChatClient {
     };
 
     final headers = {..._api._headers, 'X-Hermes-Session-Id': sessionId};
+    final completion = Completer<void>();
+    _activeStreamCompletion = completion;
+    _activeStreamCancelled = false;
 
     try {
       final request = http.Request(
@@ -464,6 +493,13 @@ class GatewayChatClient {
       request.body = jsonEncode(body);
 
       final response = await _api._http.send(request);
+
+      if (_activeStreamCancelled ||
+          !identical(_activeStreamCompletion, completion)) {
+        final subscription = response.stream.listen((_) {});
+        await subscription.cancel();
+        return;
+      }
 
       if (response.statusCode != 200) {
         final errorBody = await response.stream.bytesToString();
@@ -482,22 +518,61 @@ class GatewayChatClient {
       }
 
       String buffer = '';
-      await response.stream.transform(utf8.decoder).forEach((chunk) {
-        buffer += chunk;
-        while (buffer.contains('\n\n')) {
-          final eventEnd = buffer.indexOf('\n\n');
-          final frame = buffer.substring(0, eventEnd);
-          buffer = buffer.substring(eventEnd + 2);
+      _activeStreamSubscription = response.stream
+          .transform(utf8.decoder)
+          .listen(
+            (chunk) {
+              if (_activeStreamCancelled) return;
+              buffer += chunk;
+              while (buffer.contains('\n\n')) {
+                final eventEnd = buffer.indexOf('\n\n');
+                final frame = buffer.substring(0, eventEnd);
+                buffer = buffer.substring(eventEnd + 2);
 
-          final token = parseSseFrame(frame, onToolProgress: onToolProgress);
-          if (token != null && token.isNotEmpty) onToken(token);
-        }
-      });
+                final token = parseSseFrame(
+                  frame,
+                  onToolProgress: onToolProgress,
+                );
+                if (token != null && token.isNotEmpty) onToken(token);
+              }
+            },
+            onError: (Object error, StackTrace stackTrace) {
+              if (!completion.isCompleted) {
+                completion.completeError(error, stackTrace);
+              }
+            },
+            onDone: () {
+              if (!completion.isCompleted) completion.complete();
+            },
+            cancelOnError: true,
+          );
+      await completion.future;
 
-      onDone();
+      if (!_activeStreamCancelled) onDone();
     } catch (e) {
-      onError(e.toString());
+      if (!_activeStreamCancelled) onError(e.toString());
+    } finally {
+      if (identical(_activeStreamCompletion, completion)) {
+        _activeStreamSubscription = null;
+        _activeStreamCompletion = null;
+        _activeStreamCancelled = false;
+      }
     }
+  }
+
+  /// Cancels the current SSE response. The Hermes API server treats the
+  /// resulting client disconnect as an agent interrupt.
+  Future<bool> cancelActiveMessage() async {
+    final completion = _activeStreamCompletion;
+    if (completion == null) return false;
+
+    _activeStreamCancelled = true;
+    final subscription = _activeStreamSubscription;
+    if (subscription != null) {
+      await subscription.cancel();
+    }
+    if (!completion.isCompleted) completion.complete();
+    return true;
   }
 
   void abort() {
@@ -645,6 +720,31 @@ class DashboardClient {
       'X-Hermes-Session-Token': await _getToken(),
       'Content-Type': 'application/json',
     };
+  }
+
+  /// Mints the short-lived, single-use WebSocket ticket required by a secured
+  /// Hermes Desktop gateway. The HTTP API cookie stays in this client; only the
+  /// ticket is passed to the WebSocket URL.
+  Future<String> mintWebSocketTicket({bool retried = false}) async {
+    final res = await _http.post(
+      Uri.parse('$_baseUrl/api/auth/ws-ticket'),
+      headers: await _authHeaders(),
+    );
+    if (res.statusCode == 401 && !retried) {
+      _resetAuth();
+      return mintWebSocketTicket(retried: true);
+    }
+    if (res.statusCode != 200) {
+      throw Exception(
+        'Could not mint Desktop gateway WebSocket ticket: HTTP ${res.statusCode}',
+      );
+    }
+    final data = _decodeMapResponse(res);
+    final ticket = data['ticket'] as String?;
+    if (ticket == null || ticket.isEmpty) {
+      throw Exception('Desktop gateway returned no WebSocket ticket');
+    }
+    return ticket;
   }
 
   Map<String, dynamic> _decodeMapResponse(http.Response res) {

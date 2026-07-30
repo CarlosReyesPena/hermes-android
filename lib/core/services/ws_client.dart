@@ -33,12 +33,29 @@ class StreamEvent {
   });
 }
 
+/// Gateway-side file reference returned by `file.attach`.
+class RemoteFileAttachment {
+  final String name;
+  final String path;
+  final String refText;
+  final bool uploaded;
+
+  const RemoteFileAttachment({
+    required this.name,
+    required this.path,
+    required this.refText,
+    required this.uploaded,
+  });
+}
+
 typedef StreamCallback = void Function(StreamEvent event);
+typedef ConnectionCallback = void Function(bool connected);
 
 /// WebSocket client for the Hermes JSON-RPC gateway.
 class WsClient {
   final String baseUrl;
   final String? _token;
+  final String? _ticket;
   IOWebSocketChannel? _channel;
   bool _connected = false;
   int _nextId = 1;
@@ -49,40 +66,91 @@ class WsClient {
   /// Active stream subscriptions: id -> callback.
   final Map<int, List<StreamCallback>> _streams = {};
 
+  /// Gateway events are emitted independently of a JSON-RPC request ID. Keep
+  /// per-session listeners so one active session cannot consume another one's
+  /// streamed response.
+  final Map<String, List<StreamCallback>> _sessionStreams = {};
+
   /// Global stream listener (receives all untargeted events).
   StreamCallback? onStreamEvent;
+  ConnectionCallback? onConnectionChanged;
 
   // Keep the public parameter name `token` while storing it privately.
   // ignore: prefer_initializing_formals
-  WsClient(this.baseUrl, {String? token}) : _token = token;
+  WsClient(this.baseUrl, {String? token, String? ticket})
+    : _token = token,
+      _ticket = ticket;
 
   /// Connect to the WebSocket gateway.
   Future<void> connect() async {
     if (_connected) return;
-    var wsUrl =
-        '${baseUrl.replaceFirst('http://', 'ws://').replaceFirst('https://', 'wss://')}/api/ws';
-    // Pass session token as query param if available.
-    final token = _token;
-    if (token != null && token.isNotEmpty) {
-      wsUrl = '$wsUrl?token=${Uri.encodeQueryComponent(token)}';
-    }
-    _channel = IOWebSocketChannel.connect(Uri.parse(wsUrl));
-    _connected = true;
-    _channel!.stream.listen(
+    final wsUrl = buildWebSocketUrl(baseUrl, token: _token, ticket: _ticket);
+    final channel = IOWebSocketChannel.connect(Uri.parse(wsUrl));
+    _channel = channel;
+    channel.stream.listen(
       _handleMessage,
+      onError: (_) => _handleClosedConnection(),
       onDone: () {
-        _connected = false;
-        _channel = null;
-        // Reject all pending requests
-        for (var entry in _pending.values) {
-          entry.timer?.cancel();
-          if (!entry.completer.isCompleted) {
-            entry.completer.completeError(Exception('Connection closed'));
-          }
-        }
-        _pending.clear();
+        _handleClosedConnection();
       },
     );
+    try {
+      await channel.ready.timeout(const Duration(seconds: 15));
+      _connected = true;
+      onConnectionChanged?.call(true);
+    } catch (_) {
+      _handleClosedConnection();
+      rethrow;
+    }
+  }
+
+  void _handleClosedConnection() {
+    final wasConnected = _connected || _channel != null;
+    _connected = false;
+    _channel = null;
+    if (wasConnected) onConnectionChanged?.call(false);
+    // Reject all pending request-response calls.
+    for (var entry in _pending.values) {
+      entry.timer?.cancel();
+      if (!entry.completer.isCompleted) {
+        entry.completer.completeError(Exception('Connection closed'));
+      }
+    }
+    _pending.clear();
+
+    // Prompt acknowledgements may already have arrived when the socket drops.
+    // Notify their terminal-event listeners immediately instead of waiting for
+    // the long turn timeout.
+    final failure = StreamEvent(
+      type: 'turn.error',
+      data: const {'message': 'Desktop gateway connection closed'},
+      isComplete: true,
+    );
+    for (final listeners in _sessionStreams.values) {
+      for (final listener in List<StreamCallback>.from(listeners)) {
+        listener(failure);
+      }
+    }
+    _sessionStreams.clear();
+  }
+
+  /// Produces the gateway `/api/ws` URL. Secured Desktop gateways use a
+  /// single-use ticket; insecure legacy gateways still use a session token.
+  static String buildWebSocketUrl(
+    String baseUrl, {
+    String? token,
+    String? ticket,
+  }) {
+    final socketBase = baseUrl
+        .replaceFirst('http://', 'ws://')
+        .replaceFirst('https://', 'wss://');
+    final uri = Uri.parse('$socketBase/api/ws');
+    final credential = ticket?.trim().isNotEmpty == true
+        ? {'ticket': ticket!.trim()}
+        : token?.trim().isNotEmpty == true
+        ? {'token': token!.trim()}
+        : const <String, String>{};
+    return uri.replace(queryParameters: credential).toString();
   }
 
   /// Handle inbound messages.
@@ -101,9 +169,11 @@ class WsClient {
       final method = data['method'] as String?;
       final params = data['params'];
 
-      // Server-pushed event (has method but no id)
-      if (method != null && id == null && params != null) {
-        _dispatchEvent(method, params is Map<String, dynamic> ? params : {});
+      // Server-pushed events have the JSON-RPC method `event` and carry their
+      // actual type/session/payload inside params.
+      if (method == 'event' && id == null && params is Map<String, dynamic>) {
+        final event = parseGatewayEvent(params);
+        if (event != null) _dispatchEvent(event);
         return;
       }
 
@@ -131,13 +201,38 @@ class WsClient {
   }
 
   /// Dispatch a server-pushed event to registered listeners.
-  void _dispatchEvent(String type, Map<String, dynamic> data) {
-    final event = StreamEvent(
+  static StreamEvent? parseGatewayEvent(Map<String, dynamic> params) {
+    final type = params['type']?.toString();
+    if (type == null || type.isEmpty) return null;
+    final payload = params['payload'];
+    final data = payload is Map<String, dynamic>
+        ? Map<String, dynamic>.from(payload)
+        : <String, dynamic>{};
+    final sessionId =
+        params['session_id']?.toString() ?? params['sid']?.toString();
+    if (sessionId != null && sessionId.isNotEmpty) {
+      data['session_id'] = sessionId;
+    }
+    return StreamEvent(
       type: type,
       data: data,
-      isComplete: type == 'done' || type == 'error',
+      isComplete:
+          type == 'message.complete' ||
+          type == 'error' ||
+          type == 'turn.end' ||
+          type == 'turn.error',
     );
+  }
+
+  void _dispatchEvent(StreamEvent event) {
     onStreamEvent?.call(event);
+    final sessionId = event.data['session_id']?.toString();
+    if (sessionId == null || sessionId.isEmpty) return;
+    final listeners = _sessionStreams[sessionId];
+    if (listeners == null) return;
+    for (final listener in List<StreamCallback>.from(listeners)) {
+      listener(event);
+    }
   }
 
   /// Dispatch a streaming event to a specific request's subscribers.
@@ -222,43 +317,291 @@ class WsClient {
     return completer.future;
   }
 
+  /// Sends `prompt.submit`, then waits for the gateway's terminal turn event.
+  /// The RPC acknowledgement only confirms that the turn was accepted; it is
+  /// not the end of streamed model output.
+  Future<void> submitPrompt(
+    String message, {
+    required String sessionId,
+    required StreamCallback onEvent,
+    Duration timeout = const Duration(minutes: 10),
+  }) async {
+    final completion = Completer<void>();
+    late final StreamCallback listener;
+    Timer? timer;
+
+    listener = (event) {
+      onEvent(event);
+      if (!event.isComplete || completion.isCompleted) return;
+      if (event.type == 'error' || event.type == 'turn.error') {
+        completion.completeError(
+          JsonRpcError(
+            'prompt.submit',
+            event.data['message']?.toString() ?? 'Gateway turn failed',
+          ),
+        );
+      } else {
+        completion.complete();
+      }
+    };
+
+    final listeners = _sessionStreams.putIfAbsent(sessionId, () => []);
+    listeners.add(listener);
+    timer = Timer(timeout, () {
+      if (!completion.isCompleted) {
+        completion.completeError(JsonRpcError('prompt.submit', 'Timeout'));
+      }
+    });
+
+    try {
+      final response = await send('prompt.submit', {
+        'session_id': sessionId,
+        'text': message,
+      });
+      final error = response['error'];
+      if (error is Map<String, dynamic>) {
+        throw JsonRpcError(
+          'prompt.submit',
+          error['message']?.toString() ?? 'Unknown error',
+          code: error['code'] as int?,
+        );
+      }
+      await completion.future;
+    } finally {
+      timer.cancel();
+      final current = _sessionStreams[sessionId];
+      current?.remove(listener);
+      if (current != null && current.isEmpty) {
+        _sessionStreams.remove(sessionId);
+      }
+    }
+  }
+
+  /// Cooperatively interrupts the active turn for one gateway session.
+  Future<void> interruptSession(String sessionId) async {
+    final response = await send('session.interrupt', {'session_id': sessionId});
+    final error = response['error'];
+    if (error is Map<String, dynamic>) {
+      throw JsonRpcError(
+        'session.interrupt',
+        error['message']?.toString() ?? 'Gateway interrupt failed',
+        code: error['code'] as int?,
+      );
+    }
+  }
+
+  /// Resolves the single in-flight Hermes approval for one gateway session.
+  Future<void> respondToApproval({
+    required String sessionId,
+    required String choice,
+  }) async {
+    const allowedChoices = {'once', 'session', 'always', 'deny'};
+    if (!allowedChoices.contains(choice)) {
+      throw ArgumentError.value(
+        choice,
+        'choice',
+        'Unsupported approval choice',
+      );
+    }
+    final response = await send('approval.respond', {
+      'session_id': sessionId,
+      'choice': choice,
+    });
+    final error = response['error'];
+    if (error is Map<String, dynamic>) {
+      throw JsonRpcError(
+        'approval.respond',
+        error['message']?.toString() ?? 'Gateway approval failed',
+        code: error['code'] as int?,
+      );
+    }
+  }
+
+  Future<void> respondToSudo({
+    required String requestId,
+    required String password,
+  }) {
+    return _respondToSensitivePrompt(
+      method: 'sudo.respond',
+      requestId: requestId,
+      valueKey: 'password',
+      value: password,
+    );
+  }
+
+  Future<void> respondToSecret({
+    required String requestId,
+    required String value,
+  }) {
+    return _respondToSensitivePrompt(
+      method: 'secret.respond',
+      requestId: requestId,
+      valueKey: 'value',
+      value: value,
+    );
+  }
+
+  Future<void> respondToClarify({
+    required String requestId,
+    required String answer,
+  }) async {
+    if (requestId.trim().isEmpty) {
+      throw ArgumentError.value(
+        requestId,
+        'requestId',
+        'A Hermes request ID is required',
+      );
+    }
+    final response = await send('clarify.respond', {
+      'request_id': requestId,
+      'answer': answer,
+    });
+    final error = response['error'];
+    if (error is Map<String, dynamic>) {
+      throw JsonRpcError(
+        'clarify.respond',
+        error['message']?.toString() ?? 'Gateway clarification failed',
+        code: error['code'] as int?,
+      );
+    }
+  }
+
+  Future<void> _respondToSensitivePrompt({
+    required String method,
+    required String requestId,
+    required String valueKey,
+    required String value,
+  }) async {
+    if (requestId.trim().isEmpty) {
+      throw ArgumentError.value(
+        requestId,
+        'requestId',
+        'A Hermes request ID is required',
+      );
+    }
+    final response = await send(method, {
+      'request_id': requestId,
+      valueKey: value,
+    });
+    final error = response['error'];
+    if (error is Map<String, dynamic>) {
+      throw JsonRpcError(
+        method,
+        error['message']?.toString() ?? 'Gateway response failed',
+        code: error['code'] as int?,
+      );
+    }
+  }
+
   /// Resume an existing session.
   Future<String> resumeSession(String sessionId) async {
     final result = await send('session.resume', {'session_id': sessionId});
     if (result['error'] != null) {
       final errMap = result['error'] as Map<String, dynamic>;
       final errorMsg = errMap['message'] as String?;
-      throw JsonRpcError('session.resume', errorMsg ?? 'Unknown error');
+      throw JsonRpcError(
+        'session.resume',
+        errorMsg ?? 'Unknown error',
+        code: errMap['code'] as int?,
+      );
     }
     return result['result']?['session_id'] as String? ?? sessionId;
+  }
+
+  Future<void> setSessionTitle(String sessionId, String title) async {
+    final response = await send('session.title', {
+      'session_id': sessionId,
+      'title': title,
+    });
+    final error = response['error'];
+    if (error is Map<String, dynamic>) {
+      throw JsonRpcError(
+        'session.title',
+        error['message']?.toString() ?? 'Could not rename session',
+        code: error['code'] as int?,
+      );
+    }
+  }
+
+  Future<Map<String, dynamic>> branchSession(
+    String sessionId, {
+    required String name,
+  }) async {
+    final response = await send('session.branch', {
+      'session_id': sessionId,
+      'name': name,
+    });
+    final error = response['error'];
+    if (error is Map<String, dynamic>) {
+      throw JsonRpcError(
+        'session.branch',
+        error['message']?.toString() ?? 'Could not branch session',
+        code: error['code'] as int?,
+      );
+    }
+    final result = response['result'];
+    if (result is Map<String, dynamic>) return result;
+    throw JsonRpcError('session.branch', 'Gateway returned no branch');
   }
 
   /// Submit a message to the active session with streaming.
   /// Returns the final response and streams events via callback.
   Future<String> sendMessageStreaming(
     String message, {
+    required String sessionId,
     StreamCallback? onEvent,
   }) async {
-    final result = await sendStreaming('prompt.submit', {
-      'message': message,
-    }, onEvent: onEvent);
-    if (result['error'] != null) {
-      final errMap = result['error'] as Map<String, dynamic>;
-      final errorMsg = errMap['message'] as String?;
-      throw JsonRpcError('prompt.submit', errorMsg ?? 'Unknown error');
-    }
-    return result['result']?['session_id'] as String? ?? '';
+    await submitPrompt(
+      message,
+      sessionId: sessionId,
+      onEvent: onEvent ?? (_) {},
+    );
+    return sessionId;
   }
 
   /// Submit a message to the active session (non-streaming, backward-compatible).
   Future<String> sendMessage(String message) async {
-    final result = await send('prompt.submit', {'message': message});
-    if (result['error'] != null) {
-      final errMap = result['error'] as Map<String, dynamic>;
-      final errorMsg = errMap['message'] as String?;
-      throw JsonRpcError('prompt.submit', errorMsg ?? 'Unknown error');
+    throw UnsupportedError(
+      'Use sendMessageStreaming with a gateway session ID instead.',
+    );
+  }
+
+  /// Uploads one file or image to a remote Desktop gateway and returns the
+  /// canonical `@file:` reference that must be included in the following turn.
+  Future<RemoteFileAttachment> attachFile({
+    required String sessionId,
+    required String name,
+    required String dataUrl,
+    String path = '',
+  }) async {
+    final response = await send('file.attach', {
+      'session_id': sessionId,
+      'name': name,
+      'path': path,
+      'data_url': dataUrl,
+    });
+    final error = response['error'];
+    if (error is Map<String, dynamic>) {
+      throw JsonRpcError(
+        'file.attach',
+        error['message']?.toString() ?? 'Unknown error',
+        code: error['code'] as int?,
+      );
     }
-    return result['result']?['session_id'] as String? ?? '';
+    final result = response['result'];
+    if (result is! Map<String, dynamic> || result['attached'] != true) {
+      throw JsonRpcError('file.attach', 'Gateway did not attach the file');
+    }
+    final refText = result['ref_text']?.toString() ?? '';
+    if (refText.isEmpty) {
+      throw JsonRpcError('file.attach', 'Gateway returned no file reference');
+    }
+    return RemoteFileAttachment(
+      name: result['name']?.toString() ?? name,
+      path: result['path']?.toString() ?? path,
+      refText: refText,
+      uploaded: result['uploaded'] == true,
+    );
   }
 
   /// Create a new chat session.
@@ -287,6 +630,120 @@ class WsClient {
     return result['result']?['session_id'] as String? ?? sessionId;
   }
 
+  /// Applies a model only to one live gateway session.  Hermes interprets the
+  /// `--session` flag as a persistent per-session override; it must never be
+  /// replaced with a profile-wide config write from the mobile client.
+  Future<void> setSessionModel({
+    required String sessionId,
+    required String provider,
+    required String model,
+  }) async {
+    final result = await send('config.set', {
+      'session_id': sessionId,
+      'key': 'model',
+      'value': buildSessionModelValue(provider: provider, model: model),
+    });
+    if (result['error'] != null) {
+      final error = result['error'] as Map<String, dynamic>;
+      throw JsonRpcError(
+        'config.set',
+        error['message']?.toString() ?? 'Model switch failed',
+        code: error['code'] as int?,
+      );
+    }
+    final payload = result['result'];
+    if (payload is Map && payload['confirm_required'] == true) {
+      throw JsonRpcError(
+        'config.set',
+        payload['confirm_message']?.toString() ??
+            'This model needs confirmation before it can be selected.',
+      );
+    }
+  }
+
+  /// Returns the effective reasoning effort for one live gateway session.
+  Future<String> getSessionReasoning(String sessionId) async {
+    final response = await send('config.get', {
+      'session_id': sessionId,
+      'key': 'reasoning',
+    });
+    final error = response['error'];
+    if (error is Map<String, dynamic>) {
+      throw JsonRpcError(
+        'config.get',
+        error['message']?.toString() ?? 'Could not read reasoning effort',
+        code: error['code'] as int?,
+      );
+    }
+    final result = response['result'];
+    if (result is! Map) {
+      throw JsonRpcError('config.get', 'Gateway returned no reasoning effort');
+    }
+    return normalizeReasoningEffort(result['value']);
+  }
+
+  /// Applies reasoning effort only to one live gateway session.
+  Future<void> setSessionReasoning({
+    required String sessionId,
+    required String effort,
+  }) async {
+    final normalized = effort.trim().toLowerCase();
+    if (!validReasoningEfforts.contains(normalized)) {
+      throw ArgumentError.value(
+        effort,
+        'effort',
+        'Unsupported reasoning effort',
+      );
+    }
+    final response = await send('config.set', {
+      'session_id': sessionId,
+      'key': 'reasoning',
+      'value': normalized,
+    });
+    final error = response['error'];
+    if (error is Map<String, dynamic>) {
+      throw JsonRpcError(
+        'config.set',
+        error['message']?.toString() ?? 'Reasoning effort switch failed',
+        code: error['code'] as int?,
+      );
+    }
+  }
+
+  static const validReasoningEfforts = <String>{
+    'none',
+    'minimal',
+    'low',
+    'medium',
+    'high',
+    'xhigh',
+    'max',
+    'ultra',
+  };
+
+  static String normalizeReasoningEffort(Object? value) {
+    final normalized = value?.toString().trim().toLowerCase() ?? '';
+    return validReasoningEfforts.contains(normalized) ? normalized : 'medium';
+  }
+
+  /// Builds the gateway `/model` value used for one live session.
+  ///
+  /// A bare `custom` provider represents the endpoint already stored in the
+  /// profile's `model.base_url`; it is not a resolvable named provider before
+  /// the deferred agent build finishes. Omitting the redundant provider flag
+  /// lets Hermes resolve that endpoint from the active profile immediately.
+  static String buildSessionModelValue({
+    required String provider,
+    required String model,
+  }) {
+    final normalizedProvider = provider.trim();
+    final modelValue = model.trim();
+    if (normalizedProvider.isEmpty || normalizedProvider == 'custom') {
+      return '$modelValue --session';
+    }
+    return '$modelValue --provider $normalizedProvider --session';
+  }
+
   bool get isConnected => _connected;
 
   /// Close the connection.
@@ -299,9 +756,12 @@ class WsClient {
     }
     _pending.clear();
     _streams.clear();
+    _sessionStreams.clear();
+    final wasConnected = _connected || _channel != null;
     _connected = false;
     _channel?.sink.close();
     _channel = null;
+    if (wasConnected) onConnectionChanged?.call(false);
   }
 }
 

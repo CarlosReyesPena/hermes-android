@@ -1,10 +1,13 @@
+import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:hermes_android/core/services/connection_manager.dart';
+import 'package:hermes_android/core/services/ws_client.dart';
 
 /// Case-insensitive request header lookup — package:http normalises header
 /// names when sending, so tests should not assume a particular casing.
@@ -14,6 +17,22 @@ String? _header(http.BaseRequest request, String name) {
     if (entry.key.toLowerCase() == lower) return entry.value;
   }
   return null;
+}
+
+class _BlockingStreamingClient extends http.BaseClient {
+  bool cancelled = false;
+  late final StreamController<List<int>> controller =
+      StreamController<List<int>>(onCancel: () => cancelled = true);
+
+  @override
+  Future<http.StreamedResponse> send(http.BaseRequest request) async {
+    return http.StreamedResponse(controller.stream, 200);
+  }
+
+  @override
+  void close() {
+    if (!controller.isClosed) controller.close();
+  }
 }
 
 void main() {
@@ -336,6 +355,52 @@ void main() {
       },
     );
 
+    test('builds an OpenAI image_url content part for an attached image', () {
+      const dataUrl = 'data:image/jpeg;base64,aGVybWVz';
+
+      final messages = GatewayChatClient.buildChatCompletionMessages(
+        message: 'What is in this image?',
+        imageDataUrl: dataUrl,
+      );
+
+      expect(messages, [
+        {
+          'role': 'user',
+          'content': [
+            {'type': 'text', 'text': 'What is in this image?'},
+            {
+              'type': 'image_url',
+              'image_url': {'url': dataUrl},
+            },
+          ],
+        },
+      ]);
+    });
+
+    test('preserves multimodal history when sending a later message', () {
+      final previousImageMessage = {
+        'role': 'user',
+        'content': [
+          {'type': 'text', 'text': 'Earlier image'},
+          {
+            'type': 'image_url',
+            'image_url': {'url': 'data:image/png;base64,cHJldmlvdXM='},
+          },
+        ],
+      };
+
+      final messages = GatewayChatClient.buildChatCompletionMessages(
+        message: 'Describe it further.',
+        history: [previousImageMessage],
+      );
+
+      expect(messages.first, previousImageMessage);
+      expect(messages.last, {
+        'role': 'user',
+        'content': 'Describe it further.',
+      });
+    });
+
     test('parses normal chat completion SSE token frames', () {
       final token = GatewayChatClient.parseSseFrame(
         'data: {"choices":[{"delta":{"content":"hello"}}]}',
@@ -358,6 +423,46 @@ void main() {
       expect(progress!['toolCallId'], 'call_1');
       expect(progress!['status'], 'running');
     });
+
+    test(
+      'cancels the active SSE request without reporting completion',
+      () async {
+        final transport = _BlockingStreamingClient();
+        final api = ApiClient(
+          baseUrl: 'http://hermes.local:8642',
+          apiKey: 'valid-key',
+          httpClient: transport,
+        );
+        final gateway = GatewayChatClient(api);
+        final firstToken = Completer<void>();
+        var done = false;
+        String? error;
+
+        final sending = gateway.sendMessageStreaming(
+          message: 'slow response',
+          sessionId: 'mob-stop-test',
+          onToken: (token) {
+            if (!firstToken.isCompleted) firstToken.complete();
+          },
+          onDone: () => done = true,
+          onError: (value) => error = value,
+        );
+        transport.controller.add(
+          utf8.encode(
+            'data: {"choices":[{"delta":{"content":"partial"}}]}\n\n',
+          ),
+        );
+        await firstToken.future;
+
+        expect(await gateway.cancelActiveMessage(), isTrue);
+        await sending;
+
+        expect(transport.cancelled, isTrue);
+        expect(done, isFalse);
+        expect(error, isNull);
+        api.close();
+      },
+    );
   });
 
   group('DashboardClient', () {
@@ -494,6 +599,40 @@ void main() {
       expect(client.getModelInfo(), throwsA(isA<Exception>()));
       client.close();
     });
+
+    test(
+      'mints a WebSocket ticket with the dashboard session cookie',
+      () async {
+        final client = DashboardClient(
+          host: 'desktop.hermes.local',
+          port: 443,
+          useHttps: true,
+          username: 'misha',
+          password: 'secret',
+          httpClient: MockClient((request) async {
+            if (request.url.path == '/auth/password-login') {
+              return http.Response(
+                '{"ok":true}',
+                200,
+                headers: {'set-cookie': 'hermes_session_at=TOK123; Path=/'},
+              );
+            }
+            if (request.url.path == '/api/auth/ws-ticket') {
+              expect(request.method, 'POST');
+              expect(_header(request, 'cookie'), 'hermes_session_at=TOK123');
+              return http.Response('{"ticket":"ONE_TIME_TICKET"}', 200);
+            }
+            return http.Response('not found', 404);
+          }),
+        );
+
+        await expectLater(
+          client.mintWebSocketTicket(),
+          completion('ONE_TIME_TICKET'),
+        );
+        client.close();
+      },
+    );
   });
 
   group('ConnectionManager', () {
@@ -733,6 +872,462 @@ void main() {
       expect(map['gateway_prefix'], '/profile/peter');
       expect(map['dashboard_prefix'], '/dashboard');
       expect(map['dashboard_proxied'], true);
+    });
+
+    test('SavedConnection preserves an optional Desktop gateway URL', () {
+      final conn = SavedConnection(
+        id: '1',
+        label: 'ATLAS',
+        host: 'hermes-api.example.lan',
+        port: 443,
+        apiKey: 'key',
+        useHttps: true,
+        desktopGatewayUrl: 'https://hermes-desktop.example.lan',
+      );
+
+      final restored = SavedConnection.fromMap(conn.toMap());
+      expect(restored.desktopGatewayUrl, 'https://hermes-desktop.example.lan');
+    });
+  });
+
+  group('Desktop gateway WebSocket URL', () {
+    test('uses a ticket for a secured Desktop gateway', () {
+      expect(
+        WsClient.buildWebSocketUrl(
+          'https://hermes-desktop.example.lan',
+          ticket: 'one time+ticket',
+        ),
+        'wss://hermes-desktop.example.lan/api/ws?ticket=one+time%2Bticket',
+      );
+    });
+
+    test('keeps legacy token support for insecure gateways', () {
+      expect(
+        WsClient.buildWebSocketUrl('http://hermes.local:9119', token: 'spa'),
+        'ws://hermes.local:9119/api/ws?token=spa',
+      );
+    });
+
+    test('sends the official session.interrupt JSON-RPC method', () async {
+      final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+      final requestSeen = Completer<Map<String, dynamic>>();
+      final socketSubscription = server
+          .transform(WebSocketTransformer())
+          .listen((socket) {
+            socket.listen((raw) {
+              final request = jsonDecode(raw as String) as Map<String, dynamic>;
+              if (!requestSeen.isCompleted) requestSeen.complete(request);
+              socket.add(
+                jsonEncode({
+                  'jsonrpc': '2.0',
+                  'id': request['id'],
+                  'result': {'status': 'interrupted'},
+                }),
+              );
+            });
+          });
+      final client = WsClient('http://127.0.0.1:${server.port}');
+
+      try {
+        await client.connect();
+        await client.interruptSession('gateway-session-123');
+        final request = await requestSeen.future;
+
+        expect(request['method'], 'session.interrupt');
+        expect(request['params'], {'session_id': 'gateway-session-123'});
+      } finally {
+        client.close();
+        await socketSubscription.cancel();
+        await server.close(force: true);
+      }
+    });
+
+    test('sends the official session.resume JSON-RPC method', () async {
+      final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+      final requestSeen = Completer<Map<String, dynamic>>();
+      final socketSubscription = server
+          .transform(WebSocketTransformer())
+          .listen((socket) {
+            socket.listen((raw) {
+              final request = jsonDecode(raw as String) as Map<String, dynamic>;
+              requestSeen.complete(request);
+              socket.add(
+                jsonEncode({
+                  'jsonrpc': '2.0',
+                  'id': request['id'],
+                  'result': {'session_id': 'runtime-123'},
+                }),
+              );
+            });
+          });
+      final client = WsClient('http://127.0.0.1:${server.port}');
+
+      try {
+        await client.connect();
+        expect(await client.resumeSession('stored-123'), 'runtime-123');
+        final request = await requestSeen.future;
+        expect(request['method'], 'session.resume');
+        expect(request['params'], {'session_id': 'stored-123'});
+      } finally {
+        client.close();
+        await socketSubscription.cancel();
+        await server.close(force: true);
+      }
+    });
+
+    test('sends official session.title and session.branch frames', () async {
+      final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+      final requests = <Map<String, dynamic>>[];
+      final socketSubscription = server
+          .transform(WebSocketTransformer())
+          .listen((socket) {
+            socket.listen((raw) {
+              final request = jsonDecode(raw as String) as Map<String, dynamic>;
+              requests.add(request);
+              socket.add(
+                jsonEncode({
+                  'jsonrpc': '2.0',
+                  'id': request['id'],
+                  'result': request['method'] == 'session.branch'
+                      ? {'session_id': 'branch-runtime', 'title': 'Copy'}
+                      : {'ok': true},
+                }),
+              );
+            });
+          });
+      final client = WsClient('http://127.0.0.1:${server.port}');
+
+      try {
+        await client.connect();
+        await client.setSessionTitle('runtime-123', 'Renamed');
+        final branch = await client.branchSession('runtime-123', name: 'Copy');
+        expect(branch['session_id'], 'branch-runtime');
+        expect(requests[0]['method'], 'session.title');
+        expect(requests[0]['params'], {
+          'session_id': 'runtime-123',
+          'title': 'Renamed',
+        });
+        expect(requests[1]['method'], 'session.branch');
+        expect(requests[1]['params'], {
+          'session_id': 'runtime-123',
+          'name': 'Copy',
+        });
+      } finally {
+        client.close();
+        await socketSubscription.cancel();
+        await server.close(force: true);
+      }
+    });
+
+    test('reads and writes session-scoped reasoning effort', () async {
+      final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+      final requests = <Map<String, dynamic>>[];
+      final socketSubscription = server
+          .transform(WebSocketTransformer())
+          .listen((socket) {
+            socket.listen((raw) {
+              final request = jsonDecode(raw as String) as Map<String, dynamic>;
+              requests.add(request);
+              socket.add(
+                jsonEncode({
+                  'jsonrpc': '2.0',
+                  'id': request['id'],
+                  'result': request['method'] == 'config.get'
+                      ? {'key': 'reasoning', 'value': 'high'}
+                      : {'key': 'reasoning', 'value': 'xhigh'},
+                }),
+              );
+            });
+          });
+      final client = WsClient('http://127.0.0.1:${server.port}');
+
+      try {
+        await client.connect();
+        expect(await client.getSessionReasoning('runtime-123'), 'high');
+        await client.setSessionReasoning(
+          sessionId: 'runtime-123',
+          effort: 'xhigh',
+        );
+
+        expect(requests[0], {
+          'jsonrpc': '2.0',
+          'id': requests[0]['id'],
+          'method': 'config.get',
+          'params': {'session_id': 'runtime-123', 'key': 'reasoning'},
+        });
+        expect(requests[1], {
+          'jsonrpc': '2.0',
+          'id': requests[1]['id'],
+          'method': 'config.set',
+          'params': {
+            'session_id': 'runtime-123',
+            'key': 'reasoning',
+            'value': 'xhigh',
+          },
+        });
+      } finally {
+        client.close();
+        await socketSubscription.cancel();
+        await server.close(force: true);
+      }
+    });
+
+    test('rejects invalid reasoning effort before sending it', () async {
+      final client = WsClient('http://127.0.0.1:1');
+
+      expect(
+        () => client.setSessionReasoning(
+          sessionId: 'runtime-123',
+          effort: 'impossible',
+        ),
+        throwsArgumentError,
+      );
+    });
+
+    test('sends the official approval.respond JSON-RPC method', () async {
+      final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+      final requestSeen = Completer<Map<String, dynamic>>();
+      final socketSubscription = server
+          .transform(WebSocketTransformer())
+          .listen((socket) {
+            socket.listen((raw) {
+              final request = jsonDecode(raw as String) as Map<String, dynamic>;
+              if (!requestSeen.isCompleted) requestSeen.complete(request);
+              socket.add(
+                jsonEncode({
+                  'jsonrpc': '2.0',
+                  'id': request['id'],
+                  'result': {'resolved': true},
+                }),
+              );
+            });
+          });
+      final client = WsClient('http://127.0.0.1:${server.port}');
+
+      try {
+        await client.connect();
+        await client.respondToApproval(
+          sessionId: 'gateway-session-123',
+          choice: 'session',
+        );
+        final request = await requestSeen.future;
+
+        expect(request['method'], 'approval.respond');
+        expect(request['params'], {
+          'session_id': 'gateway-session-123',
+          'choice': 'session',
+        });
+      } finally {
+        client.close();
+        await socketSubscription.cancel();
+        await server.close(force: true);
+      }
+    });
+
+    test('sends the official sudo.respond JSON-RPC method', () async {
+      final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+      final requestSeen = Completer<Map<String, dynamic>>();
+      final socketSubscription = server
+          .transform(WebSocketTransformer())
+          .listen((socket) {
+            socket.listen((raw) {
+              final request = jsonDecode(raw as String) as Map<String, dynamic>;
+              if (!requestSeen.isCompleted) requestSeen.complete(request);
+              socket.add(
+                jsonEncode({
+                  'jsonrpc': '2.0',
+                  'id': request['id'],
+                  'result': {'status': 'ok'},
+                }),
+              );
+            });
+          });
+      final client = WsClient('http://127.0.0.1:${server.port}');
+
+      try {
+        await client.connect();
+        await client.respondToSudo(
+          requestId: 'sudo-request-123',
+          password: 'synthetic-password',
+        );
+        final request = await requestSeen.future;
+
+        expect(request['method'], 'sudo.respond');
+        expect(request['params'], {
+          'request_id': 'sudo-request-123',
+          'password': 'synthetic-password',
+        });
+      } finally {
+        client.close();
+        await socketSubscription.cancel();
+        await server.close(force: true);
+      }
+    });
+
+    test('sends the official secret.respond JSON-RPC method', () async {
+      final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+      final requestSeen = Completer<Map<String, dynamic>>();
+      final socketSubscription = server
+          .transform(WebSocketTransformer())
+          .listen((socket) {
+            socket.listen((raw) {
+              final request = jsonDecode(raw as String) as Map<String, dynamic>;
+              if (!requestSeen.isCompleted) requestSeen.complete(request);
+              socket.add(
+                jsonEncode({
+                  'jsonrpc': '2.0',
+                  'id': request['id'],
+                  'result': {'status': 'ok'},
+                }),
+              );
+            });
+          });
+      final client = WsClient('http://127.0.0.1:${server.port}');
+
+      try {
+        await client.connect();
+        await client.respondToSecret(
+          requestId: 'secret-request-123',
+          value: 'synthetic-secret',
+        );
+        final request = await requestSeen.future;
+
+        expect(request['method'], 'secret.respond');
+        expect(request['params'], {
+          'request_id': 'secret-request-123',
+          'value': 'synthetic-secret',
+        });
+      } finally {
+        client.close();
+        await socketSubscription.cancel();
+        await server.close(force: true);
+      }
+    });
+
+    test('sends the official clarify.respond JSON-RPC method', () async {
+      final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+      final requestSeen = Completer<Map<String, dynamic>>();
+      final socketSubscription = server
+          .transform(WebSocketTransformer())
+          .listen((socket) {
+            socket.listen((raw) {
+              final request = jsonDecode(raw as String) as Map<String, dynamic>;
+              if (!requestSeen.isCompleted) requestSeen.complete(request);
+              socket.add(
+                jsonEncode({
+                  'jsonrpc': '2.0',
+                  'id': request['id'],
+                  'result': {'status': 'expired'},
+                }),
+              );
+            });
+          });
+      final client = WsClient('http://127.0.0.1:${server.port}');
+
+      try {
+        await client.connect();
+        await client.respondToClarify(
+          requestId: 'clarify-request-123',
+          answer: 'Balanced',
+        );
+        final request = await requestSeen.future;
+
+        expect(request['method'], 'clarify.respond');
+        expect(request['params'], {
+          'request_id': 'clarify-request-123',
+          'answer': 'Balanced',
+        });
+      } finally {
+        client.close();
+        await socketSubscription.cancel();
+        await server.close(force: true);
+      }
+    });
+
+    test('rejects an invalid approval choice before sending it', () async {
+      final client = WsClient('http://127.0.0.1:1');
+
+      expect(
+        () => client.respondToApproval(
+          sessionId: 'gateway-session-123',
+          choice: 'unsafe',
+        ),
+        throwsArgumentError,
+      );
+    });
+
+    test('unwraps a gateway event into its session payload', () {
+      final event = WsClient.parseGatewayEvent({
+        'type': 'message.delta',
+        'sid': 'session-123',
+        'payload': {'text': 'Hello'},
+      });
+
+      expect(event, isNotNull);
+      expect(event!.type, 'message.delta');
+      expect(event.data, {'text': 'Hello', 'session_id': 'session-123'});
+      expect(event.isComplete, isFalse);
+    });
+
+    test('unwraps the real gateway session_id event field', () {
+      final event = WsClient.parseGatewayEvent({
+        'type': 'message.delta',
+        'session_id': 'gateway-session-123',
+        'payload': {'text': 'Hello'},
+      });
+
+      expect(event, isNotNull);
+      expect(event!.data, {
+        'text': 'Hello',
+        'session_id': 'gateway-session-123',
+      });
+    });
+
+    test('marks a gateway turn error as terminal', () {
+      final event = WsClient.parseGatewayEvent({
+        'type': 'turn.error',
+        'sid': 'session-123',
+        'payload': {'message': 'failed'},
+      });
+
+      expect(event?.isComplete, isTrue);
+    });
+
+    test('marks the real gateway message.complete event as terminal', () {
+      final event = WsClient.parseGatewayEvent({
+        'type': 'message.complete',
+        'sid': 'session-123',
+        'payload': {'text': 'Done', 'status': 'complete'},
+      });
+
+      expect(event?.isComplete, isTrue);
+    });
+
+    test('marks the real gateway error event as terminal', () {
+      final event = WsClient.parseGatewayEvent({
+        'type': 'error',
+        'sid': 'session-123',
+        'payload': {'message': 'failed'},
+      });
+
+      expect(event?.isComplete, isTrue);
+    });
+
+    test('omits bare custom provider from an early session model switch', () {
+      expect(
+        WsClient.buildSessionModelValue(
+          provider: 'custom',
+          model: 'hermes-android-fixture',
+        ),
+        'hermes-android-fixture --session',
+      );
+      expect(
+        WsClient.buildSessionModelValue(
+          provider: 'anthropic',
+          model: 'claude-sonnet-4.6',
+        ),
+        'claude-sonnet-4.6 --provider anthropic --session',
+      );
     });
   });
 }
