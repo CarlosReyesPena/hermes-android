@@ -39,12 +39,18 @@ class RemoteFileAttachment {
   final String path;
   final String refText;
   final bool uploaded;
+  final bool? atlasIntakeAccepted;
+  final String? atlasIntakeStatus;
+  final String? atlasRelativePath;
 
   const RemoteFileAttachment({
     required this.name,
     required this.path,
     required this.refText,
     required this.uploaded,
+    this.atlasIntakeAccepted,
+    this.atlasIntakeStatus,
+    this.atlasRelativePath,
   });
 }
 
@@ -573,13 +579,22 @@ class WsClient {
     required String name,
     required String dataUrl,
     String path = '',
+    String? sourceChannel,
+    String? sourceProfile,
   }) async {
-    final response = await send('file.attach', {
+    final params = <String, dynamic>{
       'session_id': sessionId,
       'name': name,
       'path': path,
       'data_url': dataUrl,
-    });
+    };
+    if (sourceChannel?.isNotEmpty == true) {
+      params['source_channel'] = sourceChannel;
+    }
+    if (sourceProfile?.isNotEmpty == true) {
+      params['source_profile'] = sourceProfile;
+    }
+    final response = await send('file.attach', params);
     final error = response['error'];
     if (error is Map<String, dynamic>) {
       throw JsonRpcError(
@@ -596,11 +611,21 @@ class WsClient {
     if (refText.isEmpty) {
       throw JsonRpcError('file.attach', 'Gateway returned no file reference');
     }
+    final atlasIntake = result['atlas_intake'];
     return RemoteFileAttachment(
       name: result['name']?.toString() ?? name,
       path: result['path']?.toString() ?? path,
       refText: refText,
       uploaded: result['uploaded'] == true,
+      atlasIntakeAccepted: atlasIntake is Map<String, dynamic>
+          ? atlasIntake['accepted'] == true
+          : null,
+      atlasIntakeStatus: atlasIntake is Map<String, dynamic>
+          ? atlasIntake['status']?.toString()
+          : null,
+      atlasRelativePath: atlasIntake is Map<String, dynamic>
+          ? atlasIntake['relative_path']?.toString()
+          : null,
     );
   }
 

@@ -39,6 +39,9 @@ local operator logs are intentionally excluded.
 - Added per-file ready, uploading, attached, failed, remove, and retry states.
 - Ensured text and attachments are sent through the same Desktop Gateway
   session and are not uploaded again after a retry if already attached.
+- Added explicit `hermes_mobile` channel and profile metadata for canonical
+  server-side document intake. Intake failure is non-blocking for the chat and
+  is surfaced as an operator-visible pending status.
 
 ### Conversation controls
 
@@ -81,7 +84,7 @@ local operator logs are intentionally excluded.
 
 ## Validation
 
-- 110 Flutter tests pass.
+- 113 Flutter tests pass.
 - Static analysis passes with `--fatal-infos`.
 - The synthetic gateway contract test covers authentication, session lifecycle,
   model/reasoning configuration, files, streaming, interruption, interactive
@@ -91,6 +94,15 @@ local operator logs are intentionally excluded.
 - The ARM64 artifact was tested successfully on a physical Android phone:
   Remote Gateway chat, Branch, per-chat model, and thinking effort were
   confirmed functional.
+- The `.14` ARM64 debug artifact builds successfully and its extended synthetic
+  `file.attach` contract returns canonical intake status. Physical-device
+  validation of the new intake metadata remains an operator acceptance step.
+
+## Toolchain follow-up
+
+- The current Flutter build warns that several plugins still apply the Kotlin
+  Gradle Plugin directly. This is non-blocking today, but the dependencies must
+  migrate before a future Flutter release enforces built-in Kotlin.
 
 ## Known release boundary
 

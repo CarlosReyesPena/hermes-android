@@ -1250,6 +1250,15 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
             pendingFile.refText = attachment.refText;
             pendingFile.status = _AttachmentStatus.attached;
           });
+          if (attachment.atlasIntakeAccepted == false && mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text(
+                  'File attached; document catalog registration is pending.',
+                ),
+              ),
+            );
+          }
         } catch (error) {
           if (!mounted || responseGeneration != _responseGeneration) return;
           setState(() {

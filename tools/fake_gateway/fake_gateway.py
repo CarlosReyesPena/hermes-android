@@ -667,6 +667,8 @@ async def handle_rpc(
             "ref_text": ref_text,
             "bytes": len(attachment_bytes),
             "sha256": digest,
+            "source_channel": str(params.get("source_channel") or ""),
+            "source_profile": str(params.get("source_profile") or ""),
         }
         state.attachments.setdefault(session_id, []).append(metadata)
         state.log({**log_record, **metadata, "accepted": True})
@@ -679,6 +681,14 @@ async def handle_rpc(
                     "name": name,
                     "path": remote_path,
                     "ref_text": ref_text,
+                    "atlas_intake": {
+                        "accepted": True,
+                        "status": "accepted",
+                        "relative_path": (
+                            "00_Inbox/Hermes-Mobile/"
+                            f"fixture/{metadata['source_profile']}/{name}"
+                        ),
+                    },
                 },
             )
         )

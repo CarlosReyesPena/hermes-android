@@ -21,6 +21,7 @@ enum DesktopConnectionState {
 class DesktopGatewayClient {
   final String _baseUrl;
   final DashboardClient _dashboard;
+  final String _documentProfile;
   WsClient? _ws;
   final Map<String, String> _gatewaySessionIds = {};
   DesktopAsyncEventCallback? _asyncEventListener;
@@ -39,7 +40,11 @@ class DesktopGatewayClient {
     'subagent.complete',
   };
 
-  DesktopGatewayClient._({required this._baseUrl, required this._dashboard});
+  DesktopGatewayClient._({
+    required this._baseUrl,
+    required this._dashboard,
+    required this._documentProfile,
+  });
 
   factory DesktopGatewayClient.fromConnection(SavedConnection connection) {
     final raw = connection.desktopGatewayUrl?.trim() ?? '';
@@ -74,6 +79,7 @@ class DesktopGatewayClient {
         username: connection.dashboardUsername,
         password: connection.dashboardPassword,
       ),
+      documentProfile: documentIntakeProfileForConnection(connection),
     );
   }
 
@@ -157,6 +163,8 @@ class DesktopGatewayClient {
       sessionId: gateway.sessionId,
       name: name,
       dataUrl: dataUrl,
+      sourceChannel: 'hermes_mobile',
+      sourceProfile: _documentProfile,
     );
   }
 
@@ -318,6 +326,22 @@ class DesktopGatewayClient {
     _gatewaySessionIds.clear();
     _dashboard.close();
   }
+}
+
+String documentIntakeProfileForConnection(SavedConnection connection) {
+  final candidates = <String>[
+    connection.gatewayPrefix ?? '',
+    Uri.tryParse(connection.desktopGatewayUrl ?? '')?.path ?? '',
+  ];
+  final segments = candidates
+      .expand((value) => value.toLowerCase().split('/'))
+      .where((value) => value.isNotEmpty)
+      .toSet();
+  if (segments.contains('personal')) return 'personal';
+  if (segments.contains('pro') || segments.contains('professional')) {
+    return 'pro';
+  }
+  return 'organizator';
 }
 
 class _DesktopGatewaySession {

@@ -174,6 +174,8 @@ async def probe(base_url: str) -> None:
                     "session_id": session_id,
                     "name": "contract-probe.txt",
                     "path": "",
+                    "source_channel": "hermes_mobile",
+                    "source_profile": "pro",
                     "data_url": (
                         "data:text/plain;base64,"
                         + base64.b64encode(fixture_bytes).decode("ascii")
@@ -182,6 +184,8 @@ async def probe(base_url: str) -> None:
             )
             assert attachment["attached"] is True
             assert attachment["ref_text"].startswith("@file:")
+            assert attachment["atlas_intake"]["accepted"] is True
+            assert attachment["atlas_intake"]["status"] == "accepted"
 
             await ws.send_json(
                 {
