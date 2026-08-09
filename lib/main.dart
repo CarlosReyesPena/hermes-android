@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'core/services/connection_manager.dart';
+import 'core/services/text_size_preference.dart';
 import 'core/screens/session_list_screen.dart';
 import 'core/utils/responsive.dart';
 
@@ -42,9 +43,18 @@ class HermesApp extends StatefulWidget {
         : 'system';
     await prefs.setString('theme_mode', value);
   }
+
+  static TextSizePreference getTextSizePreference(SharedPreferences prefs) {
+    return TextSizePreferenceStore(prefs).read();
+  }
 }
 
 class HermesAppState extends State<HermesApp> {
+  Future<void> setTextSizePreference(TextSizePreference preference) async {
+    await TextSizePreferenceStore(widget.connManager.prefs).save(preference);
+    if (mounted) setState(() {});
+  }
+
   @override
   Widget build(BuildContext context) {
     const gold = Color(0xFFD4AF37);
@@ -98,6 +108,18 @@ class HermesAppState extends State<HermesApp> {
           foregroundColor: Colors.black,
         ),
       ),
+      builder: (context, child) {
+        final systemMediaQuery = MediaQuery.of(context);
+        final preference = HermesApp.getTextSizePreference(
+          widget.connManager.prefs,
+        );
+        return MediaQuery(
+          data: systemMediaQuery.copyWith(
+            textScaler: preference.applyTo(systemMediaQuery.textScaler),
+          ),
+          child: child!,
+        );
+      },
       home: HomeScreen(connManager: widget.connManager),
     );
   }
