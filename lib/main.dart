@@ -8,7 +8,7 @@ import 'core/utils/responsive.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final prefs = await SharedPreferences.getInstance();
-  final connManager = ConnectionManager(prefs);
+  final connManager = await ConnectionManager.create(prefs);
   runApp(HermesApp(connManager: connManager));
 }
 
@@ -236,9 +236,9 @@ class _HomeScreenState extends State<HomeScreen> {
               dashboardPort,
               dashboardUsername,
               dashboardPassword,
-            }) {
+            }) async {
               if (existing == null) {
-                widget.connManager.saveConnection(
+                await widget.connManager.saveConnection(
                   label,
                   host,
                   port,
@@ -252,7 +252,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   dashboardPassword: dashboardPassword,
                 );
               } else {
-                widget.connManager.updateConnection(
+                await widget.connManager.updateConnection(
                   existing.id,
                   label,
                   host,
@@ -359,7 +359,8 @@ class _HomeScreenState extends State<HomeScreen> {
                         if (!ctx.mounted) return;
 
                         if (ok) {
-                          widget.connManager.updateApiKey(conn.id, key);
+                          await widget.connManager.updateApiKey(conn.id, key);
+                          if (!ctx.mounted) return;
                           await _closeDialogAndRefresh(ctx);
                         } else {
                           setDialogState(() {
@@ -367,7 +368,13 @@ class _HomeScreenState extends State<HomeScreen> {
                             validating = false;
                           });
                         }
-                      } catch (e) {
+                      } on CredentialStorageException {
+                        if (!ctx.mounted) return;
+                        setDialogState(() {
+                          error = 'The API key could not be stored securely.';
+                          validating = false;
+                        });
+                      } catch (_) {
                         if (!ctx.mounted) return;
                         setDialogState(() {
                           error = 'Cannot reach ${conn.host}:${conn.port}.';
@@ -581,7 +588,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         await client.getModelInfo();
                         client.close();
                         if (!ctx.mounted) return;
-                        widget.connManager.updateDashboardAuth(
+                        await widget.connManager.updateDashboardAuth(
                           conn.id,
                           dashboardPort: port,
                           username: user,
@@ -590,8 +597,17 @@ class _HomeScreenState extends State<HomeScreen> {
                           dashboardPrefix: dashboardPrefix,
                           dashboardProxied: proxied,
                         );
+                        if (!ctx.mounted) return;
                         await _closeDialogAndRefresh(ctx);
-                      } catch (e) {
+                      } on CredentialStorageException {
+                        client.close();
+                        if (!ctx.mounted) return;
+                        setDialogState(() {
+                          error =
+                              'The dashboard credentials could not be stored securely.';
+                          validating = false;
+                        });
+                      } catch (_) {
                         client.close();
                         if (!ctx.mounted) return;
                         setDialogState(() {
@@ -638,10 +654,21 @@ class _HomeScreenState extends State<HomeScreen> {
           style: TextStyle(color: Colors.grey[600]),
         ),
         trailing: PopupMenuButton<String>(
-          onSelected: (v) {
+          onSelected: (v) async {
             if (v == 'delete') {
-              widget.connManager.deleteConnection(conn.id);
-              _refresh();
+              try {
+                await widget.connManager.deleteConnection(conn.id);
+                if (mounted) _refresh();
+              } on CredentialStorageException {
+                if (!mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text(
+                      'The connection could not be deleted safely.',
+                    ),
+                  ),
+                );
+              }
             } else if (v == 'edit') {
               _showEditConnectionDialog(conn);
             } else if (v == 'apikey') {
@@ -737,7 +764,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
 class _AddDialog extends StatefulWidget {
   final SavedConnection? initialConnection;
-  final void Function(
+  final Future<void> Function(
     String label,
     String host,
     int port,
@@ -904,7 +931,7 @@ class _AddDialogState extends State<_AddDialog> {
         if (!mounted) return;
       }
 
-      widget.onSave(
+      await widget.onSave(
         label,
         host,
         port,
@@ -917,8 +944,14 @@ class _AddDialogState extends State<_AddDialog> {
         dashboardUsername: dashUser.isEmpty ? null : dashUser,
         dashboardPassword: dashPass.isEmpty ? null : dashPass,
       );
-      Navigator.pop(context);
-    } catch (e) {
+      if (mounted) Navigator.pop(context);
+    } on CredentialStorageException {
+      if (!mounted) return;
+      setState(() {
+        _error = 'The connection could not be stored securely.';
+        _validating = false;
+      });
+    } catch (_) {
       if (!mounted) return;
       setState(() {
         _error = 'Cannot reach $host:$port. Check the host and port.';

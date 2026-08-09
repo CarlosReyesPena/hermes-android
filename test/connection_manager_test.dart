@@ -35,6 +35,36 @@ class _BlockingStreamingClient extends http.BaseClient {
   }
 }
 
+class _MemoryCredentialStore implements CredentialStore {
+  final Map<String, String> values = <String, String>{};
+  final Map<String, String> _cache = <String, String>{};
+
+  @override
+  Future<void> delete(String key) async {
+    values.remove(key);
+    _cache.remove(key);
+  }
+
+  @override
+  Future<String?> read(String key) async {
+    final value = values[key];
+    if (value == null) {
+      _cache.remove(key);
+    } else {
+      _cache[key] = value;
+    }
+    return value;
+  }
+
+  @override
+  String? readCached(String key) => _cache[key];
+
+  @override
+  Future<void> write(String key, String value) async {
+    values[key] = value;
+  }
+}
+
 void main() {
   group('SavedConnection', () {
     test('normalizes bare HTTP gateway hosts with fallback port', () {
@@ -153,27 +183,28 @@ void main() {
       expect(https.dashboardPort, 8443);
     });
 
-    test(
-      'round-trips dashboard port and credentials through toMap/fromMap',
-      () {
-        final conn = SavedConnection(
-          id: '1',
-          label: 'Home',
-          host: '192.168.1.50',
-          port: 8642,
-          apiKey: 'key',
-          dashboardPortOverride: 30433,
-          dashboardUsername: 'misha',
-          dashboardPassword: 'secret',
-        );
+    test('serializes dashboard metadata without plaintext credentials', () {
+      final conn = SavedConnection(
+        id: '1',
+        label: 'Home',
+        host: '192.168.1.50',
+        port: 8642,
+        apiKey: 'key',
+        dashboardPortOverride: 30433,
+        dashboardUsername: 'misha',
+        dashboardPassword: 'secret',
+      );
 
-        final restored = SavedConnection.fromMap(conn.toMap());
-        expect(restored.dashboardPortOverride, 30433);
-        expect(restored.dashboardUsername, 'misha');
-        expect(restored.dashboardPassword, 'secret');
-        expect(restored.dashboardPort, 30433);
-      },
-    );
+      final map = conn.toMap();
+      final restored = SavedConnection.fromMap(map);
+      expect(map, isNot(contains('api_key')));
+      expect(map, isNot(contains('dashboard_password')));
+      expect(restored.dashboardPortOverride, 30433);
+      expect(restored.dashboardUsername, 'misha');
+      expect(restored.apiKey, isEmpty);
+      expect(restored.dashboardPassword, isNull);
+      expect(restored.dashboardPort, 30433);
+    });
 
     test('fromMap is backward compatible with maps lacking dashboard keys', () {
       final restored = SavedConnection.fromMap({
@@ -643,8 +674,11 @@ void main() {
 
     test('saveConnection persists dashboard port and credentials', () async {
       final prefs = await SharedPreferences.getInstance();
-      final mgr = ConnectionManager(prefs);
-      mgr.saveConnection(
+      final mgr = await ConnectionManager.create(
+        prefs,
+        credentialStore: _MemoryCredentialStore(),
+      );
+      await mgr.saveConnection(
         'Home',
         '192.168.1.50',
         8642,
@@ -662,11 +696,14 @@ void main() {
 
     test('updateDashboardAuth sets then clears fields', () async {
       final prefs = await SharedPreferences.getInstance();
-      final mgr = ConnectionManager(prefs);
-      mgr.saveConnection('Home', '192.168.1.50', 8642, 'key');
+      final mgr = await ConnectionManager.create(
+        prefs,
+        credentialStore: _MemoryCredentialStore(),
+      );
+      await mgr.saveConnection('Home', '192.168.1.50', 8642, 'key');
       final id = mgr.getConnections().single.id;
 
-      mgr.updateDashboardAuth(
+      await mgr.updateDashboardAuth(
         id,
         gatewayPrefix: '/profile/peter',
         dashboardPrefix: '/dashboard',
@@ -684,7 +721,7 @@ void main() {
       expect(conn.dashboardPassword, 'secret');
 
       // Blank values clear the corresponding fields.
-      mgr.updateDashboardAuth(
+      await mgr.updateDashboardAuth(
         id,
         gatewayPrefix: '',
         dashboardPrefix: '',
@@ -703,8 +740,11 @@ void main() {
 
     test('updateApiKey preserves dashboard credentials', () async {
       final prefs = await SharedPreferences.getInstance();
-      final mgr = ConnectionManager(prefs);
-      mgr.saveConnection(
+      final mgr = await ConnectionManager.create(
+        prefs,
+        credentialStore: _MemoryCredentialStore(),
+      );
+      await mgr.saveConnection(
         'Home',
         '192.168.1.50',
         8642,
@@ -715,7 +755,7 @@ void main() {
       );
       final id = mgr.getConnections().single.id;
 
-      mgr.updateApiKey(id, 'new-key');
+      await mgr.updateApiKey(id, 'new-key');
       final conn = mgr.getConnections().single;
       expect(conn.apiKey, 'new-key');
       expect(conn.dashboardPortOverride, 30433);
@@ -727,8 +767,11 @@ void main() {
       'updateConnection edits host, port, key, and clears optional fields',
       () async {
         final prefs = await SharedPreferences.getInstance();
-        final mgr = ConnectionManager(prefs);
-        mgr.saveConnection(
+        final mgr = await ConnectionManager.create(
+          prefs,
+          credentialStore: _MemoryCredentialStore(),
+        );
+        await mgr.saveConnection(
           'Home',
           '192.168.1.50',
           8642,
@@ -742,7 +785,7 @@ void main() {
         );
         final id = mgr.getConnections().single.id;
 
-        mgr.updateConnection(
+        await mgr.updateConnection(
           id,
           'Moved',
           'https://hermes.example.com',

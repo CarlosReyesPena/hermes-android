@@ -127,13 +127,16 @@ class SavedConnection {
     );
   }
 
+  /// Serializes non-secret connection metadata for SharedPreferences.
+  ///
+  /// [apiKey] and [dashboardPassword] intentionally never cross this boundary;
+  /// [ConnectionManager] persists them in the platform secure store instead.
   Map<String, dynamic> toMap() {
     final m = <String, dynamic>{
       'id': id,
       'label': label,
       'host': host,
       'port': port,
-      'api_key': apiKey,
       'use_https': useHttps,
       'dashboard_port': dashboardPortOverride,
     };
@@ -152,9 +155,6 @@ class SavedConnection {
     if (dashboardUsername != null && dashboardUsername!.isNotEmpty) {
       m['dashboard_username'] = dashboardUsername;
     }
-    if (dashboardPassword != null && dashboardPassword!.isNotEmpty) {
-      m['dashboard_password'] = dashboardPassword;
-    }
     return m;
   }
 
@@ -169,6 +169,8 @@ class SavedConnection {
       label: map['label'] as String,
       host: map['host'] as String,
       port: (map['port'] as int?) ?? 8642,
+      // Legacy plaintext fields are accepted only so ConnectionManager can
+      // migrate existing installs before rewriting sanitized metadata.
       apiKey: (map['api_key'] as String?) ?? '',
       useHttps: (map['use_https'] as bool?) ?? false,
       gatewayPrefix: map['gateway_prefix'] as String?,

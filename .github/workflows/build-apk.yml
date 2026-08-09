@@ -1,4 +1,4 @@
-name: Build Release APK
+name: Build APK / Release Gate
 
 on:
   push:
@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   build:
-    name: Build APK
+    name: Build and verify APK
     runs-on: ubuntu-latest
     env:
       HAS_RELEASE_KEYSTORE: ${{ secrets.KEYSTORE_BASE64 != '' }}
@@ -34,34 +34,54 @@ jobs:
       - name: Cache Flutter dependencies
         uses: actions/cache@v4
         with:
-          path: |
-            ~/.pub-cache
-            build/
+          path: ~/.pub-cache
           key: flutter-${{ runner.os }}-${{ hashFiles('pubspec.lock') }}
           restore-keys: flutter-${{ runner.os }}-
 
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Verify tag matches app version
-        if: startsWith(github.ref, 'refs/tags/v')
+      - name: Verify release identity and upgrade versionCode
+        env:
+          MINIMUM_INSTALLED_VERSION_CODE: '2126'
         run: |
-          TAG_VERSION="${GITHUB_REF_NAME#v}"
-          PUBSPEC_VERSION=$(python3 - <<'PY'
+          python3 - <<'PY'
+          import os
           import pathlib
           import re
 
-          match = re.search(r"^version:\s*([^+\s]+)", pathlib.Path("pubspec.yaml").read_text(), re.M)
-          if not match:
-              raise SystemExit("pubspec.yaml is missing a version line")
-          print(match.group(1))
-          PY
+          match = re.search(
+              r"^version:\s*([^\s+]+)\+(\d+)\s*$",
+              pathlib.Path("pubspec.yaml").read_text(),
+              re.M,
           )
+          if not match:
+              raise SystemExit("pubspec.yaml must declare versionName+versionCode")
 
-          if [ "$TAG_VERSION" != "$PUBSPEC_VERSION" ]; then
-            echo "Release tag v$TAG_VERSION does not match pubspec.yaml version $PUBSPEC_VERSION"
-            exit 1
-          fi
+          version_name, version_code_text = match.groups()
+          version_code = int(version_code_text)
+          minimum = int(os.environ["MINIMUM_INSTALLED_VERSION_CODE"])
+          if version_code <= minimum:
+              raise SystemExit(
+                  f"versionCode {version_code} must be greater than {minimum}"
+              )
+
+          if os.environ.get("GITHUB_REF_TYPE") == "tag":
+              expected_tag = f"v{version_name}"
+              actual_tag = os.environ.get("GITHUB_REF_NAME")
+              if actual_tag != expected_tag:
+                  raise SystemExit(
+                      f"Release tag {actual_tag} does not match {expected_tag}"
+                  )
+
+          print(f"Verified {version_name}+{version_code}; upgrade floor is {minimum}")
+          PY
+
+      - name: Refuse an unsigned tagged release
+        if: startsWith(github.ref, 'refs/tags/v') && env.HAS_RELEASE_KEYSTORE != 'true'
+        run: |
+          echo "A tagged release requires the authorized release keystore."
+          exit 1
 
       - name: Set up release keystore
         if: env.HAS_RELEASE_KEYSTORE == 'true'
@@ -78,34 +98,43 @@ jobs:
           echo "storeFile=${{ github.workspace }}/release.keystore" >> key.properties
 
       - name: Static analysis
-        run: flutter analyze --fatal-infos
+        run: flutter analyze --no-pub --fatal-infos
 
       - name: Run tests
-        run: flutter test
+        run: flutter test --no-pub
 
       - name: Build APK (signed release)
         if: env.HAS_RELEASE_KEYSTORE == 'true'
         run: flutter build apk --release --split-per-abi
 
-      - name: Build APK (debug prerelease)
+      - name: Build APK (debug validation artifact only)
         if: env.HAS_RELEASE_KEYSTORE != 'true'
         run: flutter build apk --debug --split-per-abi
 
-      - name: Upload APKs
+      - name: Upload signed release APKs
+        if: env.HAS_RELEASE_KEYSTORE == 'true'
         uses: actions/upload-artifact@v4
         with:
-          name: release-apks
-          path: build/app/outputs/flutter-apk/*.apk
+          name: signed-release-apks
+          path: build/app/outputs/flutter-apk/app-*-release.apk
+          retention-days: 30
+
+      - name: Upload debug validation APKs
+        if: env.HAS_RELEASE_KEYSTORE != 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: debug-validation-apks
+          path: build/app/outputs/flutter-apk/app-*-debug.apk
           retention-days: 30
 
       - name: Create Release
-        if: startsWith(github.ref, 'refs/tags/v')
+        if: startsWith(github.ref, 'refs/tags/v') && env.HAS_RELEASE_KEYSTORE == 'true'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh release create "${{ github.ref_name }}" \
             --title "Hermes Android ${{ github.ref_name }}" \
             --generate-notes \
-            build/app/outputs/flutter-apk/*.apk || \
+            build/app/outputs/flutter-apk/app-*-release.apk || \
           gh release upload "${{ github.ref_name }}" \
-            build/app/outputs/flutter-apk/*.apk --clobber
+            build/app/outputs/flutter-apk/app-*-release.apk --clobber
