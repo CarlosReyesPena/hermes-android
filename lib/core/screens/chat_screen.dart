@@ -11,14 +11,13 @@ import 'package:file_picker/file_picker.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:speech_to_text/speech_recognition_error.dart';
-import 'package:speech_to_text/speech_recognition_result.dart';
-import 'package:speech_to_text/speech_to_text.dart';
 
+import '../controllers/voice_composer_controller.dart';
 import '../services/connection_manager.dart';
 import '../services/attachment_draft_service.dart';
 import '../services/chat_model_override_store.dart';
 import '../services/desktop_gateway_client.dart';
+import '../services/voice_composer_adapter.dart';
 import '../services/ws_client.dart';
 import '../models/attachment_draft.dart';
 import '../models/gateway_activity.dart';
@@ -36,6 +35,7 @@ import '../widgets/gateway_approval_dialog.dart';
 import '../widgets/gateway_clarify_dialog.dart';
 import '../widgets/gateway_insight_card.dart';
 import '../widgets/gateway_sensitive_prompt_dialog.dart';
+import '../widgets/voice_composer_controls.dart';
 
 /// These colors remain identical in light and dark themes. Their 8.15:1
 /// contrast ratio keeps normal user-message text above WCAG AA.
@@ -114,6 +114,9 @@ class ChatScreen extends StatefulWidget {
   @visibleForTesting
   final List<AttachmentDraft> testInitialAttachmentDrafts;
 
+  @visibleForTesting
+  final VoiceComposerAdapter? testVoiceComposerAdapter;
+
   const ChatScreen({
     required this.connection,
     required this.session,
@@ -121,6 +124,7 @@ class ChatScreen extends StatefulWidget {
     this.testAttachmentDraftService,
     this.testRemotePromptSubmit,
     this.testInitialAttachmentDrafts = const [],
+    this.testVoiceComposerAdapter,
     super.key,
   });
 
@@ -171,10 +175,8 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   _PendingClarifyPrompt? _activeClarifyPrompt;
 
   // Voice input / spoken replies
-  final SpeechToText _speechToText = SpeechToText();
   final FlutterTts _flutterTts = FlutterTts();
-  bool _speechAvailable = false;
-  bool _listening = false;
+  late final VoiceComposerController _voiceComposer;
   bool _voiceReplyEnabled = true;
   bool _awaitingVoiceReply = false;
   String? _voiceStatus;
@@ -214,6 +216,11 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     _attachmentSendCoordinator = AttachmentDraftSendCoordinator(
       _attachmentDraftService,
     );
+    _voiceComposer = VoiceComposerController(
+      textController: _textController,
+      adapter:
+          widget.testVoiceComposerAdapter ?? SpeechToTextVoiceComposerAdapter(),
+    )..addListener(_onVoiceComposerChanged);
     _attachmentDrafts.addAll(widget.testInitialAttachmentDrafts);
     _gatewayNotices = List<GatewayNotice>.from(
       _savedGatewayNotices[_gatewayNoticeIdentity] ?? const [],
@@ -277,8 +284,12 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     _savedGatewayNotices[_gatewayNoticeIdentity] = List.unmodifiable(
       _gatewayNotices,
     );
-    _speechToText.cancel();
-    _flutterTts.stop();
+    _voiceComposer
+      ..removeListener(_onVoiceComposerChanged)
+      ..dispose();
+    if (widget.testVoiceComposerAdapter == null) {
+      _flutterTts.stop();
+    }
     for (final timer in _notificationTimers.values) {
       timer.cancel();
     }
@@ -356,122 +367,58 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
       final voiceName = prefs.getString('voice_name');
       final voiceLocale = prefs.getString('voice_locale');
 
-      if (voiceName != null && voiceName.isNotEmpty) {
-        if (voiceName == voiceLocale) {
-          await _flutterTts.setLanguage(voiceName);
+      if (widget.testVoiceComposerAdapter == null) {
+        if (voiceName != null && voiceName.isNotEmpty) {
+          if (voiceName == voiceLocale) {
+            await _flutterTts.setLanguage(voiceName);
+          } else {
+            await _flutterTts.setVoice({
+              'name': voiceName,
+              'locale': voiceLocale ?? '',
+            });
+          }
+          _sttLocaleId = voiceLocale?.replaceAll('-', '_');
         } else {
-          await _flutterTts.setVoice({
-            'name': voiceName,
-            'locale': voiceLocale ?? '',
-          });
+          _sttLocaleId = null;
         }
-        _sttLocaleId = voiceLocale?.replaceAll('-', '_');
+        await _flutterTts.setSpeechRate(0.48);
+        await _flutterTts.setVolume(1.0);
+        await _flutterTts.setPitch(1.0);
       } else {
-        _sttLocaleId = null;
-      }
-      await _flutterTts.setSpeechRate(0.48);
-      await _flutterTts.setVolume(1.0);
-      await _flutterTts.setPitch(1.0);
-
-      if (!requestSpeechPermission && !await _speechToText.hasPermission) {
-        if (!mounted) return;
-        setState(() {
-          _speechAvailable = false;
-          _voiceStatus = null;
-        });
-        return;
+        _sttLocaleId = voiceLocale?.replaceAll('-', '_');
       }
 
-      final available = await _speechToText.initialize(
-        onStatus: _handleSpeechStatus,
-        onError: _handleSpeechError,
+      await _voiceComposer.initialize(
+        requestPermission: requestSpeechPermission,
       );
-      if (!mounted) return;
-      setState(() {
-        _speechAvailable = available;
-        _voiceStatus = available ? null : 'Speech recognition is unavailable';
-      });
     } catch (e) {
       if (!mounted) return;
-      setState(() {
-        _speechAvailable = false;
-        _voiceStatus = 'Voice setup failed: $e';
-      });
+      setState(() => _voiceStatus = 'Voice setup failed: $e');
     }
   }
 
-  void _handleSpeechStatus(String status) {
-    if (!mounted) return;
-    final listening = status == 'listening';
-    setState(() {
-      _listening = listening;
-      if (!listening && status == 'done') {
-        _voiceStatus = null;
-      }
-    });
-  }
-
-  void _handleSpeechError(SpeechRecognitionError error) {
-    if (!mounted) return;
-    setState(() {
-      _listening = false;
-      _voiceStatus = error.errorMsg;
-    });
-  }
-
-  Future<void> _toggleVoiceInput() async {
+  Future<void> _startVoiceInput() async {
     if (_streaming || _sending || _loading) return;
-    if (_listening) {
-      await _speechToText.stop();
-      if (!mounted) return;
-      setState(() => _listening = false);
-      return;
+    if (widget.testVoiceComposerAdapter == null) {
+      await _flutterTts.stop();
     }
-
-    if (!_speechAvailable) {
-      await _initVoice(requestSpeechPermission: true);
-      if (!_speechAvailable) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                _voiceStatus ?? 'Speech recognition is unavailable',
-              ),
-            ),
-          );
-        }
-        return;
-      }
-    }
-
-    await _flutterTts.stop();
     if (!mounted) return;
-    setState(() => _voiceStatus = 'Listening…');
-    await _speechToText.listen(
-      listenOptions: SpeechListenOptions(
-        listenFor: const Duration(seconds: 60),
-        pauseFor: const Duration(seconds: 3),
-        partialResults: true,
-        cancelOnError: true,
-        listenMode: ListenMode.dictation,
-        localeId: _sttLocaleId,
-      ),
-      onResult: _handleSpeechResult,
-    );
+    final started = await _voiceComposer.start(localeId: _sttLocaleId);
+    if (!started && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            _voiceComposer.status ??
+                _voiceStatus ??
+                'Speech recognition is unavailable',
+          ),
+        ),
+      );
+    }
   }
 
-  void _handleSpeechResult(SpeechRecognitionResult result) {
-    final recognised = result.recognizedWords.trim();
-    if (recognised.isEmpty || !mounted) return;
-    setState(() {
-      _textController.text = recognised;
-      _textController.selection = TextSelection.collapsed(
-        offset: _textController.text.length,
-      );
-    });
-    if (result.finalResult) {
-      _sendMessage(speakResponse: true);
-    }
+  void _onVoiceComposerChanged() {
+    if (mounted) setState(() {});
   }
 
   Future<void> _speakAssistantText(String text) async {
@@ -1226,6 +1173,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
 
   /// Send message via SSE streaming (Gateway API Server).
   Future<void> _sendMessage({bool speakResponse = false}) async {
+    if (_voiceComposer.listening) return;
     final text = _textController.text.trim();
     final attachments = List<AttachmentDraft>.from(_attachmentDrafts);
     if (text.isEmpty && attachments.isEmpty) return;
@@ -2384,6 +2332,12 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                   ),
                 ),
               ),
+            if (_voiceComposer.listening)
+              VoiceComposerIndicator(
+                controller: _voiceComposer,
+                onStop: () => unawaited(_voiceComposer.stop()),
+                onCancel: () => unawaited(_voiceComposer.cancel()),
+              ),
             Row(
               children: [
                 Semantics(
@@ -2431,26 +2385,11 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                   ),
                 ),
                 const SizedBox(width: 8),
-                Semantics(
-                  label: _listening ? 'Stop voice input' : 'Start voice input',
-                  button: true,
-                  enabled: !_loading && !_streaming && !_sending,
-                  excludeSemantics: true,
-                  child: IconButton.filledTonal(
-                    icon: Icon(_listening ? Icons.mic_off : Icons.mic),
-                    color: _listening
-                        ? Theme.of(context).colorScheme.error
-                        : null,
-                    onPressed: (!_loading && !_streaming && !_sending)
-                        ? _toggleVoiceInput
-                        : null,
-                    tooltip: _listening ? 'Stop listening' : 'Speak to Hermes',
-                    constraints: const BoxConstraints.tightFor(
-                      width: 48,
-                      height: 48,
-                    ),
+                if (!_voiceComposer.listening)
+                  VoiceComposerStartButton(
+                    enabled: !_loading && !_streaming && !_sending,
+                    onPressed: _startVoiceInput,
                   ),
-                ),
                 Semantics(
                   label: 'Spoken replies',
                   value: _voiceReplyEnabled ? 'On' : 'Off',
@@ -2480,7 +2419,9 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                 Semantics(
                   label: _streaming ? 'Stop response' : 'Send message',
                   button: true,
-                  enabled: _streaming || (!_loading && !_sending),
+                  enabled:
+                      _streaming ||
+                      (!_loading && !_sending && !_voiceComposer.listening),
                   excludeSemantics: true,
                   child: SizedBox.square(
                     dimension: 48,
@@ -2501,7 +2442,12 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                             )
                           : IconButton(
                               icon: const Icon(Icons.send, size: 20),
-                              onPressed: _sendMessage,
+                              onPressed:
+                                  _loading ||
+                                      _sending ||
+                                      _voiceComposer.listening
+                                  ? null
+                                  : _sendMessage,
                               tooltip: 'Send',
                               constraints: const BoxConstraints.tightFor(
                                 width: 48,
