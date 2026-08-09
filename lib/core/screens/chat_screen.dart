@@ -2,7 +2,6 @@
 // Uses REST endpoints: POST /api/sessions/{id}/chat and
 // GET /api/sessions/{id}/messages.
 import 'dart:async';
-import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -17,9 +16,11 @@ import 'package:speech_to_text/speech_recognition_result.dart';
 import 'package:speech_to_text/speech_to_text.dart';
 
 import '../services/connection_manager.dart';
+import '../services/attachment_draft_service.dart';
 import '../services/chat_model_override_store.dart';
 import '../services/desktop_gateway_client.dart';
 import '../services/ws_client.dart';
+import '../models/attachment_draft.dart';
 import '../models/gateway_activity.dart';
 import '../models/gateway_approval.dart';
 import '../models/gateway_clarify.dart';
@@ -29,45 +30,11 @@ import '../utils/chat_history_scroll.dart';
 import '../utils/message_content.dart';
 import '../utils/responsive.dart';
 import '../widgets/gateway_activity_card.dart';
+import '../widgets/attachment_draft_tile.dart';
 import '../widgets/gateway_approval_dialog.dart';
 import '../widgets/gateway_clarify_dialog.dart';
 import '../widgets/gateway_insight_card.dart';
 import '../widgets/gateway_sensitive_prompt_dialog.dart';
-
-const _maxInlineImageBytes = 680 * 1024;
-const _maxRemoteFileBytes = 16 * 1024 * 1024;
-const _maxRemoteAttachments = 10;
-
-class _PendingImage {
-  final Uint8List bytes;
-  final String dataUrl;
-  final String name;
-
-  const _PendingImage({
-    required this.bytes,
-    required this.dataUrl,
-    required this.name,
-  });
-}
-
-enum _AttachmentStatus { ready, uploading, attached, failed }
-
-class _PendingFile {
-  final Uint8List bytes;
-  final String dataUrl;
-  final String name;
-  final bool isImage;
-  _AttachmentStatus status = _AttachmentStatus.ready;
-  String? refText;
-  String? error;
-
-  _PendingFile({
-    required this.bytes,
-    required this.dataUrl,
-    required this.name,
-    this.isImage = false,
-  });
-}
 
 class _ModelChoice {
   final String provider;
@@ -124,10 +91,14 @@ class ChatScreen extends StatefulWidget {
   @visibleForTesting
   final ApiClient? testApiClient;
 
+  @visibleForTesting
+  final AttachmentDraftService? testAttachmentDraftService;
+
   const ChatScreen({
     required this.connection,
     required this.session,
     this.testApiClient,
+    this.testAttachmentDraftService,
     super.key,
   });
 
@@ -146,6 +117,8 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   String? _error;
   late final ApiClient _client;
   late final GatewayChatClient _gateway;
+  late final AttachmentDraftService _attachmentDraftService;
+  late final AttachmentDraftSendCoordinator _attachmentSendCoordinator;
   late final Future<ChatModelOverrideStore> _chatModelStore;
   late final Future<void> _sessionModelRestore;
   DesktopGatewayClient? _desktopGateway;
@@ -155,8 +128,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   // Chat sending state
   final _textController = TextEditingController();
   final _imagePicker = ImagePicker();
-  _PendingImage? _pendingImage;
-  final List<_PendingFile> _pendingFiles = [];
+  final List<AttachmentDraft> _attachmentDrafts = [];
   String? _sessionModel;
   String? _sessionProvider;
   String? _sessionReasoningEffort;
@@ -210,6 +182,11 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
           pathPrefix: widget.connection.gatewayPrefix ?? '',
         );
     _gateway = GatewayChatClient(_client);
+    _attachmentDraftService =
+        widget.testAttachmentDraftService ?? AttachmentDraftService();
+    _attachmentSendCoordinator = AttachmentDraftSendCoordinator(
+      _attachmentDraftService,
+    );
     _gatewayNotices = List<GatewayNotice>.from(
       _savedGatewayNotices[_gatewayNoticeIdentity] ?? const [],
     );
@@ -286,6 +263,11 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
       timer.cancel();
     }
     _client.close();
+    unawaited(
+      _attachmentDraftService.removeAll(
+        List<AttachmentDraft>.from(_attachmentDrafts),
+      ),
+    );
     _desktopGateway?.setAsyncEventListener(null);
     _desktopGateway?.close();
     _textController.dispose();
@@ -650,10 +632,12 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
           children: [
             ListTile(
               leading: const Icon(Icons.photo_library_outlined),
-              title: const Text('Choose image'),
+              title: Text(
+                _desktopGateway == null ? 'Choose image' : 'Choose images',
+              ),
               onTap: () {
                 Navigator.pop(sheetContext);
-                _pickImage(ImageSource.gallery);
+                _pickGalleryImages();
               },
             ),
             ListTile(
@@ -661,37 +645,62 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
               title: const Text('Take photo'),
               onTap: () {
                 Navigator.pop(sheetContext);
-                _pickImage(ImageSource.camera);
+                _pickCameraImage();
               },
             ),
-            ListTile(
-              leading: const Icon(Icons.description_outlined),
-              title: const Text('Choose file'),
-              subtitle: const Text(
-                'Documents, archives, audio, video, or data',
+            if (_desktopGateway != null)
+              ListTile(
+                leading: const Icon(Icons.description_outlined),
+                title: const Text('Choose files'),
+                subtitle: const Text(
+                  'Documents, archives, audio, video, or data',
+                ),
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  _pickFiles();
+                },
               ),
-              onTap: () {
-                Navigator.pop(sheetContext);
-                _pickFile();
-              },
-            ),
           ],
         ),
       ),
     );
   }
 
-  Future<void> _pickImage(ImageSource source) async {
+  Future<void> _pickGalleryImages() async {
     try {
-      final image = await _imagePicker.pickImage(
-        source: source,
+      final mode = _desktopGateway == null
+          ? AttachmentDraftMode.rest
+          : AttachmentDraftMode.remoteGateway;
+      if (!allowsMultipleImageSelection(mode)) {
+        final image = await _imagePicker.pickImage(
+          source: ImageSource.gallery,
+          imageQuality: 75,
+          maxWidth: 1600,
+          maxHeight: 1600,
+        );
+        if (image != null) await _preparePickedImages([image]);
+        return;
+      }
+      final images = await _imagePicker.pickMultiImage(
         imageQuality: 75,
         maxWidth: 1600,
         maxHeight: 1600,
       );
-      if (image == null) return;
+      if (images.isNotEmpty) await _preparePickedImages(images);
+    } catch (_) {
+      _showAttachmentError('Unable to prepare this image. Try another one.');
+    }
+  }
 
-      await _preparePickedImage(image);
+  Future<void> _pickCameraImage() async {
+    try {
+      final image = await _imagePicker.pickImage(
+        source: ImageSource.camera,
+        imageQuality: 75,
+        maxWidth: 1600,
+        maxHeight: 1600,
+      );
+      if (image != null) await _preparePickedImages([image]);
     } catch (_) {
       _showAttachmentError('Unable to prepare this image. Try another one.');
     }
@@ -707,39 +716,56 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
       return;
     }
 
-    await _preparePickedImage(files.first);
+    await _preparePickedImages(_desktopGateway == null ? [files.first] : files);
   }
 
-  Future<void> _preparePickedImage(XFile image) async {
-    try {
-      final mimeType = _imageMimeType(image.path, image.mimeType);
-      if (mimeType == null) {
-        _showAttachmentError('Choose a JPEG, PNG, or WEBP image.');
-        return;
-      }
-
-      final bytes = await image.readAsBytes();
-      if (bytes.length > _maxInlineImageBytes) {
-        _showAttachmentError(
-          'Image is too large after compression. Choose a smaller image.',
+  Future<void> _preparePickedImages(List<XFile> images) async {
+    final isRemote = _desktopGateway != null;
+    final prepared = <AttachmentDraft>[];
+    final errors = <String>[];
+    for (final image in images) {
+      try {
+        final draft = await _attachmentDraftService.prepareImage(
+          sourcePath: image.path,
+          displayName: image.name,
+          existingDrafts: isRemote
+              ? [..._attachmentDrafts, ...prepared]
+              : const <AttachmentDraft>[],
+          mode: isRemote
+              ? AttachmentDraftMode.remoteGateway
+              : AttachmentDraftMode.rest,
         );
-        return;
+        prepared.add(draft);
+        if (!isRemote) break;
+      } on AttachmentDraftException catch (error) {
+        errors.add(error.message);
+      } catch (_) {
+        errors.add('Unable to prepare ${image.name}.');
       }
-      if (!mounted) return;
-
-      setState(() {
-        _pendingImage = _PendingImage(
-          bytes: bytes,
-          dataUrl: 'data:$mimeType;base64,${base64Encode(bytes)}',
-          name: image.name,
-        );
-      });
-    } catch (_) {
-      _showAttachmentError('Unable to prepare this image. Try another one.');
+    }
+    if (!mounted) {
+      await _attachmentDraftService.removeAll(prepared);
+      return;
+    }
+    if (prepared.isNotEmpty) {
+      if (isRemote) {
+        setState(() => _attachmentDrafts.addAll(prepared));
+      } else {
+        final replaced = List<AttachmentDraft>.from(_attachmentDrafts);
+        setState(() {
+          _attachmentDrafts
+            ..clear()
+            ..add(prepared.single);
+        });
+        unawaited(_attachmentDraftService.removeAll(replaced));
+      }
+    }
+    if (errors.isNotEmpty) {
+      _showAttachmentError(errors.first);
     }
   }
 
-  Future<void> _pickFile() async {
+  Future<void> _pickFiles() async {
     if (_desktopGateway == null) {
       _showAttachmentError(
         'Configure a valid Desktop Gateway URL before attaching files.',
@@ -750,39 +776,42 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
       final result = await FilePicker.platform.pickFiles(
         type: FileType.any,
         allowMultiple: true,
-        withData: true,
+        withData: false,
       );
       final files = result?.files ?? const [];
       if (files.isEmpty) return;
-      final available = _maxRemoteAttachments - _pendingFiles.length;
+      final available = maxRemoteAttachmentDrafts - _attachmentDrafts.length;
       if (available <= 0) {
         _showAttachmentError(
-          'You can attach up to $_maxRemoteAttachments files.',
+          'You can attach up to $maxRemoteAttachmentDrafts items.',
         );
         return;
       }
-      final prepared = <_PendingFile>[];
+      final prepared = <AttachmentDraft>[];
       var rejected = 0;
       for (final file in files.take(available)) {
-        final bytes = file.bytes;
-        if (bytes == null ||
-            bytes.isEmpty ||
-            bytes.length > _maxRemoteFileBytes ||
-            _isSensitiveFileName(file.name)) {
+        final path = file.path;
+        if (path == null) {
           rejected++;
           continue;
         }
-        prepared.add(
-          _PendingFile(
-            bytes: bytes,
-            dataUrl:
-                'data:application/octet-stream;base64,${base64Encode(bytes)}',
-            name: file.name,
-          ),
-        );
+        try {
+          prepared.add(
+            await _attachmentDraftService.prepareGenericFile(
+              sourcePath: path,
+              displayName: file.name,
+              existingDrafts: [..._attachmentDrafts, ...prepared],
+            ),
+          );
+        } catch (_) {
+          rejected++;
+        }
       }
-      if (!mounted) return;
-      setState(() => _pendingFiles.addAll(prepared));
+      if (!mounted) {
+        await _attachmentDraftService.removeAll(prepared);
+        return;
+      }
+      setState(() => _attachmentDrafts.addAll(prepared));
       if (files.length > available || rejected > 0) {
         _showAttachmentError(
           '${files.length - prepared.length} file(s) skipped: limit, size, unreadable, or sensitive filename.',
@@ -793,31 +822,6 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     }
   }
 
-  bool _isSensitiveFileName(String fileName) {
-    final lower = fileName.trim().toLowerCase();
-    if (lower.isEmpty) return true;
-    if (lower == '.env' ||
-        (lower.startsWith('.env.') &&
-            !const {
-              'dist',
-              'example',
-              'sample',
-              'template',
-            }.contains(lower.substring('.env.'.length)))) {
-      return true;
-    }
-    if (lower == '.npmrc' || lower == '.netrc' || lower == '.pypirc') {
-      return true;
-    }
-    if (lower.endsWith('.kdbx') ||
-        lower.endsWith('.p12') ||
-        lower.endsWith('.pem') ||
-        lower.endsWith('.pfx')) {
-      return true;
-    }
-    return RegExp(r'^id_(rsa|dsa|ecdsa|ed25519)(?:\..+)?$').hasMatch(lower);
-  }
-
   void _showAttachmentError(String message) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
@@ -825,26 +829,82 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     );
   }
 
-  String? _imageMimeType(String path, String? declaredMimeType) {
-    if (declaredMimeType == 'image/jpeg' ||
-        declaredMimeType == 'image/png' ||
-        declaredMimeType == 'image/webp') {
-      return declaredMimeType;
-    }
-
-    final lowerPath = path.toLowerCase();
-    if (lowerPath.endsWith('.jpg') || lowerPath.endsWith('.jpeg')) {
-      return 'image/jpeg';
-    }
-    if (lowerPath.endsWith('.png')) return 'image/png';
-    if (lowerPath.endsWith('.webp')) return 'image/webp';
-    return null;
+  Future<void> _removeAttachment(AttachmentDraft draft) async {
+    await _attachmentDraftService.removeCachedFile(draft);
+    if (!mounted) return;
+    setState(
+      () => _attachmentDrafts.removeWhere((item) => item.id == draft.id),
+    );
   }
 
-  String _formatFileSize(int bytes) {
-    if (bytes < 1024) return '$bytes B';
-    if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KiB';
-    return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MiB';
+  void _moveAttachment(AttachmentDraft draft, int offset) {
+    final index = _attachmentDrafts.indexOf(draft);
+    setState(() {
+      _attachmentDraftService.moveDraft(
+        _attachmentDrafts,
+        fromIndex: index,
+        offset: offset,
+      );
+    });
+  }
+
+  Future<AttachmentUploadReceipt> _uploadAttachmentDraft(
+    DesktopGatewayClient desktopGateway,
+    AttachmentDraft draft,
+    String dataUrl,
+  ) async {
+    final attachment = await desktopGateway.attachFile(
+      sessionId: widget.session.id,
+      name: draft.name,
+      dataUrl: dataUrl,
+    );
+    return AttachmentUploadReceipt(
+      refText: attachment.refText,
+      atlasIntakeAccepted: attachment.atlasIntakeAccepted,
+    );
+  }
+
+  Future<void> _retryAttachment(AttachmentDraft draft) async {
+    final desktopGateway = _desktopGateway;
+    if (desktopGateway == null || _sending || _streaming) return;
+    setState(() {
+      _sending = true;
+      _gatewayTurnStatus = GatewayTurnStatus(
+        kind: 'upload',
+        text: 'Retrying ${draft.name}…',
+      );
+    });
+    try {
+      final receipt = await _attachmentSendCoordinator.retryFailed(
+        draft: draft,
+        upload: ({required draft, required dataUrl}) =>
+            _uploadAttachmentDraft(desktopGateway, draft, dataUrl),
+        onChanged: (_) {
+          if (mounted) setState(() {});
+        },
+      );
+      if (!mounted) return;
+      if (receipt.atlasIntakeAccepted == false) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'File attached; document catalog registration is pending.',
+            ),
+          ),
+        );
+      }
+    } catch (error) {
+      _showAttachmentError(
+        'Retry failed for ${draft.name}. The draft and prompt were kept.',
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _sending = false;
+          _gatewayTurnStatus = null;
+        });
+      }
+    }
   }
 
   Future<void> _showModelSelector() async {
@@ -1089,8 +1149,8 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   /// Send message via SSE streaming (Gateway API Server).
   Future<void> _sendMessage({bool speakResponse = false}) async {
     final text = _textController.text.trim();
-    final pendingImage = _pendingImage;
-    if (text.isEmpty && pendingImage == null && _pendingFiles.isEmpty) return;
+    final attachments = List<AttachmentDraft>.from(_attachmentDrafts);
+    if (text.isEmpty && attachments.isEmpty) return;
     if (_sending || _streaming) return;
     await _sessionModelRestore;
     if (!mounted) return;
@@ -1098,24 +1158,34 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     // A remote-gateway profile uses one transport for every prompt. Images and
     // arbitrary files are both attached with the official `file.attach` RPC.
     if (_desktopGateway != null) {
-      final attachments = List<_PendingFile>.from(_pendingFiles);
-      if (pendingImage != null) {
-        attachments.insert(
-          0,
-          _PendingFile(
-            bytes: pendingImage.bytes,
-            dataUrl: pendingImage.dataUrl,
-            name: pendingImage.name,
-            isImage: true,
-          ),
-        );
-      }
       await _sendDesktopGatewayMessage(
         text: text,
-        pendingFiles: attachments,
+        attachments: attachments,
         speakResponse: speakResponse,
       );
       return;
+    }
+
+    try {
+      _attachmentDraftService.validateRestDrafts(attachments);
+    } on AttachmentDraftException catch (error) {
+      _showAttachmentError(error.message);
+      return;
+    }
+    final pendingImage = attachments.firstOrNull;
+    String? imageDataUrl;
+    if (pendingImage != null) {
+      setState(() => _sending = true);
+      try {
+        imageDataUrl = await _attachmentDraftService.readDataUrl(pendingImage);
+      } catch (_) {
+        if (mounted) setState(() => _sending = false);
+        _showAttachmentError(
+          'Unable to read the selected image. The selection was kept.',
+        );
+        return;
+      }
+      if (!mounted) return;
     }
 
     final localContent = pendingImage == null
@@ -1124,7 +1194,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
             if (text.isNotEmpty) {'type': 'text', 'text': text},
             {
               'type': 'image_url',
-              'image_url': {'url': pendingImage.dataUrl},
+              'image_url': {'url': imageDataUrl},
             },
           ];
 
@@ -1146,7 +1216,6 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
         text: 'Starting Hermes…',
       );
       _showScrollToBottom = false;
-      _pendingImage = null;
       _messages.add({'role': 'user', 'content': localContent});
       // Insert a placeholder streaming message
       _messages.add({'role': 'assistant', 'content': ''});
@@ -1159,7 +1228,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
       message: text,
       sessionId: widget.session.id,
       history: history,
-      imageDataUrl: pendingImage?.dataUrl,
+      imageDataUrl: imageDataUrl,
       onToken: (token) {
         if (!mounted || responseGeneration != _responseGeneration) return;
         setState(() {
@@ -1181,8 +1250,17 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
           final messages = await _client.getMessages(widget.session.id);
           if (!mounted || responseGeneration != _responseGeneration) return;
           _extractToolMessages(messages);
+          if (pendingImage != null) {
+            await _attachmentDraftService.removeCachedFile(pendingImage);
+          }
+          if (!mounted || responseGeneration != _responseGeneration) return;
           setState(() {
             _messages = messages;
+            if (pendingImage != null) {
+              _attachmentDrafts.removeWhere(
+                (draft) => draft.id == pendingImage.id,
+              );
+            }
             _streaming = false;
             _sending = false;
             _gatewayTurnStatus = null;
@@ -1227,7 +1305,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
 
   Future<void> _sendDesktopGatewayMessage({
     required String text,
-    required List<_PendingFile> pendingFiles,
+    required List<AttachmentDraft> attachments,
     required bool speakResponse,
   }) async {
     final desktopGateway = _desktopGateway;
@@ -1235,6 +1313,12 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
       _showAttachmentError(
         'Desktop Gateway is not configured for this connection.',
       );
+      return;
+    }
+    try {
+      _attachmentDraftService.validateRemoteDrafts(attachments);
+    } on AttachmentDraftException catch (error) {
+      _showAttachmentError(error.message);
       return;
     }
 
@@ -1255,30 +1339,27 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     try {
       await _applySessionModelOverride(desktopGateway);
       if (!mounted || responseGeneration != _responseGeneration) return;
-      for (var index = 0; index < pendingFiles.length; index++) {
-        final pendingFile = pendingFiles[index];
-        if (pendingFile.refText?.isNotEmpty == true) continue;
-        setState(() {
-          pendingFile.status = _AttachmentStatus.uploading;
-          pendingFile.error = null;
-          _gatewayTurnStatus = GatewayTurnStatus(
-            kind: 'upload',
-            text:
-                'Uploading ${index + 1}/${pendingFiles.length}: ${pendingFile.name}',
-          );
-        });
-        try {
-          final attachment = await desktopGateway.attachFile(
-            sessionId: widget.session.id,
-            name: pendingFile.name,
-            dataUrl: pendingFile.dataUrl,
-          );
+      await _attachmentSendCoordinator.uploadThenSubmit(
+        drafts: attachments,
+        upload: ({required draft, required dataUrl}) async {
+          return _uploadAttachmentDraft(desktopGateway, draft, dataUrl);
+        },
+        onChanged: (draft) {
           if (!mounted || responseGeneration != _responseGeneration) return;
           setState(() {
-            pendingFile.refText = attachment.refText;
-            pendingFile.status = _AttachmentStatus.attached;
+            if (draft.status == AttachmentDraftStatus.uploading) {
+              final index = attachments.indexOf(draft);
+              _gatewayTurnStatus = GatewayTurnStatus(
+                kind: 'upload',
+                text:
+                    'Uploading ${index + 1}/${attachments.length}: ${draft.name}',
+              );
+            }
           });
-          if (attachment.atlasIntakeAccepted == false && mounted) {
+        },
+        submitPrompt: (refTexts) async {
+          if (!mounted || responseGeneration != _responseGeneration) return;
+          if (attachments.any((draft) => draft.atlasIntakeAccepted == false)) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
                 content: Text(
@@ -1287,51 +1368,38 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
               ),
             );
           }
-        } catch (error) {
-          if (!mounted || responseGeneration != _responseGeneration) return;
+          final prompt = [
+            text,
+            refTexts.join('\n'),
+          ].where((part) => part.trim().isNotEmpty).join('\n\n');
+          final attachmentLabels = attachments
+              .map((attachment) => '[Attached file: ${attachment.name}]')
+              .join('\n');
+          final localContent = [
+            text,
+            attachmentLabels,
+          ].where((part) => part.trim().isNotEmpty).join('\n\n');
+          _textController.clear();
+          _scrollCoordinator.beginStreaming(isNearBottom: _isNearBottom());
           setState(() {
-            pendingFile.status = _AttachmentStatus.failed;
-            pendingFile.error = error.toString();
+            _streaming = true;
+            _gatewayTurnStatus = const GatewayTurnStatus(
+              kind: 'starting',
+              text: 'Starting Hermes…',
+            );
+            _attachmentDrafts.clear();
+            _messages.add({'role': 'user', 'content': localContent});
+            _messages.add({'role': 'assistant', 'content': ''});
+            turnAdded = true;
           });
-          rethrow;
-        }
-      }
-      final refs = pendingFiles
-          .map((attachment) => attachment.refText)
-          .whereType<String>()
-          .where((ref) => ref.isNotEmpty)
-          .join('\n');
-      final prompt = [
-        text,
-        refs,
-      ].where((part) => part.trim().isNotEmpty).join('\n\n');
-      final attachmentLabels = pendingFiles
-          .map((attachment) => '[Attached file: ${attachment.name}]')
-          .join('\n');
-      final localContent = [
-        text,
-        attachmentLabels,
-      ].where((part) => part.trim().isNotEmpty).join('\n\n');
-      _textController.clear();
-      _scrollCoordinator.beginStreaming(isNearBottom: _isNearBottom());
-      setState(() {
-        _streaming = true;
-        _gatewayTurnStatus = const GatewayTurnStatus(
-          kind: 'starting',
-          text: 'Starting Hermes…',
-        );
-        _pendingImage = null;
-        _pendingFiles.clear();
-        _messages.add({'role': 'user', 'content': localContent});
-        _messages.add({'role': 'assistant', 'content': ''});
-        turnAdded = true;
-      });
-      _scheduleStreamingFollow();
-      await desktopGateway.submitPrompt(
-        sessionId: widget.session.id,
-        text: prompt,
-        onEvent: (event) =>
-            _handleDesktopGatewayEvent(event, responseGeneration),
+          _scheduleStreamingFollow();
+          await desktopGateway.submitPrompt(
+            sessionId: widget.session.id,
+            text: prompt,
+            onEvent: (event) =>
+                _handleDesktopGatewayEvent(event, responseGeneration),
+          );
+        },
       );
       if (!mounted || responseGeneration != _responseGeneration) return;
       setState(() {
@@ -1365,10 +1433,9 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
             _messages.removeLast();
           }
           _textController.text = text;
-          _pendingImage = null;
-          _pendingFiles
+          _attachmentDrafts
             ..clear()
-            ..addAll(pendingFiles);
+            ..addAll(attachments);
         });
       }
       _handleSendError(error);
@@ -2144,50 +2211,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                 ),
               ),
             ),
-            if (_pendingImage != null)
-              Container(
-                width: double.infinity,
-                margin: const EdgeInsets.fromLTRB(4, 4, 4, 8),
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Row(
-                  children: [
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: Image.memory(
-                        _pendingImage!.bytes,
-                        width: 56,
-                        height: 56,
-                        fit: BoxFit.cover,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text('Image ready to send'),
-                          Text(
-                            _pendingImage!.name,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: Theme.of(context).textTheme.bodySmall,
-                          ),
-                        ],
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.close),
-                      tooltip: 'Remove image',
-                      onPressed: () => setState(() => _pendingImage = null),
-                    ),
-                  ],
-                ),
-              ),
-            if (_pendingFiles.isNotEmpty)
+            if (_attachmentDrafts.isNotEmpty)
               Container(
                 width: double.infinity,
                 margin: const EdgeInsets.fromLTRB(4, 4, 4, 8),
@@ -2198,55 +2222,24 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                 ),
                 child: Column(
                   children: [
-                    for (final attachment in _pendingFiles)
-                      ListTile(
-                        dense: true,
-                        leading: switch (attachment.status) {
-                          _AttachmentStatus.uploading => const SizedBox.square(
-                            dimension: 22,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          ),
-                          _AttachmentStatus.attached => const Icon(
-                            Icons.check_circle_outline,
-                            color: Colors.green,
-                          ),
-                          _AttachmentStatus.failed => Icon(
-                            Icons.error_outline,
-                            color: Theme.of(context).colorScheme.error,
-                          ),
-                          _AttachmentStatus.ready => const Icon(
-                            Icons.description_outlined,
-                          ),
-                        },
-                        title: Text(
-                          attachment.name,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        subtitle: Text(
-                          attachment.status == _AttachmentStatus.failed
-                              ? 'Upload failed • tap retry'
-                              : '${_formatFileSize(attachment.bytes.length)} • ${attachment.status.name}',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        trailing: attachment.status == _AttachmentStatus.failed
-                            ? IconButton(
-                                icon: const Icon(Icons.refresh),
-                                tooltip: 'Retry upload',
-                                onPressed: _sending
-                                    ? null
-                                    : () => _sendMessage(),
-                              )
-                            : IconButton(
-                                icon: const Icon(Icons.close),
-                                tooltip: 'Remove file',
-                                onPressed: _sending
-                                    ? null
-                                    : () => setState(
-                                        () => _pendingFiles.remove(attachment),
-                                      ),
-                              ),
+                    for (
+                      var index = 0;
+                      index < _attachmentDrafts.length;
+                      index++
+                    )
+                      AttachmentDraftTile(
+                        draft: _attachmentDrafts[index],
+                        index: index,
+                        total: _attachmentDrafts.length,
+                        busy: _sending,
+                        onMovePrevious: () =>
+                            _moveAttachment(_attachmentDrafts[index], -1),
+                        onMoveNext: () =>
+                            _moveAttachment(_attachmentDrafts[index], 1),
+                        onRetry: () =>
+                            _retryAttachment(_attachmentDrafts[index]),
+                        onRemove: () =>
+                            _removeAttachment(_attachmentDrafts[index]),
                       ),
                   ],
                 ),

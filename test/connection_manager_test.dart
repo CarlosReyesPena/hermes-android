@@ -985,6 +985,57 @@ void main() {
       }
     });
 
+    test('preserves mobile source_profile on generic file.attach', () async {
+      final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+      final requestSeen = Completer<Map<String, dynamic>>();
+      final socketSubscription = server
+          .transform(WebSocketTransformer())
+          .listen((socket) {
+            socket.listen((raw) {
+              final request = jsonDecode(raw as String) as Map<String, dynamic>;
+              if (!requestSeen.isCompleted) requestSeen.complete(request);
+              socket.add(
+                jsonEncode({
+                  'jsonrpc': '2.0',
+                  'id': request['id'],
+                  'result': {
+                    'attached': true,
+                    'name': 'fixture.txt',
+                    'ref_text': '@file:fixture.txt',
+                  },
+                }),
+              );
+            });
+          });
+      final client = WsClient('http://127.0.0.1:${server.port}');
+
+      try {
+        await client.connect();
+        await client.attachFile(
+          sessionId: 'gateway-session-123',
+          name: 'fixture.txt',
+          dataUrl: 'data:application/octet-stream;base64,ZmFrZQ==',
+          sourceChannel: 'hermes_mobile',
+          sourceProfile: 'pro',
+        );
+        final request = await requestSeen.future;
+
+        expect(request['method'], 'file.attach');
+        expect(request['params'], {
+          'session_id': 'gateway-session-123',
+          'name': 'fixture.txt',
+          'path': '',
+          'data_url': 'data:application/octet-stream;base64,ZmFrZQ==',
+          'source_channel': 'hermes_mobile',
+          'source_profile': 'pro',
+        });
+      } finally {
+        client.close();
+        await socketSubscription.cancel();
+        await server.close(force: true);
+      }
+    });
+
     test('sends the official session.resume JSON-RPC method', () async {
       final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
       final requestSeen = Completer<Map<String, dynamic>>();
