@@ -25,6 +25,7 @@ import '../models/gateway_approval.dart';
 import '../models/gateway_clarify.dart';
 import '../models/gateway_insight.dart';
 import '../models/gateway_sensitive_prompt.dart';
+import '../utils/chat_history_scroll.dart';
 import '../utils/message_content.dart';
 import '../utils/responsive.dart';
 import '../widgets/gateway_activity_card.dart';
@@ -120,9 +121,13 @@ class ChatScreen extends StatefulWidget {
   final SavedConnection connection;
   final Session session;
 
+  @visibleForTesting
+  final ApiClient? testApiClient;
+
   const ChatScreen({
     required this.connection,
     required this.session,
+    this.testApiClient,
     super.key,
   });
 
@@ -186,20 +191,24 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
 
   // Scroll management
   final _scrollController = ScrollController();
+  final _scrollCoordinator = ChatScrollCoordinator();
   bool _showScrollToBottom = false;
   double _lastPixels = 0;
-  static final Map<String, double> _savedPositions = {};
+  bool _streamFollowScheduled = false;
+  static final Map<ChatScrollPositionKey, double> _savedPositions = {};
   static final Map<String, List<GatewayNotice>> _savedGatewayNotices = {};
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _client = ApiClient(
-      baseUrl: widget.connection.baseUrl,
-      apiKey: widget.connection.apiKey,
-      pathPrefix: widget.connection.gatewayPrefix ?? '',
-    );
+    _client =
+        widget.testApiClient ??
+        ApiClient(
+          baseUrl: widget.connection.baseUrl,
+          apiKey: widget.connection.apiKey,
+          pathPrefix: widget.connection.gatewayPrefix ?? '',
+        );
     _gateway = GatewayChatClient(_client);
     _gatewayNotices = List<GatewayNotice>.from(
       _savedGatewayNotices[_gatewayNoticeIdentity] ?? const [],
@@ -237,6 +246,13 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   String get _gatewayNoticeIdentity =>
       '$_chatModelConnectionIdentity|${widget.session.id}';
 
+  ChatScrollPositionKey get _scrollPositionKey =>
+      ChatScrollPositionKey.fromConnection(
+        connectionId: widget.connection.id,
+        fallbackConnectionIdentity: _chatModelConnectionIdentity,
+        sessionId: widget.session.id,
+      );
+
   Future<void> _restoreSessionModelOverride() async {
     final store = await _chatModelStore;
     final override = store.read(
@@ -260,7 +276,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    _savedPositions[widget.session.id] = _lastPixels;
+    _savedPositions[_scrollPositionKey] = _lastPixels;
     _savedGatewayNotices[_gatewayNoticeIdentity] = List.unmodifiable(
       _gatewayNotices,
     );
@@ -493,26 +509,71 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   }
 
   void _onScroll() {
-    if (_scrollController.hasClients) {
-      _lastPixels = _scrollController.position.pixels;
-    }
-    final atBottom =
-        _scrollController.hasClients &&
-        _scrollController.position.pixels >=
-            _scrollController.position.maxScrollExtent - 200;
-    if (atBottom != !_showScrollToBottom && _streaming) {
+    if (!_scrollController.hasClients) return;
+    _lastPixels = _scrollController.position.pixels;
+    final atBottom = _isNearBottom(_scrollController.position);
+    if (_streaming && _showScrollToBottom == atBottom) {
       setState(() => _showScrollToBottom = !atBottom);
     }
   }
 
-  void _scrollToBottom() {
-    if (_scrollController.hasClients) {
-      _scrollController.animateTo(
-        _scrollController.position.maxScrollExtent,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeOut,
+  bool _isNearBottom([ScrollMetrics? metrics]) {
+    if (metrics == null && !_scrollController.hasClients) return true;
+    final current = metrics ?? _scrollController.position;
+    return _scrollCoordinator.isNearBottom(
+      pixels: current.pixels,
+      maxScrollExtent: current.maxScrollExtent,
+    );
+  }
+
+  bool _handleScrollNotification(ScrollNotification notification) {
+    final isDirectUserScroll =
+        (notification is ScrollUpdateNotification &&
+            notification.dragDetails != null) ||
+        (notification is OverscrollNotification &&
+            notification.dragDetails != null);
+    if (isDirectUserScroll) {
+      _scrollCoordinator.updateFromUserScroll(
+        isNearBottom: _isNearBottom(notification.metrics),
       );
     }
+    return false;
+  }
+
+  void _applyScrollTarget(ChatScrollTarget target) {
+    if (!_scrollController.hasClients) return;
+    final maxExtent = _scrollController.position.maxScrollExtent;
+    final requested = target.isBottom ? maxExtent : target.offset;
+    _scrollController.jumpTo(requested.clamp(0.0, maxExtent));
+  }
+
+  void _scheduleScrollTarget(ChatScrollTarget? target) {
+    if (target == null) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _applyScrollTarget(target);
+    });
+  }
+
+  void _scheduleStreamingFollow() {
+    if (_scrollCoordinator.streamingContentChanged() == null ||
+        _streamFollowScheduled) {
+      return;
+    }
+    _streamFollowScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _streamFollowScheduled = false;
+      if (!mounted) return;
+      final target = _scrollCoordinator.streamingContentChanged();
+      if (target != null) _applyScrollTarget(target);
+    });
+  }
+
+  void _scheduleInitialScrollRestore() {
+    final target = _scrollCoordinator.consumeInitialRestore(
+      _savedPositions[_scrollPositionKey],
+    );
+    _scheduleScrollTarget(target);
   }
 
   Future<void> _fetchMessages() async {
@@ -529,24 +590,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
         _messages = messages;
         _loading = false;
       });
-      final saved = _savedPositions[widget.session.id];
-      if (saved != null) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (_scrollController.hasClients) {
-            _scrollController.jumpTo(
-              saved.clamp(0.0, _scrollController.position.maxScrollExtent),
-            );
-          }
-        });
-      } else {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (_scrollController.hasClients) {
-            _scrollController.jumpTo(
-              _scrollController.position.maxScrollExtent,
-            );
-          }
-        });
-      }
+      _scheduleInitialScrollRestore();
     } catch (e) {
       if (!mounted) return;
       final errStr = e.toString();
@@ -555,6 +599,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
           _messages = [];
           _loading = false;
         });
+        _scheduleInitialScrollRestore();
         return;
       }
       setState(() {
@@ -1088,12 +1133,10 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     final responseGeneration = ++_responseGeneration;
     _activeResponseTransport = _ResponseTransport.rest;
 
-    // Build conversation history for SSE request
-    final history = <Map<String, dynamic>>[];
-    for (var i = _messages.length - 1; i >= 0; i--) {
-      final m = _messages[i];
-      history.add({'role': m['role'] ?? 'user', 'content': m['content'] ?? ''});
-    }
+    // The server returns oldest-to-newest history. Preserve that order; the
+    // gateway client appends the current prompt exactly once.
+    final history = buildRestChatHistory(_messages);
+    _scrollCoordinator.beginStreaming(isNearBottom: _isNearBottom());
 
     setState(() {
       _sending = true;
@@ -1109,7 +1152,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
       _messages.add({'role': 'assistant', 'content': ''});
     });
 
-    WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
+    _scheduleStreamingFollow();
 
     // Accumulate tokens into the streaming placeholder
     await _gateway.sendMessageStreaming(
@@ -1125,6 +1168,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                 (_messages.last['content'] as String) + token;
           }
         });
+        _scheduleStreamingFollow();
       },
       onToolProgress: (progress) {
         if (!mounted || responseGeneration != _responseGeneration) return;
@@ -1145,6 +1189,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
             _activeResponseTransport = _ResponseTransport.none;
             _showScrollToBottom = false;
           });
+          _scheduleScrollTarget(_scrollCoordinator.endStreaming());
           if (_awaitingVoiceReply) {
             _awaitingVoiceReply = false;
             final assistant = messages.reversed.firstWhere(
@@ -1156,26 +1201,9 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
               await _speakAssistantText(assistantText);
             }
           }
-          final saved = _savedPositions[widget.session.id];
-          if (saved != null) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (_scrollController.hasClients) {
-                _scrollController.jumpTo(
-                  saved.clamp(0.0, _scrollController.position.maxScrollExtent),
-                );
-              }
-            });
-          } else {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (_scrollController.hasClients) {
-                _scrollController.jumpTo(
-                  _scrollController.position.maxScrollExtent,
-                );
-              }
-            });
-          }
         } catch (e) {
           if (!mounted || responseGeneration != _responseGeneration) return;
+          _scrollCoordinator.cancelStreaming();
           setState(() {
             _streaming = false;
             _sending = false;
@@ -1285,6 +1313,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
         attachmentLabels,
       ].where((part) => part.trim().isNotEmpty).join('\n\n');
       _textController.clear();
+      _scrollCoordinator.beginStreaming(isNearBottom: _isNearBottom());
       setState(() {
         _streaming = true;
         _gatewayTurnStatus = const GatewayTurnStatus(
@@ -1297,7 +1326,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
         _messages.add({'role': 'assistant', 'content': ''});
         turnAdded = true;
       });
-      WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
+      _scheduleStreamingFollow();
       await desktopGateway.submitPrompt(
         sessionId: widget.session.id,
         text: prompt,
@@ -1312,6 +1341,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
         _activeResponseTransport = _ResponseTransport.none;
         _showScrollToBottom = false;
       });
+      _scheduleScrollTarget(_scrollCoordinator.endStreaming());
       if (_awaitingVoiceReply) {
         _awaitingVoiceReply = false;
         final assistantText = _messages.isNotEmpty
@@ -1323,6 +1353,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
       }
     } catch (error) {
       if (!mounted || responseGeneration != _responseGeneration) return;
+      _scrollCoordinator.cancelStreaming();
       if (turnAdded) {
         setState(() {
           if (_messages.isNotEmpty &&
@@ -1359,7 +1390,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
         assistant['_gateway_reasoning'] = reasoning.applyTo(current);
         assistant['_gateway_reasoning_verbose'] = reasoning.verbose;
       });
-      WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
+      _scheduleStreamingFollow();
       return;
     }
     final turnStatus = GatewayTurnStatus.fromGatewayEvent(
@@ -1368,6 +1399,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     );
     if (turnStatus != null) {
       setState(() => _gatewayTurnStatus = turnStatus);
+      _scheduleStreamingFollow();
       return;
     }
     if (event.type == 'approval.request') {
@@ -1395,6 +1427,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
         if (assistant == null) return;
         assistant['content'] = '${assistant['content'] ?? ''}$token';
       });
+      _scheduleStreamingFollow();
       return;
     }
     if (event.type == 'message.interim') {
@@ -1414,7 +1447,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
           _messages.add({'role': 'assistant', 'content': ''});
         }
       });
-      WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
+      _scheduleStreamingFollow();
       return;
     }
     if (event.type == 'message.complete') {
@@ -1427,6 +1460,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
           final assistant = _lastAssistantMessage();
           if (assistant != null) assistant['content'] = completeText;
         });
+        _scheduleStreamingFollow();
       }
       return;
     }
@@ -1453,6 +1487,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
       if (notification == null) return;
       _notificationTimers.remove(notification.key)?.cancel();
       setState(() => _gatewayNotifications[notification.key] = notification);
+      _scheduleStreamingFollow();
       if (notification.ttl case final ttl?) {
         _notificationTimers[notification.key] = Timer(ttl, () {
           if (!mounted) return;
@@ -1476,6 +1511,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
           _notificationTimers.remove(key)?.cancel();
         }
       });
+      _scheduleStreamingFollow();
       return;
     }
     if (event.type.startsWith('subagent.')) {
@@ -1492,7 +1528,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
         _gatewayNotices,
       );
     });
-    WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
+    _scheduleStreamingFollow();
   }
 
   void _upsertSubagent(String eventType, Map<String, dynamic> data) {
@@ -1514,6 +1550,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
         );
       }
     });
+    _scheduleStreamingFollow();
   }
 
   void _showGatewayApproval(
@@ -1787,6 +1824,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
 
     final transport = _activeResponseTransport;
     ++_responseGeneration;
+    _scrollCoordinator.cancelStreaming();
     setState(() {
       _streaming = false;
       _sending = false;
@@ -1833,6 +1871,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   }
 
   void _handleSendError(Object e, {bool removePendingUserMessage = false}) {
+    _scrollCoordinator.cancelStreaming();
     setState(() {
       _sending = false;
       _streaming = false;
@@ -1889,7 +1928,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
       );
     });
 
-    WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
+    _scheduleStreamingFollow();
   }
 
   @override
@@ -2384,50 +2423,53 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     }
     displayMessages.addAll(_gatewayNotices);
 
-    return ListView.builder(
-      controller: _scrollController,
-      padding: const EdgeInsets.only(bottom: 4),
-      itemCount: displayMessages.length,
-      itemBuilder: (context, index) {
-        final item = displayMessages[index];
+    return NotificationListener<ScrollNotification>(
+      onNotification: _handleScrollNotification,
+      child: ListView.builder(
+        controller: _scrollController,
+        padding: const EdgeInsets.only(bottom: 4),
+        itemCount: displayMessages.length,
+        itemBuilder: (context, index) {
+          final item = displayMessages[index];
 
-        if (item is List<GatewayToolActivity>) {
-          return GatewayActivityCard(activities: item, verbose: _verboseMode);
-        }
-        if (item is List<GatewaySubagentActivity>) {
-          return GatewaySubagentCard(activities: item);
-        }
-        if (item is _GatewayReasoningDisplay) {
-          return GatewayReasoningCard(
-            text: item.text,
-            initiallyExpanded: item.initiallyExpanded,
+          if (item is List<GatewayToolActivity>) {
+            return GatewayActivityCard(activities: item, verbose: _verboseMode);
+          }
+          if (item is List<GatewaySubagentActivity>) {
+            return GatewaySubagentCard(activities: item);
+          }
+          if (item is _GatewayReasoningDisplay) {
+            return GatewayReasoningCard(
+              text: item.text,
+              initiallyExpanded: item.initiallyExpanded,
+            );
+          }
+          if (item is GatewayNotice) {
+            return GatewayNoticeCard(notice: item);
+          }
+
+          final msg = item as Map<String, dynamic>;
+          final role = (msg['role'] as String?) ?? 'assistant';
+          final content =
+              (msg['_display_content'] as String?) ??
+              stripToolResultText(messageContentToText(msg['content']));
+          final isUser = role == 'user';
+
+          return MessageBubble(
+            content: content,
+            isUser: isUser,
+            verbose: _verboseMode,
+            metadata: msg,
+            onReadAloud: isUser
+                ? null
+                : () => _readAssistantText(content, announce: true),
+            onEdit: isUser ? () => _editAndResend(content) : null,
+            onRetry: isUser
+                ? null
+                : () => _retryPrompt(msg['_retry_prompt']?.toString() ?? ''),
           );
-        }
-        if (item is GatewayNotice) {
-          return GatewayNoticeCard(notice: item);
-        }
-
-        final msg = item as Map<String, dynamic>;
-        final role = (msg['role'] as String?) ?? 'assistant';
-        final content =
-            (msg['_display_content'] as String?) ??
-            stripToolResultText(messageContentToText(msg['content']));
-        final isUser = role == 'user';
-
-        return MessageBubble(
-          content: content,
-          isUser: isUser,
-          verbose: _verboseMode,
-          metadata: msg,
-          onReadAloud: isUser
-              ? null
-              : () => _readAssistantText(content, announce: true),
-          onEdit: isUser ? () => _editAndResend(content) : null,
-          onRetry: isUser
-              ? null
-              : () => _retryPrompt(msg['_retry_prompt']?.toString() ?? ''),
-        );
-      },
+        },
+      ),
     );
   }
 
