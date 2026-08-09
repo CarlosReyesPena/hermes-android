@@ -31,6 +31,7 @@ import '../utils/message_content.dart';
 import '../utils/responsive.dart';
 import '../widgets/gateway_activity_card.dart';
 import '../widgets/attachment_draft_tile.dart';
+import '../widgets/chat_end_affordance.dart';
 import '../widgets/gateway_approval_dialog.dart';
 import '../widgets/gateway_clarify_dialog.dart';
 import '../widgets/gateway_insight_card.dart';
@@ -75,6 +76,14 @@ class _GatewayReasoningDisplay {
 
 enum _ResponseTransport { none, rest, desktop }
 
+@visibleForTesting
+typedef TestRemotePromptSubmit =
+    Future<void> Function({
+      required String sessionId,
+      required String text,
+      required StreamCallback onEvent,
+    });
+
 class _PendingSensitivePrompt {
   final GatewaySensitivePromptRequest request;
   final int responseGeneration;
@@ -99,11 +108,19 @@ class ChatScreen extends StatefulWidget {
   @visibleForTesting
   final AttachmentDraftService? testAttachmentDraftService;
 
+  @visibleForTesting
+  final TestRemotePromptSubmit? testRemotePromptSubmit;
+
+  @visibleForTesting
+  final List<AttachmentDraft> testInitialAttachmentDrafts;
+
   const ChatScreen({
     required this.connection,
     required this.session,
     this.testApiClient,
     this.testAttachmentDraftService,
+    this.testRemotePromptSubmit,
+    this.testInitialAttachmentDrafts = const [],
     super.key,
   });
 
@@ -169,10 +186,15 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   // Scroll management
   final _scrollController = ScrollController();
   final _scrollCoordinator = ChatScrollCoordinator();
-  bool _showScrollToBottom = false;
-  double _lastPixels = 0;
+  final _endAffordanceController = ChatEndAffordanceController();
   bool _streamFollowScheduled = false;
-  static final Map<ChatScrollPositionKey, double> _savedPositions = {};
+  bool _initialEndFrameScheduled = false;
+  double? _initialEndLastExtent;
+  int _initialEndStableFrames = 0;
+  int _initialEndFramesRemaining = 0;
+  static const _initialEndFrameBudget = 12;
+  static const _requiredStableEndFrames = 2;
+  static const _stableExtentTolerance = 0.5;
   static final Map<String, List<GatewayNotice>> _savedGatewayNotices = {};
 
   @override
@@ -192,6 +214,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     _attachmentSendCoordinator = AttachmentDraftSendCoordinator(
       _attachmentDraftService,
     );
+    _attachmentDrafts.addAll(widget.testInitialAttachmentDrafts);
     _gatewayNotices = List<GatewayNotice>.from(
       _savedGatewayNotices[_gatewayNoticeIdentity] ?? const [],
     );
@@ -228,13 +251,6 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   String get _gatewayNoticeIdentity =>
       '$_chatModelConnectionIdentity|${widget.session.id}';
 
-  ChatScrollPositionKey get _scrollPositionKey =>
-      ChatScrollPositionKey.fromConnection(
-        connectionId: widget.connection.id,
-        fallbackConnectionIdentity: _chatModelConnectionIdentity,
-        sessionId: widget.session.id,
-      );
-
   Future<void> _restoreSessionModelOverride() async {
     final store = await _chatModelStore;
     final override = store.read(
@@ -258,7 +274,6 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    _savedPositions[_scrollPositionKey] = _lastPixels;
     _savedGatewayNotices[_gatewayNoticeIdentity] = List.unmodifiable(
       _gatewayNotices,
     );
@@ -497,19 +512,33 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
 
   void _onScroll() {
     if (!_scrollController.hasClients) return;
-    _lastPixels = _scrollController.position.pixels;
-    final atBottom = _isNearBottom(_scrollController.position);
-    if (_streaming && _showScrollToBottom == atBottom) {
-      setState(() => _showScrollToBottom = !atBottom);
-    }
+    _syncEndAffordance(_scrollController.position);
   }
 
-  bool _isNearBottom([ScrollMetrics? metrics]) {
+  bool _isNearEnd([ScrollMetrics? metrics]) {
     if (metrics == null && !_scrollController.hasClients) return true;
     final current = metrics ?? _scrollController.position;
-    return _scrollCoordinator.isNearBottom(
+    return _scrollCoordinator.isNearEnd(
       pixels: current.pixels,
       maxScrollExtent: current.maxScrollExtent,
+    );
+  }
+
+  void _syncEndAffordance(
+    ScrollMetrics metrics, {
+    bool clearUnreadAtEnd = true,
+  }) {
+    final changed = _endAffordanceController.updatePosition(
+      pixels: metrics.pixels,
+      maxScrollExtent: metrics.maxScrollExtent,
+      clearUnreadAtEnd: clearUnreadAtEnd,
+    );
+    if (changed && mounted) setState(() {});
+  }
+
+  void _registerMaterializedAssistantMessage() {
+    _endAffordanceController.registerMaterializedMessage(
+      willFollow: _scrollCoordinator.shouldFollowStreaming,
     );
   }
 
@@ -521,7 +550,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
             notification.dragDetails != null);
     if (isDirectUserScroll) {
       _scrollCoordinator.updateFromUserScroll(
-        isNearBottom: _isNearBottom(notification.metrics),
+        isNearEnd: _isNearEnd(notification.metrics),
       );
     }
     return false;
@@ -530,37 +559,81 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   void _applyScrollTarget(ChatScrollTarget target) {
     if (!_scrollController.hasClients) return;
     final maxExtent = _scrollController.position.maxScrollExtent;
-    final requested = target.isBottom ? maxExtent : target.offset;
-    _scrollController.jumpTo(requested.clamp(0.0, maxExtent));
+    _scrollController.jumpTo(maxExtent);
+    _syncEndAffordance(_scrollController.position);
+  }
+
+  void _goToEnd() {
+    _applyScrollTarget(const ChatScrollTarget.end());
   }
 
   void _scheduleScrollTarget(ChatScrollTarget? target) {
-    if (target == null) return;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      _applyScrollTarget(target);
+      if (target != null) {
+        _applyScrollTarget(target);
+      } else if (_scrollController.hasClients) {
+        _syncEndAffordance(_scrollController.position, clearUnreadAtEnd: false);
+      }
     });
   }
 
   void _scheduleStreamingFollow() {
-    if (_scrollCoordinator.streamingContentChanged() == null ||
-        _streamFollowScheduled) {
-      return;
-    }
+    if (_streamFollowScheduled) return;
     _streamFollowScheduled = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _streamFollowScheduled = false;
       if (!mounted) return;
       final target = _scrollCoordinator.streamingContentChanged();
-      if (target != null) _applyScrollTarget(target);
+      if (target != null) {
+        _applyScrollTarget(target);
+      } else if (_scrollController.hasClients) {
+        _syncEndAffordance(_scrollController.position, clearUnreadAtEnd: false);
+      }
     });
   }
 
-  void _scheduleInitialScrollRestore() {
-    final target = _scrollCoordinator.consumeInitialRestore(
-      _savedPositions[_scrollPositionKey],
-    );
-    _scheduleScrollTarget(target);
+  void _scheduleInitialEndAlignment() {
+    if (_scrollCoordinator.consumeInitialEndAlignment() == null) {
+      _scheduleScrollTarget(null);
+      return;
+    }
+    _initialEndFramesRemaining = _initialEndFrameBudget;
+    _initialEndStableFrames = 0;
+    _initialEndLastExtent = null;
+    _scheduleNextInitialEndFrame();
+  }
+
+  void _scheduleNextInitialEndFrame() {
+    if (_initialEndFrameScheduled || _initialEndFramesRemaining <= 0) return;
+    _initialEndFrameScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _initialEndFrameScheduled = false;
+      if (!mounted || _initialEndFramesRemaining <= 0) return;
+      _initialEndFramesRemaining -= 1;
+
+      if (!_scrollController.hasClients) {
+        _scheduleNextInitialEndFrame();
+        return;
+      }
+
+      final extent = _scrollController.position.maxScrollExtent;
+      final previousExtent = _initialEndLastExtent;
+      final extentIsStable =
+          previousExtent != null &&
+          (extent - previousExtent).abs() <= _stableExtentTolerance;
+      _applyScrollTarget(const ChatScrollTarget.end());
+      _initialEndStableFrames = extentIsStable
+          ? _initialEndStableFrames + 1
+          : 0;
+      _initialEndLastExtent = extent;
+
+      if (_initialEndStableFrames >= _requiredStableEndFrames ||
+          _initialEndFramesRemaining <= 0) {
+        return;
+      }
+      _scheduleNextInitialEndFrame();
+    });
   }
 
   Future<void> _fetchMessages() async {
@@ -577,7 +650,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
         _messages = messages;
         _loading = false;
       });
-      _scheduleInitialScrollRestore();
+      _scheduleInitialEndAlignment();
     } catch (e) {
       if (!mounted) return;
       final errStr = e.toString();
@@ -586,7 +659,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
           _messages = [];
           _loading = false;
         });
-        _scheduleInitialScrollRestore();
+        _scheduleInitialEndAlignment();
         return;
       }
       setState(() {
@@ -1162,7 +1235,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
 
     // A remote-gateway profile uses one transport for every prompt. Images and
     // arbitrary files are both attached with the official `file.attach` RPC.
-    if (_desktopGateway != null) {
+    if (_desktopGateway != null || widget.testRemotePromptSubmit != null) {
       await _sendDesktopGatewayMessage(
         text: text,
         attachments: attachments,
@@ -1211,7 +1284,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     // The server returns oldest-to-newest history. Preserve that order; the
     // gateway client appends the current prompt exactly once.
     final history = buildRestChatHistory(_messages);
-    _scrollCoordinator.beginStreaming(isNearBottom: _isNearBottom());
+    _scrollCoordinator.beginStreaming(isNearEnd: _isNearEnd());
 
     setState(() {
       _sending = true;
@@ -1220,7 +1293,6 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
         kind: 'starting',
         text: 'Starting Hermes…',
       );
-      _showScrollToBottom = false;
       _messages.add({'role': 'user', 'content': localContent});
       // Insert a placeholder streaming message
       _messages.add({'role': 'assistant', 'content': ''});
@@ -1238,8 +1310,12 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
         if (!mounted || responseGeneration != _responseGeneration) return;
         setState(() {
           if (_messages.isNotEmpty && _messages.last['role'] == 'assistant') {
-            _messages.last['content'] =
-                (_messages.last['content'] as String) + token;
+            final assistant = _messages.last;
+            final current = assistant['content'] as String;
+            if (current.isEmpty && token.isNotEmpty) {
+              _registerMaterializedAssistantMessage();
+            }
+            assistant['content'] = current + token;
           }
         });
         _scheduleStreamingFollow();
@@ -1270,7 +1346,6 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
             _sending = false;
             _gatewayTurnStatus = null;
             _activeResponseTransport = _ResponseTransport.none;
-            _showScrollToBottom = false;
           });
           _scheduleScrollTarget(_scrollCoordinator.endStreaming());
           if (_awaitingVoiceReply) {
@@ -1314,7 +1389,8 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     required bool speakResponse,
   }) async {
     final desktopGateway = _desktopGateway;
-    if (desktopGateway == null) {
+    final testRemotePromptSubmit = widget.testRemotePromptSubmit;
+    if (desktopGateway == null && testRemotePromptSubmit == null) {
       _showAttachmentError(
         'Desktop Gateway is not configured for this connection.',
       );
@@ -1338,15 +1414,19 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
         kind: 'upload',
         text: 'Preparing attachments…',
       );
-      _showScrollToBottom = false;
     });
 
     try {
-      await _applySessionModelOverride(desktopGateway);
+      if (desktopGateway != null) {
+        await _applySessionModelOverride(desktopGateway);
+      }
       if (!mounted || responseGeneration != _responseGeneration) return;
       await _attachmentSendCoordinator.uploadThenSubmit(
         drafts: attachments,
         upload: ({required draft, required dataUrl}) async {
+          if (desktopGateway == null) {
+            throw StateError('Test remote transport does not upload files');
+          }
           return _uploadAttachmentDraft(desktopGateway, draft, dataUrl);
         },
         onChanged: (draft) {
@@ -1385,7 +1465,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
             attachmentLabels,
           ].where((part) => part.trim().isNotEmpty).join('\n\n');
           _textController.clear();
-          _scrollCoordinator.beginStreaming(isNearBottom: _isNearBottom());
+          _scrollCoordinator.beginStreaming(isNearEnd: _isNearEnd());
           setState(() {
             _streaming = true;
             _gatewayTurnStatus = const GatewayTurnStatus(
@@ -1398,12 +1478,23 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
             turnAdded = true;
           });
           _scheduleStreamingFollow();
-          await desktopGateway.submitPrompt(
-            sessionId: widget.session.id,
-            text: prompt,
-            onEvent: (event) =>
-                _handleDesktopGatewayEvent(event, responseGeneration),
-          );
+          void onEvent(StreamEvent event) {
+            _handleDesktopGatewayEvent(event, responseGeneration);
+          }
+
+          if (testRemotePromptSubmit != null) {
+            await testRemotePromptSubmit(
+              sessionId: widget.session.id,
+              text: prompt,
+              onEvent: onEvent,
+            );
+          } else {
+            await desktopGateway!.submitPrompt(
+              sessionId: widget.session.id,
+              text: prompt,
+              onEvent: onEvent,
+            );
+          }
         },
       );
       if (!mounted || responseGeneration != _responseGeneration) return;
@@ -1412,7 +1503,6 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
         _sending = false;
         _gatewayTurnStatus = null;
         _activeResponseTransport = _ResponseTransport.none;
-        _showScrollToBottom = false;
       });
       _scheduleScrollTarget(_scrollCoordinator.endStreaming());
       if (_awaitingVoiceReply) {
@@ -1497,7 +1587,9 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
         _gatewayTurnStatus = null;
         final assistant = _lastAssistantMessage();
         if (assistant == null) return;
-        assistant['content'] = '${assistant['content'] ?? ''}$token';
+        final current = assistant['content']?.toString() ?? '';
+        if (current.isEmpty) _registerMaterializedAssistantMessage();
+        assistant['content'] = '$current$token';
       });
       _scheduleStreamingFollow();
       return;
@@ -1508,11 +1600,15 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
         _gatewayTurnStatus = null;
         final assistant = _lastAssistantMessage();
         if (assistant == null) return;
+        final current = assistant['content']?.toString() ?? '';
         final transition = GatewayInterimTransition.resolve(
-          currentText: assistant['content']?.toString() ?? '',
+          currentText: current,
           interimText: interim,
           alreadyStreamed: event.data['already_streamed'] == true,
         );
+        if (current.isEmpty && transition.sealedText.isNotEmpty) {
+          _registerMaterializedAssistantMessage();
+        }
         assistant['content'] = transition.sealedText;
         if (transition.startsNewMessage) {
           assistant['_gateway_interim'] = true;
@@ -1530,7 +1626,11 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
       if (completeText.isNotEmpty) {
         setState(() {
           final assistant = _lastAssistantMessage();
-          if (assistant != null) assistant['content'] = completeText;
+          if (assistant != null) {
+            final current = assistant['content']?.toString() ?? '';
+            if (current.isEmpty) _registerMaterializedAssistantMessage();
+            assistant['content'] = completeText;
+          }
         });
         _scheduleStreamingFollow();
       }
@@ -2111,7 +2211,23 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
             children: [
               for (final notification in _gatewayNotifications.values)
                 _buildGatewayNotification(notification),
-              Expanded(child: _buildBody()),
+              Expanded(
+                child: Stack(
+                  children: [
+                    Positioned.fill(child: _buildBody()),
+                    if (_endAffordanceController.isVisible)
+                      Positioned(
+                        right: 12,
+                        bottom: 12,
+                        child: ChatEndAffordance(
+                          newMessageCount:
+                              _endAffordanceController.newMessageCount,
+                          onPressed: _goToEnd,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
               _buildInputBar(),
             ],
           ),
@@ -2146,6 +2262,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
 
   Widget _buildInputBar() {
     return Container(
+      key: const Key('chat-input-bar'),
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
@@ -2495,52 +2612,61 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     }
     displayMessages.addAll(_gatewayNotices);
 
-    return NotificationListener<ScrollNotification>(
-      onNotification: _handleScrollNotification,
-      child: ListView.builder(
-        controller: _scrollController,
-        padding: const EdgeInsets.only(bottom: 4),
-        itemCount: displayMessages.length,
-        itemBuilder: (context, index) {
-          final item = displayMessages[index];
+    return NotificationListener<ScrollMetricsNotification>(
+      onNotification: (notification) {
+        _syncEndAffordance(notification.metrics, clearUnreadAtEnd: false);
+        return false;
+      },
+      child: NotificationListener<ScrollNotification>(
+        onNotification: _handleScrollNotification,
+        child: ListView.builder(
+          controller: _scrollController,
+          padding: const EdgeInsets.only(bottom: 4),
+          itemCount: displayMessages.length,
+          itemBuilder: (context, index) {
+            final item = displayMessages[index];
 
-          if (item is List<GatewayToolActivity>) {
-            return GatewayActivityCard(activities: item, verbose: _verboseMode);
-          }
-          if (item is List<GatewaySubagentActivity>) {
-            return GatewaySubagentCard(activities: item);
-          }
-          if (item is _GatewayReasoningDisplay) {
-            return GatewayReasoningCard(
-              text: item.text,
-              initiallyExpanded: item.initiallyExpanded,
+            if (item is List<GatewayToolActivity>) {
+              return GatewayActivityCard(
+                activities: item,
+                verbose: _verboseMode,
+              );
+            }
+            if (item is List<GatewaySubagentActivity>) {
+              return GatewaySubagentCard(activities: item);
+            }
+            if (item is _GatewayReasoningDisplay) {
+              return GatewayReasoningCard(
+                text: item.text,
+                initiallyExpanded: item.initiallyExpanded,
+              );
+            }
+            if (item is GatewayNotice) {
+              return GatewayNoticeCard(notice: item);
+            }
+
+            final msg = item as Map<String, dynamic>;
+            final role = (msg['role'] as String?) ?? 'assistant';
+            final content =
+                (msg['_display_content'] as String?) ??
+                stripToolResultText(messageContentToText(msg['content']));
+            final isUser = role == 'user';
+
+            return MessageBubble(
+              content: content,
+              isUser: isUser,
+              verbose: _verboseMode,
+              metadata: msg,
+              onReadAloud: isUser
+                  ? null
+                  : () => _readAssistantText(content, announce: true),
+              onEdit: isUser ? () => _editAndResend(content) : null,
+              onRetry: isUser
+                  ? null
+                  : () => _retryPrompt(msg['_retry_prompt']?.toString() ?? ''),
             );
-          }
-          if (item is GatewayNotice) {
-            return GatewayNoticeCard(notice: item);
-          }
-
-          final msg = item as Map<String, dynamic>;
-          final role = (msg['role'] as String?) ?? 'assistant';
-          final content =
-              (msg['_display_content'] as String?) ??
-              stripToolResultText(messageContentToText(msg['content']));
-          final isUser = role == 'user';
-
-          return MessageBubble(
-            content: content,
-            isUser: isUser,
-            verbose: _verboseMode,
-            metadata: msg,
-            onReadAloud: isUser
-                ? null
-                : () => _readAssistantText(content, announce: true),
-            onEdit: isUser ? () => _editAndResend(content) : null,
-            onRetry: isUser
-                ? null
-                : () => _retryPrompt(msg['_retry_prompt']?.toString() ?? ''),
-          );
-        },
+          },
+        ),
       ),
     );
   }
