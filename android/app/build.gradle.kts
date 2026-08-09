@@ -49,6 +49,8 @@ android {
 
    buildTypes {
        debug {
+           // The guarded Flutter versionCode is the base. `--split-per-abi`
+           // adds 2000 to the packaged arm64 code; CI verifies both values.
            applicationIdSuffix = ".dev"
            versionNameSuffix = "-dev"
            manifestPlaceholders["appLabel"] = "Hermes Agent Dev"

@@ -395,6 +395,13 @@ mkdir -p release-apks
 cp build/app/outputs/flutter-apk/app-*-release.apk release-apks/
 ```
 
+`pubspec.yaml` declares the base Android `versionCode`. Flutter's
+`--split-per-abi` packaging adds an ABI offset to each split; for arm64-v8a the
+effective APK manifest value is `base + 2000`. For Build N1, base `2127`
+therefore produces effective arm64 code `4127`. CI reads the completed APK with
+`aapt` and fails if that relationship drifts. Release-floor checks continue to
+apply to the base value and must not be weakened to rely on an ABI offset.
+
 Output files:
 
 ```text

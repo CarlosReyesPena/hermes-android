@@ -31,6 +31,18 @@ void main() {
       contains('check(flutter.versionCode > minimumInstalledVersionCode)'),
     );
     expect(buildWorkflow, contains("MINIMUM_INSTALLED_VERSION_CODE: '2126'"));
+    expect(
+      buildWorkflow,
+      contains("ARM64_SPLIT_VERSION_CODE_OFFSET: '2000'"),
+    );
+    expect(
+      buildWorkflow,
+      contains('expected_code = base_code + offset'),
+    );
+    expect(
+      buildWorkflow,
+      contains('Verify arm64 split APK effective versionCode'),
+    );
     expect(buildWorkflow, contains('GITHUB_REF_TYPE'));
     expect(buildWorkflow, contains('Refuse an unsigned tagged release'));
     expect(buildWorkflow, contains("env.HAS_RELEASE_KEYSTORE == 'true'"));
