@@ -11,6 +11,13 @@ import json
 from aiohttp import ClientSession, WSMsgType
 
 
+DISCONNECT_CASES = (
+    ("before_ack", False, 0),
+    ("after_ack_before_first_delta", True, 0),
+    ("mid_stream_after_2_deltas", True, 2),
+)
+
+
 async def rpc(ws, request_id: int, method: str, params: dict) -> dict:
     await ws.send_json(
         {
@@ -29,6 +36,90 @@ async def rpc(ws, request_id: int, method: str, params: dict) -> dict:
             return payload["result"]
 
 
+async def probe_disconnect_scenario(
+    session: ClientSession,
+    base_url: str,
+    scenario: str,
+    expected_ack: bool,
+    expected_deltas: int,
+    request_id: int,
+) -> None:
+    async with session.post(
+        f"{base_url}/api/auth/ws-ticket",
+        headers={"X-Hermes-Session-Token": "fixture-dashboard-token"},
+    ) as response:
+        assert response.status == 200
+        ticket = (await response.json())["ticket"]
+
+    ws_url = (
+        base_url.replace("http://", "ws://")
+        .replace("https://", "wss://")
+        + f"/api/ws?ticket={ticket}"
+    )
+    session_id = f"fixture-disconnect-{scenario}"
+    ack_seen = False
+    delta_count = 0
+    turn_end_count = 0
+
+    async with session.ws_connect(ws_url) as ws:
+        created = await rpc(
+            ws,
+            request_id,
+            "session.create",
+            {"session_id": session_id},
+        )
+        assert created["session_id"] == session_id
+        await ws.send_json(
+            {
+                "jsonrpc": "2.0",
+                "id": request_id + 1,
+                "method": "prompt.submit",
+                "params": {
+                    "session_id": session_id,
+                    "text": "Synthetic disconnect contract probe.",
+                    "fixture_disconnect_scenario": scenario,
+                },
+            }
+        )
+
+        while True:
+            message = await ws.receive(timeout=5)
+            if message.type == WSMsgType.TEXT:
+                payload = json.loads(message.data)
+                if payload.get("id") == request_id + 1:
+                    assert payload["result"]["accepted"] is True
+                    ack_seen = True
+                    continue
+                if payload.get("method") != "event":
+                    continue
+                event_type = payload["params"]["type"]
+                if event_type == "message.delta":
+                    delta_count += 1
+                if event_type == "turn.end":
+                    turn_end_count += 1
+                continue
+            if message.type in {
+                WSMsgType.CLOSE,
+                WSMsgType.CLOSING,
+                WSMsgType.CLOSED,
+            }:
+                break
+            assert message.type != WSMsgType.ERROR, ws.exception()
+            raise AssertionError(f"Unexpected WebSocket message: {message}")
+
+    assert ack_seen is expected_ack
+    assert delta_count == expected_deltas
+    assert turn_end_count == 0
+
+    async with session.get(
+        f"{base_url}/api/sessions/{session_id}/messages",
+        headers={"Authorization": "Bearer test-key"},
+    ) as response:
+        assert response.status == 200
+        history = await response.json()
+        assert history["data"] == []
+
+
 async def probe(base_url: str) -> None:
     dashboard_headers = {
         "X-Hermes-Session-Token": "fixture-dashboard-token"
@@ -38,6 +129,20 @@ async def probe(base_url: str) -> None:
             health = await response.json()
             assert response.status == 200
             assert "json-rpc-websocket" in health["contracts"]
+            assert "fail-closed-disconnect-fixtures" in health["contracts"]
+
+        async with session.post(
+            f"{base_url}/test/disconnect-ledger/reset"
+        ) as response:
+            assert response.status == 200
+            reset_ledger = await response.json()
+            assert reset_ledger["schema"] == (
+                "hermes.fake_gateway.disconnect_ledger.v1"
+            )
+            assert all(
+                record["prompt_submit_count"] == 0
+                for record in reset_ledger["scenarios"].values()
+            )
 
         async with session.get(f"{base_url}/") as response:
             homepage = await response.text()
@@ -691,6 +796,59 @@ async def probe(base_url: str) -> None:
                 "notification.clear",
             ]
 
+        for index, (scenario, expected_ack, expected_deltas) in enumerate(
+            DISCONNECT_CASES
+        ):
+            await probe_disconnect_scenario(
+                session,
+                base_url,
+                scenario,
+                expected_ack,
+                expected_deltas,
+                200 + index * 10,
+            )
+
+        async with session.get(
+            f"{base_url}/test/disconnect-ledger"
+        ) as response:
+            assert response.status == 200
+            ledger = await response.json()
+
+        assert ledger == {
+            "schema": "hermes.fake_gateway.disconnect_ledger.v1",
+            "scenarios": {
+                scenario: {
+                    "prompt_submit_count": 1,
+                    "disconnect_point": scenario,
+                    "ack_seen": expected_ack,
+                    "delta_count": expected_deltas,
+                    "turn_end_count": 0,
+                    "resubmit_count": 0,
+                }
+                for scenario, expected_ack, expected_deltas in DISCONNECT_CASES
+            },
+        }
+        ledger_json = json.dumps(ledger)
+        assert "Synthetic disconnect contract probe" not in ledger_json
+        assert "test-key" not in ledger_json
+
+        async with session.post(
+            f"{base_url}/test/disconnect-ledger/reset"
+        ) as response:
+            assert response.status == 200
+            cleared_ledger = await response.json()
+        assert all(
+            record == {
+                "prompt_submit_count": 0,
+                "disconnect_point": scenario,
+                "ack_seen": False,
+                "delta_count": 0,
+                "turn_end_count": 0,
+                "resubmit_count": 0,
+            }
+            for scenario, record in cleared_ledger["scenarios"].items()
+        )
+
     print(
         json.dumps(
             {
@@ -733,6 +891,10 @@ async def probe(base_url: str) -> None:
                     "notification.clear",
                     "subagent.start",
                     "subagent.complete",
+                    "disconnect.before_ack",
+                    "disconnect.after_ack_before_first_delta",
+                    "disconnect.mid_stream_after_2_deltas",
+                    "disconnect-ledger-v1",
                 ],
             }
         )

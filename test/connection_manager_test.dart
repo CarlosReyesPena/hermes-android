@@ -65,6 +65,133 @@ class _MemoryCredentialStore implements CredentialStore {
   }
 }
 
+enum _PromptDisconnectPoint {
+  beforeAck,
+  afterAckBeforeFirstDelta,
+  midStreamAfterTwoDeltas,
+}
+
+Future<void> _expectFailClosedPromptDisconnect(
+  _PromptDisconnectPoint point, {
+  required int expectedDeltaCount,
+}) async {
+  final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+  final requests = <Map<String, dynamic>>[];
+  final events = <StreamEvent>[];
+  final socketClosed = Completer<void>();
+  var connectionCount = 0;
+  final socketSubscription = server.transform(WebSocketTransformer()).listen((
+    socket,
+  ) {
+    connectionCount += 1;
+    socket.listen(
+      (raw) {
+        final request = jsonDecode(raw as String) as Map<String, dynamic>;
+        if (request['method'] != 'prompt.submit') return;
+        requests.add(request);
+
+        if (point == _PromptDisconnectPoint.beforeAck) {
+          unawaited(
+            socket.close(
+              WebSocketStatus.goingAway,
+              'fixture disconnect before ack',
+            ),
+          );
+          return;
+        }
+
+        socket.add(
+          jsonEncode({
+            'jsonrpc': '2.0',
+            'id': request['id'],
+            'result': {'accepted': true},
+          }),
+        );
+        if (point == _PromptDisconnectPoint.afterAckBeforeFirstDelta) {
+          unawaited(
+            socket.close(
+              WebSocketStatus.goingAway,
+              'fixture disconnect after ack',
+            ),
+          );
+          return;
+        }
+
+        for (var index = 0; index < 2; index += 1) {
+          socket.add(
+            jsonEncode({
+              'jsonrpc': '2.0',
+              'method': 'event',
+              'params': {
+                'type': 'message.delta',
+                'sid': 'disconnect-session',
+                'payload': {'text': 'delta-${index + 1}'},
+              },
+            }),
+          );
+        }
+        unawaited(
+          socket.close(
+            WebSocketStatus.goingAway,
+            'fixture disconnect mid-stream',
+          ),
+        );
+      },
+      onError: (Object error) {
+        if (!socketClosed.isCompleted) socketClosed.completeError(error);
+      },
+      onDone: () {
+        if (!socketClosed.isCompleted) socketClosed.complete();
+      },
+    );
+  });
+  final client = WsClient('http://127.0.0.1:${server.port}');
+
+  try {
+    await client.connect().timeout(const Duration(seconds: 5));
+    Object? surfacedError;
+    try {
+      await client.submitPrompt(
+        'Synthetic disconnect prompt',
+        sessionId: 'disconnect-session',
+        onEvent: events.add,
+        timeout: const Duration(seconds: 5),
+      );
+    } catch (error) {
+      surfacedError = error;
+    }
+    await socketClosed.future.timeout(const Duration(seconds: 5));
+
+    expect(surfacedError, isA<Exception>());
+    if (point == _PromptDisconnectPoint.beforeAck) {
+      expect(surfacedError.toString(), 'Exception: Connection closed');
+    } else {
+      expect(surfacedError, isA<JsonRpcError>());
+      expect(
+        surfacedError.toString(),
+        'JsonRpcError(prompt.submit): Desktop gateway connection closed',
+      );
+    }
+    expect(connectionCount, 1);
+    expect(requests, hasLength(1));
+    expect(requests.single['params'], {
+      'session_id': 'disconnect-session',
+      'text': 'Synthetic disconnect prompt',
+    });
+    expect(
+      events.where((event) => event.type == 'message.delta'),
+      hasLength(expectedDeltaCount),
+    );
+    expect(events.where((event) => event.type == 'turn.end'), isEmpty);
+    expect(events.where((event) => event.type == 'turn.error'), hasLength(1));
+    expect(events.last.isComplete, isTrue);
+  } finally {
+    client.close();
+    await socketSubscription.cancel();
+    await server.close(force: true);
+  }
+}
+
 void main() {
   group('SavedConnection', () {
     test('normalizes bare HTTP gateway hosts with fallback port', () {
@@ -950,6 +1077,33 @@ void main() {
         'ws://hermes.local:9119/api/ws?token=spa',
       );
     });
+
+    test('fails closed when the socket closes before prompt ACK', () async {
+      await _expectFailClosedPromptDisconnect(
+        _PromptDisconnectPoint.beforeAck,
+        expectedDeltaCount: 0,
+      );
+    });
+
+    test(
+      'fails closed when the socket closes after ACK before first delta',
+      () async {
+        await _expectFailClosedPromptDisconnect(
+          _PromptDisconnectPoint.afterAckBeforeFirstDelta,
+          expectedDeltaCount: 0,
+        );
+      },
+    );
+
+    test(
+      'fails closed after two deltas without reconnect or resubmit',
+      () async {
+        await _expectFailClosedPromptDisconnect(
+          _PromptDisconnectPoint.midStreamAfterTwoDeltas,
+          expectedDeltaCount: 2,
+        );
+      },
+    );
 
     test('sends the official session.interrupt JSON-RPC method', () async {
       final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);

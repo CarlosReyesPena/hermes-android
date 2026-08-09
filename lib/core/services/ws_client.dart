@@ -333,6 +333,11 @@ class WsClient {
     Duration timeout = const Duration(minutes: 10),
   }) async {
     final completion = Completer<void>();
+    final terminalFuture = completion.future;
+    // A close before the RPC acknowledgement rejects both the pending request
+    // and this terminal watcher. Observe the secondary future immediately so
+    // the request error remains the single surfaced failure.
+    terminalFuture.ignore();
     late final StreamCallback listener;
     Timer? timer;
 
@@ -372,7 +377,7 @@ class WsClient {
           code: error['code'] as int?,
         );
       }
-      await completion.future;
+      await terminalFuture;
     } finally {
       timer.cancel();
       final current = _sessionStreams[sessionId];
