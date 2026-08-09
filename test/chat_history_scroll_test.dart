@@ -111,6 +111,44 @@ void main() {
   });
 
   group('ChatScreen integration', () {
+    testWidgets(
+      'composer stays overflow-free at font scale 200% on compact screens',
+      (tester) async {
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetDevicePixelRatio);
+        addTearDown(tester.view.resetPhysicalSize);
+
+        for (final width in [320.0, 360.0]) {
+          tester.view.physicalSize = Size(width, 640);
+          await _pumpChat(
+            tester,
+            client: _ControlledChatHttpClient(const []),
+            connectionId: 'compact-$width',
+            sessionId: 'compact-$width',
+            textScale: 2,
+          );
+
+          for (final label in const [
+            'Add attachment',
+            'Message',
+            'Start voice input',
+            'Spoken replies',
+            'Send message',
+          ]) {
+            expect(find.bySemanticsLabel(label), findsOneWidget);
+          }
+          for (final tooltip in const [
+            'Attach image or file',
+            'Speak to Hermes',
+            'Send',
+          ]) {
+            expect(tester.getSize(find.byTooltip(tooltip)), const Size(48, 48));
+          }
+          expect(tester.takeException(), isNull);
+        }
+      },
+    );
+
     testWidgets('sends chronological REST history through the real screen', (
       tester,
     ) async {
@@ -266,6 +304,7 @@ Future<void> _pumpChat(
   required _ControlledChatHttpClient client,
   required String connectionId,
   required String sessionId,
+  double textScale = 1,
 }) async {
   final apiClient = ApiClient(
     baseUrl: 'http://fixture.example',
@@ -274,6 +313,12 @@ Future<void> _pumpChat(
   );
   await tester.pumpWidget(
     MaterialApp(
+      builder: (context, child) => MediaQuery(
+        data: MediaQuery.of(
+          context,
+        ).copyWith(textScaler: TextScaler.linear(textScale)),
+        child: child!,
+      ),
       home: ChatScreen(
         connection: SavedConnection(
           id: connectionId,

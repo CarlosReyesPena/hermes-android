@@ -36,6 +36,11 @@ import '../widgets/gateway_clarify_dialog.dart';
 import '../widgets/gateway_insight_card.dart';
 import '../widgets/gateway_sensitive_prompt_dialog.dart';
 
+/// These colors remain identical in light and dark themes. Their 8.15:1
+/// contrast ratio keeps normal user-message text above WCAG AA.
+const hermesUserMessageBubbleBackground = Color(0xFFD4AF37);
+const hermesUserMessageForeground = Color(0xFF1C1B1F);
+
 class _ModelChoice {
   final String provider;
   final String model;
@@ -2188,25 +2193,40 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
               alignment: Alignment.centerLeft,
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(4, 2, 4, 4),
-                child: TextButton.icon(
-                  onPressed:
-                      (_sending ||
+                child: Semantics(
+                  label: 'Choose chat model',
+                  value: _sessionModel ?? widget.session.model,
+                  button: true,
+                  enabled:
+                      !(_sending ||
                           _streaming ||
                           _loadingModelOptions ||
-                          _changingModel)
-                      ? null
-                      : _showModelSelector,
-                  icon: _loadingModelOptions || _changingModel
-                      ? const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.tune, size: 18),
-                  label: Text(
-                    '${_sessionModel ?? widget.session.model} • '
-                    '${_sessionModelOverride ? 'this chat' : 'profile default'}',
-                    overflow: TextOverflow.ellipsis,
+                          _changingModel),
+                  excludeSemantics: true,
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(minHeight: 48),
+                    child: TextButton.icon(
+                      onPressed:
+                          (_sending ||
+                              _streaming ||
+                              _loadingModelOptions ||
+                              _changingModel)
+                          ? null
+                          : _showModelSelector,
+                      icon: _loadingModelOptions || _changingModel
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.tune, size: 18),
+                      label: Text(
+                        '${_sessionModel ?? widget.session.model} • '
+                        '${_sessionModelOverride ? 'this chat' : 'profile default'}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
                   ),
                 ),
               ),
@@ -2220,14 +2240,16 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                   color: Theme.of(context).colorScheme.surfaceContainerHighest,
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Column(
-                  children: [
-                    for (
-                      var index = 0;
-                      index < _attachmentDrafts.length;
-                      index++
-                    )
-                      AttachmentDraftTile(
+                child: Semantics(
+                  label: 'Attachment drafts',
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxHeight: MediaQuery.sizeOf(context).height * 0.32,
+                    ),
+                    child: ListView.builder(
+                      shrinkWrap: true,
+                      itemCount: _attachmentDrafts.length,
+                      itemBuilder: (context, index) => AttachmentDraftTile(
                         draft: _attachmentDrafts[index],
                         index: index,
                         total: _attachmentDrafts.length,
@@ -2241,79 +2263,136 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                         onRemove: () =>
                             _removeAttachment(_attachmentDrafts[index]),
                       ),
-                  ],
+                    ),
+                  ),
                 ),
               ),
             Row(
               children: [
-                IconButton(
-                  icon: const Icon(Icons.attach_file),
-                  onPressed: (!_loading && !_streaming && !_sending)
-                      ? _showAttachmentPicker
-                      : null,
-                  tooltip: 'Attach image or file',
+                Semantics(
+                  label: 'Add attachment',
+                  button: true,
+                  enabled: !_loading && !_streaming && !_sending,
+                  excludeSemantics: true,
+                  child: IconButton(
+                    icon: const Icon(Icons.attach_file),
+                    onPressed: (!_loading && !_streaming && !_sending)
+                        ? _showAttachmentPicker
+                        : null,
+                    tooltip: 'Attach image or file',
+                    constraints: const BoxConstraints.tightFor(
+                      width: 48,
+                      height: 48,
+                    ),
+                  ),
                 ),
                 Expanded(
-                  child: TextField(
-                    controller: _textController,
-                    decoration: InputDecoration(
-                      hintText: 'Type a message…',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(24),
+                  child: Semantics(
+                    label: 'Message',
+                    textField: true,
+                    child: TextField(
+                      controller: _textController,
+                      decoration: InputDecoration(
+                        hintText: 'Type a message…',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(24),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
+                        ),
+                        isDense: true,
                       ),
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 8,
-                      ),
-                      isDense: true,
+                      minLines: 1,
+                      maxLines: 4,
+                      textCapitalization: TextCapitalization.sentences,
+                      keyboardType: TextInputType.multiline,
+                      textInputAction: TextInputAction.send,
+                      enabled: !_loading && !_streaming,
+                      onSubmitted: (_) => _sendMessage(),
                     ),
-                    minLines: 1,
-                    maxLines: 4,
-                    textCapitalization: TextCapitalization.sentences,
-                    keyboardType: TextInputType.multiline,
-                    textInputAction: TextInputAction.send,
-                    enabled: !_loading && !_streaming,
-                    onSubmitted: (_) => _sendMessage(),
                   ),
                 ),
                 const SizedBox(width: 8),
-                IconButton.filledTonal(
-                  icon: Icon(_listening ? Icons.mic_off : Icons.mic),
-                  color: _listening
-                      ? Theme.of(context).colorScheme.error
-                      : null,
-                  onPressed: (!_loading && !_streaming && !_sending)
-                      ? _toggleVoiceInput
-                      : null,
-                  tooltip: _listening ? 'Stop listening' : 'Speak to Hermes',
-                ),
-                IconButton(
-                  icon: Icon(
-                    _voiceReplyEnabled ? Icons.volume_up : Icons.volume_off,
+                Semantics(
+                  label: _listening ? 'Stop voice input' : 'Start voice input',
+                  button: true,
+                  enabled: !_loading && !_streaming && !_sending,
+                  excludeSemantics: true,
+                  child: IconButton.filledTonal(
+                    icon: Icon(_listening ? Icons.mic_off : Icons.mic),
+                    color: _listening
+                        ? Theme.of(context).colorScheme.error
+                        : null,
+                    onPressed: (!_loading && !_streaming && !_sending)
+                        ? _toggleVoiceInput
+                        : null,
+                    tooltip: _listening ? 'Stop listening' : 'Speak to Hermes',
+                    constraints: const BoxConstraints.tightFor(
+                      width: 48,
+                      height: 48,
+                    ),
                   ),
-                  onPressed: () {
-                    setState(() => _voiceReplyEnabled = !_voiceReplyEnabled);
-                    if (!_voiceReplyEnabled) {
-                      _flutterTts.stop();
-                    }
-                  },
-                  tooltip: _voiceReplyEnabled
-                      ? 'Spoken replies on'
-                      : 'Spoken replies off',
+                ),
+                Semantics(
+                  label: 'Spoken replies',
+                  value: _voiceReplyEnabled ? 'On' : 'Off',
+                  toggled: _voiceReplyEnabled,
+                  button: true,
+                  excludeSemantics: true,
+                  child: IconButton(
+                    icon: Icon(
+                      _voiceReplyEnabled ? Icons.volume_up : Icons.volume_off,
+                    ),
+                    onPressed: () {
+                      setState(() => _voiceReplyEnabled = !_voiceReplyEnabled);
+                      if (!_voiceReplyEnabled) {
+                        _flutterTts.stop();
+                      }
+                    },
+                    tooltip: _voiceReplyEnabled
+                        ? 'Spoken replies on'
+                        : 'Spoken replies off',
+                    constraints: const BoxConstraints.tightFor(
+                      width: 48,
+                      height: 48,
+                    ),
+                  ),
                 ),
                 const SizedBox(width: 4),
-                CircleAvatar(
-                  child: _streaming
-                      ? IconButton(
-                          icon: const Icon(Icons.stop_rounded, size: 20),
-                          onPressed: _stopResponse,
-                          tooltip: 'Stop response',
-                        )
-                      : IconButton(
-                          icon: const Icon(Icons.send, size: 20),
-                          onPressed: _sendMessage,
-                          tooltip: 'Send',
-                        ),
+                Semantics(
+                  label: _streaming ? 'Stop response' : 'Send message',
+                  button: true,
+                  enabled: _streaming || (!_loading && !_sending),
+                  excludeSemantics: true,
+                  child: SizedBox.square(
+                    dimension: 48,
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.primaryContainer,
+                        shape: BoxShape.circle,
+                      ),
+                      child: _streaming
+                          ? IconButton(
+                              icon: const Icon(Icons.stop_rounded, size: 20),
+                              onPressed: _stopResponse,
+                              tooltip: 'Stop response',
+                              constraints: const BoxConstraints.tightFor(
+                                width: 48,
+                                height: 48,
+                              ),
+                            )
+                          : IconButton(
+                              icon: const Icon(Icons.send, size: 20),
+                              onPressed: _sendMessage,
+                              tooltip: 'Send',
+                              constraints: const BoxConstraints.tightFor(
+                                width: 48,
+                                height: 48,
+                              ),
+                            ),
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -2528,7 +2607,7 @@ class MessageBubble extends StatelessWidget {
     final isDark = theme.brightness == Brightness.dark;
 
     // Bubble colors
-    final userBubbleColor = const Color(0xFFD4AF37);
+    const userBubbleColor = hermesUserMessageBubbleBackground;
     final assistantBubbleColor = isDark
         ? const Color(0xFF2A2A2A)
         : const Color(0xFFEAEAEA);
@@ -2587,7 +2666,7 @@ class MessageBubble extends StatelessWidget {
                           fontSize: 11,
                           fontFamily: 'monospace',
                           color: isUser
-                              ? Colors.white.withValues(alpha: 0.8)
+                              ? hermesUserMessageForeground
                               : (isDark ? Colors.grey[400] : Colors.grey[600]),
                         ),
                       ),
@@ -2602,7 +2681,9 @@ class MessageBubble extends StatelessWidget {
             selectable: true,
             styleSheet: MarkdownStyleSheet(
               p: (isUser
-                  ? theme.textTheme.bodyMedium?.copyWith(color: Colors.white)
+                  ? theme.textTheme.bodyMedium?.copyWith(
+                      color: hermesUserMessageForeground,
+                    )
                   : theme.textTheme.bodyMedium?.copyWith(
                       color: assistantTextColor,
                     )),
@@ -2610,28 +2691,38 @@ class MessageBubble extends StatelessWidget {
                 backgroundColor: (isUser ? Colors.white : Colors.black)
                     .withValues(alpha: 0.12),
                 fontFamily: 'monospace',
-                color: isUser ? Colors.white : null,
+                color: isUser ? hermesUserMessageForeground : null,
               ),
               a: TextStyle(
-                color: isUser ? Colors.white70 : theme.colorScheme.primary,
+                color: isUser
+                    ? hermesUserMessageForeground
+                    : theme.colorScheme.primary,
               ),
               h1: isUser
-                  ? theme.textTheme.headlineSmall?.copyWith(color: Colors.white)
+                  ? theme.textTheme.headlineSmall?.copyWith(
+                      color: hermesUserMessageForeground,
+                    )
                   : theme.textTheme.headlineSmall,
               h2: isUser
-                  ? theme.textTheme.titleLarge?.copyWith(color: Colors.white)
+                  ? theme.textTheme.titleLarge?.copyWith(
+                      color: hermesUserMessageForeground,
+                    )
                   : theme.textTheme.titleLarge,
               h3: isUser
-                  ? theme.textTheme.titleMedium?.copyWith(color: Colors.white)
+                  ? theme.textTheme.titleMedium?.copyWith(
+                      color: hermesUserMessageForeground,
+                    )
                   : theme.textTheme.titleMedium,
               blockquote: TextStyle(
-                color: isUser ? Colors.white60 : Colors.grey,
+                color: isUser ? hermesUserMessageForeground : Colors.grey,
                 fontStyle: FontStyle.italic,
               ),
               blockquoteDecoration: BoxDecoration(
                 border: Border(
                   left: BorderSide(
-                    color: isUser ? Colors.white38 : theme.colorScheme.primary,
+                    color: isUser
+                        ? hermesUserMessageForeground.withValues(alpha: 0.65)
+                        : theme.colorScheme.primary,
                     width: 3,
                   ),
                 ),
@@ -2639,7 +2730,7 @@ class MessageBubble extends StatelessWidget {
               em: isUser
                   ? theme.textTheme.bodyMedium?.copyWith(
                       fontStyle: FontStyle.italic,
-                      color: Colors.white,
+                      color: hermesUserMessageForeground,
                     )
                   : theme.textTheme.bodyMedium?.copyWith(
                       fontStyle: FontStyle.italic,
@@ -2647,7 +2738,7 @@ class MessageBubble extends StatelessWidget {
               strong: isUser
                   ? theme.textTheme.bodyMedium?.copyWith(
                       fontWeight: FontWeight.bold,
-                      color: Colors.white,
+                      color: hermesUserMessageForeground,
                     )
                   : theme.textTheme.bodyMedium?.copyWith(
                       fontWeight: FontWeight.bold,
@@ -2657,31 +2748,68 @@ class MessageBubble extends StatelessWidget {
           const SizedBox(height: 4),
           Align(
             alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
+            child: Wrap(
+              spacing: 0,
+              runSpacing: 0,
               children: [
-                IconButton(
-                  icon: const Icon(Icons.copy_outlined, size: 19),
-                  tooltip: 'Copy message',
-                  onPressed: () => _copyMessage(context),
+                Semantics(
+                  label: 'Copy message',
+                  button: true,
+                  excludeSemantics: true,
+                  child: IconButton(
+                    icon: const Icon(Icons.copy_outlined, size: 19),
+                    tooltip: 'Copy message',
+                    onPressed: () => _copyMessage(context),
+                    constraints: const BoxConstraints.tightFor(
+                      width: 48,
+                      height: 48,
+                    ),
+                  ),
                 ),
                 if (onReadAloud != null)
-                  IconButton(
-                    icon: const Icon(Icons.volume_up_outlined, size: 20),
-                    tooltip: 'Read aloud',
-                    onPressed: onReadAloud,
+                  Semantics(
+                    label: 'Read aloud',
+                    button: true,
+                    excludeSemantics: true,
+                    child: IconButton(
+                      icon: const Icon(Icons.volume_up_outlined, size: 20),
+                      tooltip: 'Read aloud',
+                      onPressed: onReadAloud,
+                      constraints: const BoxConstraints.tightFor(
+                        width: 48,
+                        height: 48,
+                      ),
+                    ),
                   ),
                 if (onEdit != null)
-                  IconButton(
-                    icon: const Icon(Icons.edit_outlined, size: 20),
-                    tooltip: 'Edit and resend',
-                    onPressed: onEdit,
+                  Semantics(
+                    label: 'Edit and resend',
+                    button: true,
+                    excludeSemantics: true,
+                    child: IconButton(
+                      icon: const Icon(Icons.edit_outlined, size: 20),
+                      tooltip: 'Edit and resend',
+                      onPressed: onEdit,
+                      constraints: const BoxConstraints.tightFor(
+                        width: 48,
+                        height: 48,
+                      ),
+                    ),
                   ),
                 if (onRetry != null)
-                  IconButton(
-                    icon: const Icon(Icons.refresh, size: 20),
-                    tooltip: 'Regenerate from the preceding prompt',
-                    onPressed: onRetry,
+                  Semantics(
+                    label: 'Regenerate response',
+                    button: true,
+                    excludeSemantics: true,
+                    child: IconButton(
+                      icon: const Icon(Icons.refresh, size: 20),
+                      tooltip: 'Regenerate from the preceding prompt',
+                      onPressed: onRetry,
+                      constraints: const BoxConstraints.tightFor(
+                        width: 48,
+                        height: 48,
+                      ),
+                    ),
                   ),
               ],
             ),

@@ -28,46 +28,62 @@ class AttachmentDraftTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListTile(
-      dense: true,
-      leading: _leading(context),
-      title: Text(draft.name, maxLines: 1, overflow: TextOverflow.ellipsis),
-      subtitle: Text(
-        draft.status == AttachmentDraftStatus.failed
-            ? 'Upload failed • tap retry'
-            : '${_formatFileSize(draft.byteLength)} • ${draft.status.name}',
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-      ),
-      trailing: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _semanticIconButton(
-            icon: Icons.arrow_upward,
-            label: 'Move attachment previous',
-            onPressed: busy || index == 0 ? null : onMovePrevious,
+    return Semantics(
+      container: true,
+      label: 'Attachment ${index + 1} of $total',
+      value: _statusLabel(),
+      child: ListTile(
+        minVerticalPadding: 4,
+        leading: ExcludeSemantics(child: _leading(context)),
+        title: ExcludeSemantics(
+          child: Text(draft.name, maxLines: 1, overflow: TextOverflow.ellipsis),
+        ),
+        subtitle: ExcludeSemantics(
+          child: Text(
+            draft.status == AttachmentDraftStatus.failed
+                ? 'Upload failed • tap retry'
+                : '${_formatFileSize(draft.byteLength)} • ${draft.status.name}',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
-          _semanticIconButton(
-            icon: Icons.arrow_downward,
-            label: 'Move attachment next',
-            onPressed: busy || index == total - 1 ? null : onMoveNext,
-          ),
-          if (draft.status == AttachmentDraftStatus.failed)
-            IconButton(
-              icon: const Icon(Icons.refresh),
-              tooltip: 'Retry upload',
-              onPressed: busy ? null : onRetry,
-            )
-          else
-            IconButton(
-              icon: const Icon(Icons.close),
-              tooltip: 'Remove attachment',
-              onPressed: busy ? null : onRemove,
+        ),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _semanticIconButton(
+              icon: Icons.arrow_upward,
+              label: 'Move attachment previous',
+              onPressed: busy || index == 0 ? null : onMovePrevious,
             ),
-        ],
+            _semanticIconButton(
+              icon: Icons.arrow_downward,
+              label: 'Move attachment next',
+              onPressed: busy || index == total - 1 ? null : onMoveNext,
+            ),
+            if (draft.status == AttachmentDraftStatus.failed)
+              _semanticIconButton(
+                icon: Icons.refresh,
+                label: 'Retry upload',
+                onPressed: busy ? null : onRetry,
+              )
+            else
+              _semanticIconButton(
+                icon: Icons.close,
+                label: 'Remove attachment',
+                onPressed: busy ? null : onRemove,
+              ),
+          ],
+        ),
       ),
     );
   }
+
+  String _statusLabel() => switch (draft.status) {
+    AttachmentDraftStatus.ready => 'Ready to upload',
+    AttachmentDraftStatus.uploading => 'Uploading',
+    AttachmentDraftStatus.attached => 'Uploaded',
+    AttachmentDraftStatus.failed => 'Upload failed',
+  };
 
   Widget _leading(BuildContext context) {
     return switch (draft.status) {
@@ -113,6 +129,7 @@ class AttachmentDraftTile extends StatelessWidget {
         icon: Icon(icon, size: 20),
         tooltip: label,
         onPressed: onPressed,
+        constraints: const BoxConstraints.tightFor(width: 48, height: 48),
       ),
     );
   }
