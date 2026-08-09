@@ -40,7 +40,8 @@ jobs:
 
       - name: Verify release identity and upgrade versionCode
         env:
-          MINIMUM_INSTALLED_VERSION_CODE: '2126'
+          MINIMUM_INSTALLED_VERSION_CODE: '2127'
+          REQUIRED_BASE_VERSION_CODE: '2128'
         run: |
           python3 - <<'PY'
           import os
@@ -58,12 +59,21 @@ jobs:
           version_name, version_code_text = match.groups()
           version_code = int(version_code_text)
           minimum = int(os.environ["MINIMUM_INSTALLED_VERSION_CODE"])
+          required_base = int(os.environ["REQUIRED_BASE_VERSION_CODE"])
           if version_code <= minimum:
               raise SystemExit(
                   f"versionCode {version_code} must be greater than {minimum}"
               )
+          if version_code != required_base:
+              raise SystemExit(
+                  f"versionCode {version_code} does not match required base "
+                  f"{required_base}"
+              )
 
-          print(f"Verified {version_name}+{version_code}; upgrade floor is {minimum}")
+          print(
+              f"Verified {version_name}+{version_code}; upgrade floor is {minimum}; "
+              f"required base is {required_base}"
+          )
           PY
 
       # ── Step 1: Static analysis ──────────────────────────
