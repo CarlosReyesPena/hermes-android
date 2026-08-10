@@ -48,6 +48,41 @@ See [CHANGELOG.md](CHANGELOG.md) for the complete `.13` change list and
 [docs/HERMESAPK_DEVELOPMENT_LOG.md](docs/HERMESAPK_DEVELOPMENT_LOG.md) for the
 sanitized implementation and validation record.
 
+## What's new in v2.0.1
+
+- **Background turn notifications** — Android notifications fire when a Desktop
+  Gateway turn completes while the app is backgrounded, mirroring Hermes Desktop
+  tray notification behaviour. Notifications are automatically cleared when you
+  return to the app.
+- **Scroll bug resolved** — the inherited mid-history scroll-jump on session
+  reopen (from upstream PR #71) has been fully resolved. The
+  `ChatScrollCoordinator` only aligns to the end on initial load, never inside
+  the streaming completion handler.
+
+## What's new in v2.0.0
+
+v2.0.0 merges the community Remote Gateway edition from
+[@CristianGCiocoi](https://github.com/CristianGCiocoi).
+
+- **Unified Desktop Gateway JSON-RPC transport** — text, images, and files share
+  one WebSocket session instead of split REST+WebSocket paths.
+- **Per-chat model and thinking-effort selection** without changing the profile
+  default.
+- **Multi-attachment uploads** — up to 10 files per message, 16 MiB each.
+- **Copy/Select, Read Aloud, Edit+Resend, Regenerate, Stop, Export, Search,
+  Rename, Branch, Delete** for conversations.
+- **Native Desktop Gateway event handling** — approvals, sudo, secrets,
+  clarifications, reasoning, tool activity, notifications, background results,
+  reviews, and subagents.
+- **Voice dictation** — stage voice input before explicit send.
+- **Durable turn recovery** — completed gateway responses survive Android
+  process-kill lifecycle events.
+- **Persistent accessible text size** setting.
+- **ATLAS document intake metadata** for mobile uploads.
+- **Secure Android credential storage** with platform key material.
+- **113+ Flutter tests** plus a synthetic gateway contract suite under
+  `tools/fake_gateway/`.
+
 ## What's new in v1.0.8
 
 - **Reverse-proxy path prefixes** — configure separate path prefixes for the Gateway API and dashboard, e.g. `/profile/peter` before `/api` and `/v1`, and `/dashboard` before dashboard `/api` routes.
