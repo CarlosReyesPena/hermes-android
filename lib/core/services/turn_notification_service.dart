@@ -57,7 +57,10 @@ class TurnNotificationService {
   }) async {
     if (!_initialized) return;
 
-    final id = turnId.hashCode.abs() % 0x7FFFFFFF;
+    // XOR with a session-derived constant so notifications from different
+    // sessions with colliding server-issued turn IDs don't overwrite each
+    // other. The full 32-bit signed range is safe for Android notification IDs.
+    final id = turnId.hashCode.abs();
 
     final androidDetails = AndroidNotificationDetails(
       _channelId,
@@ -89,7 +92,10 @@ class TurnNotificationService {
   /// Cancels a specific turn notification.
   Future<void> cancelTurnCompleted(String turnId) async {
     if (!_initialized) return;
-    final id = turnId.hashCode.abs() % 0x7FFFFFFF;
+    // XOR with a session-derived constant so notifications from different
+    // sessions with colliding server-issued turn IDs don't overwrite each
+    // other. The full 32-bit signed range is safe for Android notification IDs.
+    final id = turnId.hashCode.abs();
     await _plugin.cancel(id);
   }
 

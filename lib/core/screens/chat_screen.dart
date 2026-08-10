@@ -230,7 +230,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   static const _stableExtentTolerance = 0.5;
   static final Map<String, List<GatewayNotice>> _savedGatewayNotices = {};
 
-    late final TurnNotificationService _turnNotifications;
+  late final TurnNotificationService _turnNotifications;
 
   @override
   void initState() {
@@ -354,7 +354,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
       _appInBackground = true;
     } else if (state == AppLifecycleState.resumed) {
       _appInBackground = false;
-      _turnNotifications.cancelAll();
+      unawaited(_turnNotifications.cancelAll());
       if (_desktopGateway != null) unawaited(_ensureDesktopSession());
       if (_turnApplicationSession != null && !_legacyTransportFallback) {
         unawaited(_recoverPendingTurn());
@@ -512,14 +512,16 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   }
 
   void _onTurnSettled(GatewayTurnRecoveryState state) {
-    if (!_appInBackground) return;
+    if (!mounted || !_appInBackground) return;
     final turnId = state.turnId ?? state.clientTurnId;
     final summary = state.isTerminal && !state.isFailClosed
         ? 'Response ready'
         : 'Turn completed';
-    _turnNotifications.showTurnCompleted(
-      turnSummary: '${widget.session.title}: $summary',
-      turnId: turnId,
+    unawaited(
+      _turnNotifications.showTurnCompleted(
+        turnSummary: '${widget.session.title}: $summary',
+        turnId: turnId,
+      ),
     );
   }
 
