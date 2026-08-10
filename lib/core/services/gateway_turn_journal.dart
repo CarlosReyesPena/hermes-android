@@ -11,11 +11,16 @@ abstract interface class GatewayTurnJournalStore {
   Future<void> write(String value);
 
   Future<void> delete();
+
+  Future<String?> readLegacy();
+
+  Future<void> deleteLegacy();
 }
 
 /// Android Keystore-backed production store for the single bounded journal.
 class FlutterSecureGatewayTurnJournalStore implements GatewayTurnJournalStore {
-  static const _key = 'gateway_turn_journal_v1';
+  static const _key = 'gateway_turn_journal_v2';
+  static const _legacyKey = 'gateway_turn_journal_v1';
   static const AndroidOptions _androidOptions = AndroidOptions(
     resetOnError: false,
     migrateWithBackup: true,
@@ -35,6 +40,12 @@ class FlutterSecureGatewayTurnJournalStore implements GatewayTurnJournalStore {
 
   @override
   Future<void> delete() => _storage.delete(key: _key);
+
+  @override
+  Future<String?> readLegacy() => _storage.read(key: _legacyKey);
+
+  @override
+  Future<void> deleteLegacy() => _storage.delete(key: _legacyKey);
 }
 
 class GatewayTurnJournalException implements Exception {
@@ -44,52 +55,117 @@ class GatewayTurnJournalException implements Exception {
   String toString() => 'Turn recovery journal is unavailable.';
 }
 
+/// Durable server-owned session binding for one local chat.
+///
+/// Runtime session IDs are deliberately absent. A runtime ID is valid only for
+/// the physical transport on which a fresh `session.open` returned it.
 class GatewayTurnJournalBinding {
+  static const allowedJsonKeys = <String>{
+    'connection_id',
+    'endpoint_digest',
+    'local_session_id',
+    'mobile_session_id',
+    'stored_session_id',
+    'binding_version',
+    'updated_at_epoch_ms',
+  };
+
   final String connectionId;
   final String endpointDigest;
+  final String localSessionId;
   final String mobileSessionId;
+  final String storedSessionId;
+  final int bindingVersion;
+  final int updatedAtEpochMs;
 
   factory GatewayTurnJournalBinding({
     required String connectionId,
     required String endpointDigest,
+    required String localSessionId,
     required String mobileSessionId,
+    required String storedSessionId,
+    required int bindingVersion,
+    required int updatedAtEpochMs,
   }) {
     if (!_boundedIdentity(connectionId) ||
         !_lowerHexDigest(endpointDigest) ||
-        !_canonicalUuid(mobileSessionId)) {
+        !_boundedIdentity(localSessionId) ||
+        !_canonicalUuid(mobileSessionId) ||
+        !_boundedIdentity(storedSessionId) ||
+        bindingVersion <= 0 ||
+        updatedAtEpochMs <= 0) {
       throw ArgumentError('Invalid recovery journal binding.');
     }
     return GatewayTurnJournalBinding._(
       connectionId: connectionId,
       endpointDigest: endpointDigest,
+      localSessionId: localSessionId,
       mobileSessionId: mobileSessionId,
+      storedSessionId: storedSessionId,
+      bindingVersion: bindingVersion,
+      updatedAtEpochMs: updatedAtEpochMs,
     );
   }
 
   const GatewayTurnJournalBinding._({
     required this.connectionId,
     required this.endpointDigest,
+    required this.localSessionId,
     required this.mobileSessionId,
+    required this.storedSessionId,
+    required this.bindingVersion,
+    required this.updatedAtEpochMs,
   });
 
-  String get storageIdentity =>
-      '$connectionId:$endpointDigest:$mobileSessionId';
+  String get bindingIdentity =>
+      jsonEncode(<String>[connectionId, endpointDigest, localSessionId]);
 
-  bool owns(GatewayTurnJournalEntry entry) {
-    return entry.connectionId == connectionId &&
-        entry.endpointDigest == endpointDigest &&
-        entry.mobileSessionId == mobileSessionId;
+  Map<String, Object> toJson() => <String, Object>{
+    'connection_id': connectionId,
+    'endpoint_digest': endpointDigest,
+    'local_session_id': localSessionId,
+    'mobile_session_id': mobileSessionId,
+    'stored_session_id': storedSessionId,
+    'binding_version': bindingVersion,
+    'updated_at_epoch_ms': updatedAtEpochMs,
+  };
+
+  static GatewayTurnJournalBinding _fromJson(Map<String, dynamic> value) {
+    if (value.length != allowedJsonKeys.length ||
+        value.keys.any((key) => !allowedJsonKeys.contains(key)) ||
+        value['connection_id'] is! String ||
+        value['endpoint_digest'] is! String ||
+        value['local_session_id'] is! String ||
+        value['mobile_session_id'] is! String ||
+        value['stored_session_id'] is! String ||
+        value['binding_version'] is! int ||
+        value['updated_at_epoch_ms'] is! int) {
+      throw const GatewayTurnJournalException();
+    }
+    try {
+      return GatewayTurnJournalBinding(
+        connectionId: value['connection_id'] as String,
+        endpointDigest: value['endpoint_digest'] as String,
+        localSessionId: value['local_session_id'] as String,
+        mobileSessionId: value['mobile_session_id'] as String,
+        storedSessionId: value['stored_session_id'] as String,
+        bindingVersion: value['binding_version'] as int,
+        updatedAtEpochMs: value['updated_at_epoch_ms'] as int,
+      );
+    } on ArgumentError {
+      throw const GatewayTurnJournalException();
+    }
   }
 }
 
+/// Metadata-only write-ahead record for one client intent.
+///
+/// It references a separately durable binding. Prompt text, attachment
+/// manifests, outputs, credentials, endpoints, and runtime session IDs are not
+/// permitted in this schema.
 class GatewayTurnJournalEntry {
   static const allowedJsonKeys = <String>{
-    'connection_id',
-    'endpoint_digest',
-    'mobile_session_id',
-    'runtime_session_id',
-    'stored_session_id',
-    'binding_version',
+    'binding_id',
     'client_turn_id',
     'turn_id',
     'status',
@@ -98,39 +174,24 @@ class GatewayTurnJournalEntry {
     'updated_at_epoch_ms',
   };
 
-  final String connectionId;
-  final String endpointDigest;
-  final String mobileSessionId;
-  final String runtimeSessionId;
-  final String storedSessionId;
-  final int bindingVersion;
+  final String bindingIdentity;
   final String clientTurnId;
   final String? turnId;
-  final GatewayTurnStatus? status;
+  final GatewayRecoveryTurnStatus? status;
   final int lastSeq;
   final bool ackUncertain;
   final int updatedAtEpochMs;
 
   factory GatewayTurnJournalEntry({
-    required String connectionId,
-    required String endpointDigest,
-    required String mobileSessionId,
-    required String runtimeSessionId,
-    required String storedSessionId,
-    required int bindingVersion,
+    required String bindingIdentity,
     required String clientTurnId,
     String? turnId,
-    GatewayTurnStatus? status,
+    GatewayRecoveryTurnStatus? status,
     required int lastSeq,
     required bool ackUncertain,
     required int updatedAtEpochMs,
   }) {
-    if (!_boundedIdentity(connectionId) ||
-        !_lowerHexDigest(endpointDigest) ||
-        !_canonicalUuid(mobileSessionId) ||
-        !_boundedIdentity(runtimeSessionId) ||
-        !_boundedIdentity(storedSessionId) ||
-        bindingVersion <= 0 ||
+    if (!_boundedReference(bindingIdentity) ||
         !_canonicalUuid(clientTurnId) ||
         turnId != null && !_boundedIdentity(turnId) ||
         lastSeq < 0 ||
@@ -138,12 +199,7 @@ class GatewayTurnJournalEntry {
       throw ArgumentError('Invalid recovery journal entry.');
     }
     return GatewayTurnJournalEntry._(
-      connectionId: connectionId,
-      endpointDigest: endpointDigest,
-      mobileSessionId: mobileSessionId,
-      runtimeSessionId: runtimeSessionId,
-      storedSessionId: storedSessionId,
-      bindingVersion: bindingVersion,
+      bindingIdentity: bindingIdentity,
       clientTurnId: clientTurnId,
       turnId: turnId,
       status: status,
@@ -154,12 +210,7 @@ class GatewayTurnJournalEntry {
   }
 
   const GatewayTurnJournalEntry._({
-    required this.connectionId,
-    required this.endpointDigest,
-    required this.mobileSessionId,
-    required this.runtimeSessionId,
-    required this.storedSessionId,
-    required this.bindingVersion,
+    required this.bindingIdentity,
     required this.clientTurnId,
     required this.turnId,
     required this.status,
@@ -170,26 +221,17 @@ class GatewayTurnJournalEntry {
 
   bool get isTerminal => status?.isTerminal == true;
 
-  String get entryIdentity =>
-      '$connectionId:$endpointDigest:$mobileSessionId:$clientTurnId';
+  String get entryIdentity => '$bindingIdentity:$clientTurnId';
 
   GatewayTurnJournalEntry copyWith({
-    String? runtimeSessionId,
-    String? storedSessionId,
-    int? bindingVersion,
     String? turnId,
-    GatewayTurnStatus? status,
+    GatewayRecoveryTurnStatus? status,
     int? lastSeq,
     bool? ackUncertain,
     int? updatedAtEpochMs,
   }) {
     return GatewayTurnJournalEntry(
-      connectionId: connectionId,
-      endpointDigest: endpointDigest,
-      mobileSessionId: mobileSessionId,
-      runtimeSessionId: runtimeSessionId ?? this.runtimeSessionId,
-      storedSessionId: storedSessionId ?? this.storedSessionId,
-      bindingVersion: bindingVersion ?? this.bindingVersion,
+      bindingIdentity: bindingIdentity,
       clientTurnId: clientTurnId,
       turnId: turnId ?? this.turnId,
       status: status ?? this.status,
@@ -200,12 +242,7 @@ class GatewayTurnJournalEntry {
   }
 
   Map<String, Object?> toJson() => <String, Object?>{
-    'connection_id': connectionId,
-    'endpoint_digest': endpointDigest,
-    'mobile_session_id': mobileSessionId,
-    'runtime_session_id': runtimeSessionId,
-    'stored_session_id': storedSessionId,
-    'binding_version': bindingVersion,
+    'binding_id': bindingIdentity,
     'client_turn_id': clientTurnId,
     if (turnId != null) 'turn_id': turnId,
     if (status != null) 'status': status!.wireValue,
@@ -221,14 +258,9 @@ class GatewayTurnJournalEntry {
     final statusRaw = value['status'];
     final status = statusRaw == null
         ? null
-        : GatewayTurnStatus.fromWire(statusRaw);
+        : GatewayRecoveryTurnStatus.fromWire(statusRaw);
     if (statusRaw != null && status == null ||
-        value['connection_id'] is! String ||
-        value['endpoint_digest'] is! String ||
-        value['mobile_session_id'] is! String ||
-        value['runtime_session_id'] is! String ||
-        value['stored_session_id'] is! String ||
-        value['binding_version'] is! int ||
+        value['binding_id'] is! String ||
         value['client_turn_id'] is! String ||
         value['turn_id'] != null && value['turn_id'] is! String ||
         value['last_seq'] is! int ||
@@ -238,12 +270,7 @@ class GatewayTurnJournalEntry {
     }
     try {
       return GatewayTurnJournalEntry(
-        connectionId: value['connection_id'] as String,
-        endpointDigest: value['endpoint_digest'] as String,
-        mobileSessionId: value['mobile_session_id'] as String,
-        runtimeSessionId: value['runtime_session_id'] as String,
-        storedSessionId: value['stored_session_id'] as String,
-        bindingVersion: value['binding_version'] as int,
+        bindingIdentity: value['binding_id'] as String,
         clientTurnId: value['client_turn_id'] as String,
         turnId: value['turn_id'] as String?,
         status: status,
@@ -257,8 +284,19 @@ class GatewayTurnJournalEntry {
   }
 }
 
+class GatewayTurnJournalSnapshot {
+  final List<GatewayTurnJournalBinding> bindings;
+  final List<GatewayTurnJournalEntry> entries;
+
+  const GatewayTurnJournalSnapshot({
+    required this.bindings,
+    required this.entries,
+  });
+}
+
 class GatewayTurnJournal {
-  static const schema = 'hermes.android.turn-journal.v1';
+  static const schema = 'hermes.android.turn-journal.v2';
+  static const maxBindings = 64;
   static const maxEntries = 64;
   static const maxEncodedBytes = 64 * 1024;
   static const activeRetention = Duration(days: 7);
@@ -270,46 +308,118 @@ class GatewayTurnJournal {
   GatewayTurnJournal({GatewayTurnJournalStore? store})
     : _store = store ?? FlutterSecureGatewayTurnJournalStore();
 
+  Future<GatewayTurnJournalSnapshot> loadSnapshot() {
+    return _serialized(() async => _freeze(await _readData()));
+  }
+
   Future<List<GatewayTurnJournalEntry>> loadAll() {
-    return _serialized(() async => List.unmodifiable(await _readEntries()));
+    return _serialized(() async {
+      final data = await _readData();
+      return List<GatewayTurnJournalEntry>.unmodifiable(data.entries);
+    });
+  }
+
+  Future<GatewayTurnJournalBinding?> loadBinding({
+    required String connectionId,
+    required String endpointDigest,
+    required String localSessionId,
+  }) {
+    return _serialized(() async {
+      final probe = GatewayTurnJournalBinding(
+        connectionId: connectionId,
+        endpointDigest: endpointDigest,
+        localSessionId: localSessionId,
+        mobileSessionId: '00000000-0000-4000-8000-000000000001',
+        storedSessionId: 'probe',
+        bindingVersion: 1,
+        updatedAtEpochMs: 1,
+      );
+      final data = await _readData();
+      return data.bindings.cast<GatewayTurnJournalBinding?>().firstWhere(
+        (binding) => binding!.bindingIdentity == probe.bindingIdentity,
+        orElse: () => null,
+      );
+    });
   }
 
   Future<List<GatewayTurnJournalEntry>> loadForBinding(
     GatewayTurnJournalBinding binding,
   ) {
     return _serialized(() async {
-      final entries = await _readEntries();
-      return List.unmodifiable(entries.where(binding.owns));
+      final data = await _readData();
+      return List<GatewayTurnJournalEntry>.unmodifiable(
+        data.entries.where(
+          (entry) => entry.bindingIdentity == binding.bindingIdentity,
+        ),
+      );
+    });
+  }
+
+  Future<void> upsertBinding(GatewayTurnJournalBinding binding) {
+    return _serialized(() async {
+      final data = await _readData();
+      final index = data.bindings.indexWhere(
+        (candidate) => candidate.bindingIdentity == binding.bindingIdentity,
+      );
+      if (index >= 0) {
+        final previous = data.bindings[index];
+        if (previous.mobileSessionId != binding.mobileSessionId ||
+            previous.storedSessionId != binding.storedSessionId ||
+            binding.bindingVersion < previous.bindingVersion ||
+            binding.updatedAtEpochMs < previous.updatedAtEpochMs) {
+          throw const GatewayTurnJournalException();
+        }
+        data.bindings[index] = binding;
+      } else {
+        data.bindings.add(binding);
+      }
+      await _writeData(
+        _compact(
+          data,
+          DateTime.now().toUtc(),
+          protectedBindingIdentity: binding.bindingIdentity,
+        ),
+      );
     });
   }
 
   Future<void> upsert(GatewayTurnJournalEntry entry, {DateTime? now}) {
     return _serialized(() async {
-      final entries = await _readEntries();
-      entries.removeWhere(
+      final data = await _readData();
+      if (!data.bindings.any(
+        (binding) => binding.bindingIdentity == entry.bindingIdentity,
+      )) {
+        throw const GatewayTurnJournalException();
+      }
+      final index = data.entries.indexWhere(
         (candidate) => candidate.entryIdentity == entry.entryIdentity,
       );
-      entries.add(entry);
-      await _writeEntries(_compact(entries, now ?? DateTime.now().toUtc()));
+      if (index >= 0) {
+        _validateEntryUpdate(data.entries[index], entry);
+        data.entries[index] = entry;
+      } else {
+        data.entries.add(entry);
+      }
+      await _writeData(_compact(data, now ?? DateTime.now().toUtc()));
     });
   }
 
   Future<void> remove(String entryIdentity) {
     return _serialized(() async {
-      final entries = await _readEntries();
-      entries.removeWhere((entry) => entry.entryIdentity == entryIdentity);
-      await _writeEntries(entries);
+      final data = await _readData();
+      data.entries.removeWhere((entry) => entry.entryIdentity == entryIdentity);
+      await _writeData(data);
     });
   }
 
-  Future<List<GatewayTurnJournalEntry>> compact({DateTime? now}) {
+  Future<GatewayTurnJournalSnapshot> compact({DateTime? now}) {
     return _serialized(() async {
       final compacted = _compact(
-        await _readEntries(),
+        await _readData(),
         now ?? DateTime.now().toUtc(),
       );
-      await _writeEntries(compacted);
-      return List.unmodifiable(compacted);
+      await _writeData(compacted);
+      return _freeze(compacted);
     });
   }
 
@@ -319,38 +429,54 @@ class GatewayTurnJournal {
     return run;
   }
 
-  Future<List<GatewayTurnJournalEntry>> _readEntries() async {
+  Future<_JournalData> _readData() async {
     try {
+      await _rejectLegacyState();
       final encoded = await _store.read();
-      if (encoded == null) return <GatewayTurnJournalEntry>[];
-      if (encoded.length > maxEncodedBytes) {
+      if (encoded == null) return _JournalData.empty();
+      if (utf8.encode(encoded).length > maxEncodedBytes) {
         throw const GatewayTurnJournalException();
       }
       final decoded = jsonDecode(encoded);
       if (decoded is! Map) throw const GatewayTurnJournalException();
       final root = Map<String, dynamic>.from(decoded);
-      if (root.length != 2 ||
+      if (root.length != 3 ||
           root['schema'] != schema ||
+          root['bindings'] is! List ||
           root['entries'] is! List) {
         throw const GatewayTurnJournalException();
       }
+      final rawBindings = root['bindings'] as List;
       final rawEntries = root['entries'] as List;
-      if (rawEntries.length > maxEntries) {
+      if (rawBindings.length > maxBindings || rawEntries.length > maxEntries) {
         throw const GatewayTurnJournalException();
       }
+      final bindings = <GatewayTurnJournalBinding>[];
+      final bindingIds = <String>{};
+      for (final rawBinding in rawBindings) {
+        if (rawBinding is! Map) throw const GatewayTurnJournalException();
+        final binding = GatewayTurnJournalBinding._fromJson(
+          Map<String, dynamic>.from(rawBinding),
+        );
+        if (!bindingIds.add(binding.bindingIdentity)) {
+          throw const GatewayTurnJournalException();
+        }
+        bindings.add(binding);
+      }
       final entries = <GatewayTurnJournalEntry>[];
-      final identities = <String>{};
+      final entryIds = <String>{};
       for (final rawEntry in rawEntries) {
         if (rawEntry is! Map) throw const GatewayTurnJournalException();
         final entry = GatewayTurnJournalEntry._fromJson(
           Map<String, dynamic>.from(rawEntry),
         );
-        if (!identities.add(entry.entryIdentity)) {
+        if (!bindingIds.contains(entry.bindingIdentity) ||
+            !entryIds.add(entry.entryIdentity)) {
           throw const GatewayTurnJournalException();
         }
         entries.add(entry);
       }
-      return entries;
+      return _JournalData(bindings: bindings, entries: entries);
     } on GatewayTurnJournalException {
       rethrow;
     } catch (_) {
@@ -358,34 +484,92 @@ class GatewayTurnJournal {
     }
   }
 
-  List<GatewayTurnJournalEntry> _compact(
-    List<GatewayTurnJournalEntry> entries,
-    DateTime now,
-  ) {
+  _JournalData _compact(
+    _JournalData data,
+    DateTime now, {
+    String? protectedBindingIdentity,
+  }) {
     final nowMs = now.toUtc().millisecondsSinceEpoch;
-    final retained = entries.where((entry) {
+    data.entries.removeWhere((entry) {
       final ageMs = nowMs - entry.updatedAtEpochMs;
-      if (ageMs < 0) return true;
-      final retention = entry.isTerminal ? terminalRetention : activeRetention;
-      return ageMs <= retention.inMilliseconds;
-    }).toList();
-    retained.sort(
+      if (ageMs < 0) return false;
+      return entry.isTerminal &&
+          !entry.ackUncertain &&
+          ageMs > terminalRetention.inMilliseconds;
+    });
+    data.entries.sort(
       (left, right) => right.updatedAtEpochMs.compareTo(left.updatedAtEpochMs),
     );
-    if (retained.length > maxEntries) {
-      retained.removeRange(maxEntries, retained.length);
+    if (data.entries.length > maxEntries) {
+      final removable =
+          data.entries
+              .where((entry) => entry.isTerminal && !entry.ackUncertain)
+              .toList()
+            ..sort(
+              (left, right) =>
+                  left.updatedAtEpochMs.compareTo(right.updatedAtEpochMs),
+            );
+      final removeCount = data.entries.length - maxEntries;
+      if (removable.length < removeCount) {
+        throw const GatewayTurnJournalException();
+      }
+      final removeIds = removable
+          .take(removeCount)
+          .map((entry) => entry.entryIdentity)
+          .toSet();
+      data.entries.removeWhere(
+        (entry) => removeIds.contains(entry.entryIdentity),
+      );
     }
-    return retained;
+
+    // Session bindings have independent retention. They survive removal of the
+    // last turn and are bounded only by recency/count. A referenced binding is
+    // recovery authority and is never evicted silently.
+    data.bindings.sort(
+      (left, right) => right.updatedAtEpochMs.compareTo(left.updatedAtEpochMs),
+    );
+    if (data.bindings.length > maxBindings) {
+      final referencedIds = data.entries
+          .map((entry) => entry.bindingIdentity)
+          .toSet();
+      final removable =
+          data.bindings
+              .where(
+                (binding) =>
+                    !referencedIds.contains(binding.bindingIdentity) &&
+                    binding.bindingIdentity != protectedBindingIdentity,
+              )
+              .toList()
+            ..sort(
+              (left, right) =>
+                  left.updatedAtEpochMs.compareTo(right.updatedAtEpochMs),
+            );
+      final removeCount = data.bindings.length - maxBindings;
+      if (removable.length < removeCount) {
+        throw const GatewayTurnJournalException();
+      }
+      final removeIds = removable
+          .take(removeCount)
+          .map((binding) => binding.bindingIdentity)
+          .toSet();
+      data.bindings.removeWhere(
+        (binding) => removeIds.contains(binding.bindingIdentity),
+      );
+    }
+    return data;
   }
 
-  Future<void> _writeEntries(List<GatewayTurnJournalEntry> entries) async {
-    final encoded = entries.isEmpty
+  Future<void> _writeData(_JournalData data) async {
+    final encoded = data.bindings.isEmpty && data.entries.isEmpty
         ? null
         : jsonEncode(<String, Object>{
             'schema': schema,
-            'entries': entries.map((entry) => entry.toJson()).toList(),
+            'bindings': data.bindings
+                .map((binding) => binding.toJson())
+                .toList(),
+            'entries': data.entries.map((entry) => entry.toJson()).toList(),
           });
-    if (encoded != null && encoded.length > maxEncodedBytes) {
+    if (encoded != null && utf8.encode(encoded).length > maxEncodedBytes) {
       throw const GatewayTurnJournalException();
     }
 
@@ -412,11 +596,97 @@ class GatewayTurnJournal {
       throw const GatewayTurnJournalException();
     }
   }
+
+  GatewayTurnJournalSnapshot _freeze(_JournalData data) {
+    return GatewayTurnJournalSnapshot(
+      bindings: List<GatewayTurnJournalBinding>.unmodifiable(data.bindings),
+      entries: List<GatewayTurnJournalEntry>.unmodifiable(data.entries),
+    );
+  }
+
+  Future<void> _rejectLegacyState() async {
+    try {
+      final legacy = await _store.readLegacy();
+      if (legacy == null) return;
+      await _store.deleteLegacy();
+      if (await _store.readLegacy() != null) {
+        throw const GatewayTurnJournalException();
+      }
+    } catch (_) {
+      throw const GatewayTurnJournalException();
+    }
+    // The first encounter always stops. No v1 field, especially a runtime
+    // session ID, is ever read or migrated into the v2 authority record.
+    throw const GatewayTurnJournalException();
+  }
+}
+
+class _JournalData {
+  final List<GatewayTurnJournalBinding> bindings;
+  final List<GatewayTurnJournalEntry> entries;
+
+  _JournalData({required this.bindings, required this.entries});
+
+  factory _JournalData.empty() => _JournalData(bindings: [], entries: []);
+}
+
+void _validateEntryUpdate(
+  GatewayTurnJournalEntry previous,
+  GatewayTurnJournalEntry next,
+) {
+  final previousTurnId = previous.turnId;
+  if (previousTurnId != null && next.turnId != previousTurnId ||
+      next.lastSeq < previous.lastSeq ||
+      next.updatedAtEpochMs < previous.updatedAtEpochMs) {
+    throw const GatewayTurnJournalException();
+  }
+
+  final previousStatus = previous.status;
+  final nextStatus = next.status;
+  if (previousStatus != null &&
+      (nextStatus == null ||
+          !_journalTransitionAllowed(previousStatus, nextStatus))) {
+    throw const GatewayTurnJournalException();
+  }
+  if (previous.isTerminal &&
+      (next.turnId != previous.turnId ||
+          next.status != previous.status ||
+          next.lastSeq != previous.lastSeq ||
+          next.ackUncertain != previous.ackUncertain)) {
+    throw const GatewayTurnJournalException();
+  }
+}
+
+bool _journalTransitionAllowed(
+  GatewayRecoveryTurnStatus from,
+  GatewayRecoveryTurnStatus to,
+) {
+  if (from == to) return true;
+  if (from.isTerminal) return false;
+  if (to.isTerminal) return true;
+  return switch (from) {
+    GatewayRecoveryTurnStatus.accepted =>
+      to == GatewayRecoveryTurnStatus.running,
+    GatewayRecoveryTurnStatus.running =>
+      to == GatewayRecoveryTurnStatus.waitingInput,
+    GatewayRecoveryTurnStatus.waitingInput =>
+      to == GatewayRecoveryTurnStatus.running,
+    GatewayRecoveryTurnStatus.completed ||
+    GatewayRecoveryTurnStatus.failed ||
+    GatewayRecoveryTurnStatus.interrupted => false,
+  };
 }
 
 bool _boundedIdentity(String value) {
   return value.isNotEmpty &&
       value.length <= 256 &&
+      value.trim() == value &&
+      !value.codeUnits.any((unit) => unit < 32);
+}
+
+bool _boundedReference(String value) {
+  return value.isNotEmpty &&
+      value.length <= 1024 &&
       value.trim() == value &&
       !value.codeUnits.any((unit) => unit < 32);
 }

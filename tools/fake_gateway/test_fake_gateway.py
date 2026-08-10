@@ -7,6 +7,8 @@ import argparse
 import asyncio
 import base64
 import json
+import subprocess
+import sys
 import tempfile
 from pathlib import Path
 
@@ -85,84 +87,158 @@ class _MemoryWebSocket:
 
 
 async def probe_persistent_recovery_ledger() -> None:
-    mobile_session_id = "11111111-1111-4111-8111-111111111111"
-    client_turn_id = "22222222-2222-4222-8222-222222222222"
     with tempfile.TemporaryDirectory(prefix="hermes-s12-fake-") as temporary:
         ledger_path = Path(temporary) / "turn-recovery.json"
-        first = TurnRecoveryContractLedger(ledger_path)
-        first_socket = _MemoryWebSocket()
-        await first.handle(
-            first_socket,
-            {
-                "id": 1,
-                "method": "session.open",
-                "params": {
-                    "mobile_session_id": mobile_session_id,
-                    "profile": "fixture-persistent",
-                },
-            },
-            "connection-first",
-        )
-        first_binding = first_socket.frames[-1]["result"]
-        await first.handle(
-            first_socket,
-            {
-                "id": 2,
-                "method": "prompt.submit",
-                "params": {
-                    "session_id": first_binding["runtime_session_id"],
-                    "version": 2,
-                    "client_turn_id": client_turn_id,
-                    "text": "SENTINEL_PROMPT_MUST_NOT_PERSIST",
-                    "attachments": [],
-                },
-            },
-            "connection-first",
-        )
-        first_ack = next(
-            frame["result"]
-            for frame in first_socket.frames
-            if frame.get("id") == 2
-        )
-
-        second = TurnRecoveryContractLedger(ledger_path)
-        second_socket = _MemoryWebSocket()
-        await second.handle(
-            second_socket,
-            {
-                "id": 3,
-                "method": "session.open",
-                "params": {
-                    "mobile_session_id": mobile_session_id,
-                    "profile": "fixture-persistent",
-                },
-            },
-            "connection-second",
-        )
-        second_binding = second_socket.frames[-1]["result"]
-        assert second_binding["stored_session_id"] == first_binding["stored_session_id"]
-        assert second_binding["runtime_session_id"] != first_binding["runtime_session_id"]
-        await second.handle(
-            second_socket,
-            {
-                "id": 4,
-                "method": "turn.reconcile",
-                "params": {
-                    "session_id": second_binding["runtime_session_id"],
-                    "turn_id": first_ack["turn_id"],
-                    "after_seq": 0,
-                },
-            },
-            "connection-second",
-        )
-        reconcile = second_socket.frames[-1]["result"]
-        assert reconcile["mode"] == "events"
-        assert reconcile["events"][0]["seq"] == 1
-        assert reconcile["has_more"] is True
-        assert second.inspection()["submit_attempt_count"] == 1
+        first = await asyncio.to_thread(_run_ledger_worker, ledger_path, "first")
+        second = await asyncio.to_thread(_run_ledger_worker, ledger_path, "second")
+        assert second["stored_session_id"] == first["stored_session_id"]
+        assert second["runtime_session_id"] != first["runtime_session_id"]
+        assert second["turn_id"] == first["turn_id"]
+        assert second["created"] is False
+        assert second["reconcile_mode"] == "events"
+        assert second["first_event_seq"] == 1
+        assert second["has_more"] is True
+        assert second["submit_attempt_count"] == 2
+        assert second["execution_count"] == 1
+        assert second["turn_execution_count"] == 1
+        assert second["profile_mismatch_reason"] == "profile_unavailable"
         encoded = ledger_path.read_text(encoding="utf-8")
         assert "SENTINEL_PROMPT_MUST_NOT_PERSIST" not in encoded
         assert "automatic_resubmit" not in encoded
+
+        corrupted = json.loads(encoded)
+        corrupted["bindings"][next(iter(corrupted["bindings"]))][
+            "binding_version"
+        ] = "not-an-int"
+        ledger_path.write_text(json.dumps(corrupted), encoding="utf-8")
+        failed = subprocess.run(
+            [
+                sys.executable,
+                str(Path(__file__).resolve()),
+                "--ledger-worker",
+                str(ledger_path),
+                "--ledger-phase",
+                "inspect",
+            ],
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        assert failed.returncode != 0
+        assert "binding is invalid" in failed.stderr
+
+
+def _run_ledger_worker(ledger_path: Path, phase: str) -> dict:
+    completed = subprocess.run(
+        [
+            sys.executable,
+            str(Path(__file__).resolve()),
+            "--ledger-worker",
+            str(ledger_path),
+            "--ledger-phase",
+            phase,
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    return json.loads(completed.stdout)
+
+
+async def _ledger_worker(ledger_path: Path, phase: str) -> dict:
+    mobile_session_id = "11111111-1111-4111-8111-111111111111"
+    client_turn_id = "22222222-2222-4222-8222-222222222222"
+    ledger = TurnRecoveryContractLedger(
+        ledger_path, server_profile="fixture-persistent"
+    )
+    if phase == "inspect":
+        return ledger.inspection()
+    socket = _MemoryWebSocket()
+    connection_id = f"connection-{phase}"
+    await ledger.handle(
+        socket,
+        {
+            "id": 1,
+            "method": "session.open",
+            "params": {
+                "mobile_session_id": mobile_session_id,
+                # This selector is accepted only because it exactly echoes the
+                # fixture's server-owned scope.
+                **(
+                    {"profile": "fixture-persistent"}
+                    if phase == "second"
+                    else {}
+                ),
+            },
+        },
+        connection_id,
+    )
+    binding = socket.frames[-1]["result"]
+    await ledger.handle(
+        socket,
+        {
+            "id": 2,
+            "method": "prompt.submit",
+            "params": {
+                "session_id": binding["runtime_session_id"],
+                "version": 2,
+                "client_turn_id": client_turn_id,
+                "text": "SENTINEL_PROMPT_MUST_NOT_PERSIST",
+                "attachments": [],
+            },
+        },
+        connection_id,
+    )
+    ack = next(frame["result"] for frame in socket.frames if frame.get("id") == 2)
+    if phase == "first":
+        return {
+            "runtime_session_id": binding["runtime_session_id"],
+            "stored_session_id": binding["stored_session_id"],
+            "turn_id": ack["turn_id"],
+        }
+    await ledger.handle(
+        socket,
+        {
+            "id": 3,
+            "method": "turn.reconcile",
+            "params": {
+                "session_id": binding["runtime_session_id"],
+                "turn_id": ack["turn_id"],
+                "after_seq": 0,
+            },
+        },
+        connection_id,
+    )
+    reconcile = socket.frames[-1]["result"]
+    mismatch_socket = _MemoryWebSocket()
+    await ledger.handle(
+        mismatch_socket,
+        {
+            "id": 4,
+            "method": "session.open",
+            "params": {
+                "mobile_session_id": mobile_session_id,
+                "profile": "caller-selected-profile",
+            },
+        },
+        "connection-mismatch",
+    )
+    inspection = ledger.inspection()
+    return {
+        "runtime_session_id": binding["runtime_session_id"],
+        "stored_session_id": binding["stored_session_id"],
+        "turn_id": ack["turn_id"],
+        "created": ack["created"],
+        "reconcile_mode": reconcile["mode"],
+        "first_event_seq": reconcile["events"][0]["seq"],
+        "has_more": reconcile["has_more"],
+        "submit_attempt_count": inspection["submit_attempt_count"],
+        "execution_count": inspection["execution_count"],
+        "turn_execution_count": inspection["turns"][0]["execution_count"],
+        "profile_mismatch_reason": mismatch_socket.frames[-1]["error"]["data"][
+            "reason"
+        ],
+    }
 
 
 async def _open_recovery_socket(session: ClientSession, base_url: str):
@@ -315,14 +391,16 @@ async def probe_turn_recovery_v2(session: ClientSession, base_url: str) -> None:
                 assert page["status"] == "completed"
                 assert after_seq == page["last_seq"]
                 break
-        assert [event["seq"] for event in replay] == list(range(1, 9))
-        assert replay[-1]["payload"] == {"status": "completed"}
+        assert [event["seq"] for event in replay] == list(range(1, 8))
+        assert replay[-1]["type"] == "message.complete"
+        assert replay[-1]["payload"]["status"] == "completed"
         await reconnect.close()
 
     inspect_socket = await _open_recovery_socket(session, base_url)
     inspected = await rpc(inspect_socket, 900, "fixture.turn.inspect", {})
     assert inspected["submit_attempt_count"] == len(faults)
-    assert all(turn["prompt_submit_count"] == 1 for turn in inspected["turns"])
+    assert inspected["execution_count"] == len(faults)
+    assert all(turn["execution_count"] == 1 for turn in inspected["turns"])
     binding = await rpc(
         inspect_socket,
         901,
@@ -338,7 +416,7 @@ async def probe_turn_recovery_v2(session: ClientSession, base_url: str) -> None:
         "fixture.turn.prune",
         {"session_id": binding["runtime_session_id"], "turn_id": last_turn_id},
     )
-    assert pruned["earliest_seq"] == 9
+    assert pruned["earliest_seq"] == 8
     snapshot = await rpc(
         inspect_socket,
         903,
@@ -357,39 +435,36 @@ async def probe_turn_recovery_v2(session: ClientSession, base_url: str) -> None:
     }
     restarted = await rpc(inspect_socket, 904, "fixture.turn.restart", {})
     assert restarted["durable_turns"] == len(faults)
-    await inspect_socket.close()
+    binding = await rpc(
+        inspect_socket,
+        905,
+        "session.open",
+        {
+            "mobile_session_id": mobile_session_id,
+            "profile": "fixture-recovery-a",
+        },
+    )
 
     isolated_socket = await _open_recovery_socket(session, base_url)
-    isolated = await rpc(
+    isolated = await rpc_response(
         isolated_socket,
-        905,
+        906,
         "session.open",
         {
             "mobile_session_id": mobile_session_id,
             "profile": "fixture-recovery-b",
         },
     )
-    assert isolated["stored_session_id"] != stable_stored_id
-    cross_profile = await rpc_response(
-        isolated_socket,
-        906,
-        "turn.reconcile",
-        {
-            "session_id": isolated["runtime_session_id"],
-            "turn_id": last_turn_id,
-            "after_seq": 0,
-        },
-    )
-    assert cross_profile["error"]["data"] == {
-        "reason": "turn_unknown",
+    assert isolated["error"]["data"] == {
+        "reason": "profile_unavailable",
         "safe_to_resubmit": False,
     }
     closed_schema = await rpc_response(
-        isolated_socket,
+        inspect_socket,
         907,
         "prompt.submit",
         {
-            "session_id": isolated["runtime_session_id"],
+            "session_id": binding["runtime_session_id"],
             "version": 2,
             "client_turn_id": "55555555-5555-4555-8555-555555555555",
             "text": "No in-band fixture fields.",
@@ -399,11 +474,11 @@ async def probe_turn_recovery_v2(session: ClientSession, base_url: str) -> None:
     )
     assert closed_schema["error"]["data"]["reason"] == "closed_prompt_schema"
     without_attachments = await rpc(
-        isolated_socket,
+        inspect_socket,
         908,
         "prompt.submit",
         {
-            "session_id": isolated["runtime_session_id"],
+            "session_id": binding["runtime_session_id"],
             "version": 2,
             "client_turn_id": "66666666-6666-4666-8666-666666666666",
             "text": "Missing attachments defaults to an empty manifest.",
@@ -412,17 +487,18 @@ async def probe_turn_recovery_v2(session: ClientSession, base_url: str) -> None:
     assert without_attachments["accepted"] is True
     assert without_attachments["created"] is True
     no_attachment_events: list[dict] = []
-    while len(no_attachment_events) < 7:
-        message = await isolated_socket.receive(timeout=5)
+    while len(no_attachment_events) < 6:
+        message = await inspect_socket.receive(timeout=5)
         assert message.type == WSMsgType.TEXT, message
         frame = json.loads(message.data)
         if frame.get("method") == "event":
             no_attachment_events.append(frame["params"])
     assert all(
-        event["session_id"] == isolated["runtime_session_id"]
+        event["session_id"] == binding["runtime_session_id"]
         for event in no_attachment_events
     )
     await isolated_socket.close()
+    await inspect_socket.close()
 
 
 async def probe_disconnect_scenario(
@@ -1298,9 +1374,25 @@ async def probe(base_url: str) -> None:
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--url", default="http://127.0.0.1:18642")
+    parser.add_argument("--ledger-worker", type=Path)
+    parser.add_argument(
+        "--ledger-phase", choices=("first", "second", "inspect")
+    )
     return parser.parse_args()
 
 
 if __name__ == "__main__":
     arguments = parse_args()
-    asyncio.run(probe(arguments.url.rstrip("/")))
+    if arguments.ledger_worker is not None:
+        if arguments.ledger_phase is None:
+            raise SystemExit("--ledger-phase is required with --ledger-worker")
+        print(
+            json.dumps(
+                asyncio.run(
+                    _ledger_worker(arguments.ledger_worker, arguments.ledger_phase)
+                ),
+                sort_keys=True,
+            )
+        )
+    else:
+        asyncio.run(probe(arguments.url.rstrip("/")))

@@ -1,4 +1,4 @@
-enum GatewayTurnStatus {
+enum GatewayRecoveryTurnStatus {
   accepted('accepted'),
   running('running'),
   waitingInput('waiting_input'),
@@ -6,14 +6,14 @@ enum GatewayTurnStatus {
   failed('failed'),
   interrupted('interrupted');
 
-  const GatewayTurnStatus(this.wireValue);
+  const GatewayRecoveryTurnStatus(this.wireValue);
 
   final String wireValue;
 
   bool get isTerminal =>
       this == completed || this == failed || this == interrupted;
 
-  static GatewayTurnStatus? fromWire(Object? value) {
+  static GatewayRecoveryTurnStatus? fromWire(Object? value) {
     if (value is! String) return null;
     for (final status in values) {
       if (status.wireValue == value) return status;
@@ -69,9 +69,15 @@ class GatewayTurnRecoveryCapability {
   final int? turnRetentionSeconds;
   final int? maxEventBytes;
   final int? maxTurnBytes;
+  final int? terminalEventReserveBytes;
   final int? maxPromptBytes;
   final int? reconcileMaxEvents;
   final int? reconcileMaxPageBytes;
+  final int? maxAttachments;
+  final int? maxFileAttachmentBytes;
+  final int? maxImageAttachmentBytes;
+  final int? maxPdfAttachmentBytes;
+  final int? maxAttachmentRegistryBytes;
 
   const GatewayTurnRecoveryCapability._({
     required this.supported,
@@ -81,9 +87,15 @@ class GatewayTurnRecoveryCapability {
     this.turnRetentionSeconds,
     this.maxEventBytes,
     this.maxTurnBytes,
+    this.terminalEventReserveBytes,
     this.maxPromptBytes,
     this.reconcileMaxEvents,
     this.reconcileMaxPageBytes,
+    this.maxAttachments,
+    this.maxFileAttachmentBytes,
+    this.maxImageAttachmentBytes,
+    this.maxPdfAttachmentBytes,
+    this.maxAttachmentRegistryBytes,
   });
 
   const GatewayTurnRecoveryCapability.unsupported(
@@ -125,6 +137,113 @@ class GatewayTurnRecoveryCapability {
         GatewayTurnCapabilityFailure.missingCapability,
       );
     }
+    return _fromRecoveryPayload(recovery);
+  }
+
+  /// Validates the route-specific capability returned by `session.open`.
+  ///
+  /// The open result is authoritative for this runtime. It may disable the
+  /// optional attachment route advertised by the generic ready frame, but it
+  /// may not add that route or weaken any core recovery invariant.
+  static GatewayTurnRecoveryCapability fromSessionOpenResult(
+    Map<String, dynamic> result, {
+    required GatewayTurnRecoveryCapability readyCapability,
+  }) {
+    if (!readyCapability.supported) {
+      return const GatewayTurnRecoveryCapability.unsupported(
+        GatewayTurnCapabilityFailure.unsupportedCapability,
+      );
+    }
+    final capabilities = _stringMap(result['capabilities']);
+    final recovery = _stringMap(capabilities?['turn_recovery']);
+    if (recovery == null) {
+      return const GatewayTurnRecoveryCapability.unsupported(
+        GatewayTurnCapabilityFailure.missingCapability,
+      );
+    }
+    final openCapability = _fromRecoveryPayload(recovery);
+    if (!openCapability.supported ||
+        !readyCapability.attachmentsSupported &&
+            openCapability.attachmentsSupported) {
+      return const GatewayTurnRecoveryCapability.unsupported(
+        GatewayTurnCapabilityFailure.unsupportedCapability,
+      );
+    }
+    final attachmentsSupported =
+        readyCapability.attachmentsSupported &&
+        openCapability.attachmentsSupported;
+    return GatewayTurnRecoveryCapability._(
+      supported: true,
+      failure: GatewayTurnCapabilityFailure.none,
+      attachmentsSupported: attachmentsSupported,
+      eventRetentionSeconds: _minimumSupported(
+        readyCapability.eventRetentionSeconds,
+        openCapability.eventRetentionSeconds,
+      ),
+      turnRetentionSeconds: _minimumSupported(
+        readyCapability.turnRetentionSeconds,
+        openCapability.turnRetentionSeconds,
+      ),
+      maxEventBytes: _minimumSupported(
+        readyCapability.maxEventBytes,
+        openCapability.maxEventBytes,
+      ),
+      maxTurnBytes: _minimumSupported(
+        readyCapability.maxTurnBytes,
+        openCapability.maxTurnBytes,
+      ),
+      terminalEventReserveBytes: _minimumSupported(
+        readyCapability.terminalEventReserveBytes,
+        openCapability.terminalEventReserveBytes,
+      ),
+      maxPromptBytes: _minimumSupported(
+        readyCapability.maxPromptBytes,
+        openCapability.maxPromptBytes,
+      ),
+      reconcileMaxEvents: _minimumSupported(
+        readyCapability.reconcileMaxEvents,
+        openCapability.reconcileMaxEvents,
+      ),
+      reconcileMaxPageBytes: _minimumSupported(
+        readyCapability.reconcileMaxPageBytes,
+        openCapability.reconcileMaxPageBytes,
+      ),
+      maxAttachments: attachmentsSupported
+          ? _minimumSupported(
+              readyCapability.maxAttachments,
+              openCapability.maxAttachments,
+            )
+          : null,
+      maxFileAttachmentBytes: attachmentsSupported
+          ? _minimumSupported(
+              readyCapability.maxFileAttachmentBytes,
+              openCapability.maxFileAttachmentBytes,
+            )
+          : null,
+      maxImageAttachmentBytes: attachmentsSupported
+          ? _minimumSupported(
+              readyCapability.maxImageAttachmentBytes,
+              openCapability.maxImageAttachmentBytes,
+            )
+          : null,
+      maxPdfAttachmentBytes: attachmentsSupported
+          ? _minimumSupported(
+              readyCapability.maxPdfAttachmentBytes,
+              openCapability.maxPdfAttachmentBytes,
+            )
+          : null,
+      maxAttachmentRegistryBytes: attachmentsSupported
+          ? _minimumSupported(
+              readyCapability.maxAttachmentRegistryBytes,
+              openCapability.maxAttachmentRegistryBytes,
+            )
+          : null,
+    );
+  }
+
+  static GatewayTurnRecoveryCapability _fromRecoveryPayload(
+    Map<String, dynamic> recovery,
+  ) {
     if (_exactInt(recovery['version']) != capabilityVersion ||
         _exactInt(recovery['prompt_submit_version']) != promptSubmitVersion ||
         recovery['execution_route'] != executionRoute ||
@@ -200,15 +319,25 @@ class GatewayTurnRecoveryCapability {
         GatewayTurnCapabilityFailure.invalidLimits,
       );
     }
+    final maxAttachments = _positiveInt(recovery['max_attachments']);
+    final maxFileAttachmentBytes = _positiveInt(
+      recovery['max_file_attachment_bytes'],
+    );
+    final maxImageAttachmentBytes = _positiveInt(
+      recovery['max_image_attachment_bytes'],
+    );
+    final maxPdfAttachmentBytes = _positiveInt(
+      recovery['max_pdf_attachment_bytes'],
+    );
+    final maxAttachmentRegistryBytes = _positiveInt(
+      recovery['max_attachment_registry_bytes'],
+    );
     if (attachmentsSupported) {
-      const attachmentLimits = <String>[
-        'max_attachments',
-        'max_file_attachment_bytes',
-        'max_image_attachment_bytes',
-        'max_pdf_attachment_bytes',
-        'max_attachment_registry_bytes',
-      ];
-      if (attachmentLimits.any((key) => _positiveInt(recovery[key]) == null)) {
+      if (maxAttachments == null ||
+          maxFileAttachmentBytes == null ||
+          maxImageAttachmentBytes == null ||
+          maxPdfAttachmentBytes == null ||
+          maxAttachmentRegistryBytes == null) {
         return const GatewayTurnRecoveryCapability.unsupported(
           GatewayTurnCapabilityFailure.invalidLimits,
         );
@@ -223,9 +352,23 @@ class GatewayTurnRecoveryCapability {
       turnRetentionSeconds: turnRetention,
       maxEventBytes: maxEventBytes,
       maxTurnBytes: maxTurnBytes,
+      terminalEventReserveBytes: terminalReserve,
       maxPromptBytes: maxPromptBytes,
       reconcileMaxEvents: reconcileMaxEvents,
       reconcileMaxPageBytes: reconcileMaxPageBytes,
+      maxAttachments: attachmentsSupported ? maxAttachments : null,
+      maxFileAttachmentBytes: attachmentsSupported
+          ? maxFileAttachmentBytes
+          : null,
+      maxImageAttachmentBytes: attachmentsSupported
+          ? maxImageAttachmentBytes
+          : null,
+      maxPdfAttachmentBytes: attachmentsSupported
+          ? maxPdfAttachmentBytes
+          : null,
+      maxAttachmentRegistryBytes: attachmentsSupported
+          ? maxAttachmentRegistryBytes
+          : null,
     );
   }
 }
@@ -235,15 +378,23 @@ class GatewaySessionBinding {
   final String storedSessionId;
   final String mobileSessionId;
   final int bindingVersion;
+  final GatewayTurnRecoveryCapability capability;
 
   const GatewaySessionBinding({
     required this.runtimeSessionId,
     required this.storedSessionId,
     required this.mobileSessionId,
     required this.bindingVersion,
+    required this.capability,
   });
 
-  static GatewaySessionBinding? fromWire(Map<String, dynamic> value) {
+  static GatewaySessionBinding? fromWire(
+    Map<String, dynamic> value, {
+    required GatewayTurnRecoveryCapability readyCapability,
+    required String expectedMobileSessionId,
+    String? expectedStoredSessionId,
+    int? minimumBindingVersion,
+  }) {
     if (value['turn_recovery'] != true ||
         value['automatic_resubmit'] != false) {
       return null;
@@ -252,10 +403,29 @@ class GatewaySessionBinding {
     final storedSessionId = _requiredWireString(value['stored_session_id']);
     final mobileSessionId = _canonicalUuid(value['mobile_session_id']);
     final bindingVersion = _positiveInt(value['binding_version']);
+    final capability = GatewayTurnRecoveryCapability.fromSessionOpenResult(
+      value,
+      readyCapability: readyCapability,
+    );
+    final canonicalExpectedMobileSessionId = _canonicalUuid(
+      expectedMobileSessionId,
+    );
+    final validExpectedStoredSessionId = expectedStoredSessionId == null
+        ? null
+        : _requiredWireString(expectedStoredSessionId);
     if (runtimeSessionId == null ||
         storedSessionId == null ||
         mobileSessionId == null ||
-        bindingVersion == null) {
+        canonicalExpectedMobileSessionId == null ||
+        mobileSessionId != canonicalExpectedMobileSessionId ||
+        expectedStoredSessionId != null &&
+            (validExpectedStoredSessionId == null ||
+                storedSessionId != validExpectedStoredSessionId) ||
+        bindingVersion == null ||
+        minimumBindingVersion != null &&
+            (minimumBindingVersion <= 0 ||
+                bindingVersion < minimumBindingVersion) ||
+        !capability.supported) {
       return null;
     }
     return GatewaySessionBinding(
@@ -263,14 +433,22 @@ class GatewaySessionBinding {
       storedSessionId: storedSessionId,
       mobileSessionId: mobileSessionId,
       bindingVersion: bindingVersion,
+      capability: capability,
     );
   }
+}
+
+int _minimumSupported(int? left, int? right) {
+  if (left == null || right == null) {
+    throw StateError('Supported recovery capability is incomplete.');
+  }
+  return left < right ? left : right;
 }
 
 class GatewayTurnAck {
   final String clientTurnId;
   final String turnId;
-  final GatewayTurnStatus status;
+  final GatewayRecoveryTurnStatus status;
   final int lastSeq;
   final bool created;
 
@@ -288,7 +466,7 @@ class GatewayTurnAck {
     }
     final clientTurnId = _canonicalUuid(value['client_turn_id']);
     final turnId = _requiredWireString(value['turn_id']);
-    final status = GatewayTurnStatus.fromWire(value['status']);
+    final status = GatewayRecoveryTurnStatus.fromWire(value['status']);
     final lastSeq = _nonNegativeInt(value['last_seq']);
     final created = value['created'];
     if (clientTurnId == null ||
@@ -370,13 +548,13 @@ bool _validEventPayload(String type, Map<String, dynamic> payload) {
     case 'message.delta':
       return payload.length == 1 && payload['text'] is String;
     case 'message.complete':
-      final status = GatewayTurnStatus.fromWire(payload['status']);
+      final status = GatewayRecoveryTurnStatus.fromWire(payload['status']);
       return payload.length == 2 &&
           payload['text'] is String &&
           status?.isTerminal == true;
     case 'turn.status':
       return payload.length == 1 &&
-          GatewayTurnStatus.fromWire(payload['status']) != null;
+          GatewayRecoveryTurnStatus.fromWire(payload['status']) != null;
   }
   return false;
 }
@@ -435,7 +613,7 @@ class GatewayTurnPendingInput {
 class GatewayTurnSnapshot {
   final String turnId;
   final String clientTurnId;
-  final GatewayTurnStatus status;
+  final GatewayRecoveryTurnStatus status;
   final int lastSeq;
   final GatewayTurnSnapshotAssistant assistant;
   final String attachmentManifestDigest;
@@ -456,7 +634,7 @@ class GatewayTurnSnapshot {
   static GatewayTurnSnapshot? fromWire(Map<String, dynamic> value) {
     final turnId = _requiredWireString(value['turn_id']);
     final clientTurnId = _canonicalUuid(value['client_turn_id']);
-    final status = GatewayTurnStatus.fromWire(value['status']);
+    final status = GatewayRecoveryTurnStatus.fromWire(value['status']);
     final lastSeq = _nonNegativeInt(value['last_seq']);
     final assistantRaw = _stringMap(value['assistant']);
     final assistantMessageId = _requiredWireString(assistantRaw?['message_id']);
@@ -503,7 +681,7 @@ enum GatewayTurnReconcileMode { events, snapshot }
 class GatewayTurnReconcilePage {
   final GatewayTurnReconcileMode mode;
   final String turnId;
-  final GatewayTurnStatus status;
+  final GatewayRecoveryTurnStatus status;
   final int earliestSeq;
   final int lastSeq;
   final int nextAfterSeq;
@@ -575,7 +753,7 @@ class GatewayTurnReconcilePage {
 
     if (mode != 'events') return null;
     final turnId = _requiredWireString(value['turn_id']);
-    final status = GatewayTurnStatus.fromWire(value['status']);
+    final status = GatewayRecoveryTurnStatus.fromWire(value['status']);
     final rawEvents = value['events'];
     if (turnId == null ||
         status == null ||

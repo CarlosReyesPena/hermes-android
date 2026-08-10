@@ -97,6 +97,22 @@ Map<String, dynamic> _eventPage({
   'automatic_resubmit': false,
 };
 
+Map<String, dynamic> _openResult({bool attachments = false}) {
+  final ready = _readyFrame(attachments: attachments);
+  final payload =
+      (ready['params'] as Map<String, dynamic>)['payload']
+          as Map<String, dynamic>;
+  return <String, dynamic>{
+    'runtime_session_id': 'runtime-1',
+    'stored_session_id': 'stored-1',
+    'mobile_session_id': _mobileSessionId,
+    'binding_version': 1,
+    'turn_recovery': true,
+    'automatic_resubmit': false,
+    'capabilities': payload['capabilities'],
+  };
+}
+
 void main() {
   group('turn recovery v2 capability', () {
     test('accepts the exact core and attachment capability shapes', () {
@@ -110,8 +126,11 @@ void main() {
       expect(core.supported, isTrue);
       expect(core.attachmentsSupported, isFalse);
       expect(core.reconcileMaxEvents, 256);
+      expect(core.terminalEventReserveBytes, 1024);
       expect(attachments.supported, isTrue);
       expect(attachments.attachmentsSupported, isTrue);
+      expect(attachments.maxAttachments, 10);
+      expect(attachments.maxFileAttachmentBytes, 16777216);
     });
 
     test('rejects v1, shadow, automatic resubmit, and method drift', () {
@@ -148,26 +167,24 @@ void main() {
 
   group('wire contract', () {
     test('requires the canonical session binding and v2 ack safety bit', () {
+      final readyCapability =
+          GatewayTurnRecoveryCapability.fromGatewayReadyFrame(_readyFrame());
       expect(
-        GatewaySessionBinding.fromWire(<String, dynamic>{
-          'runtime_session_id': 'runtime-1',
-          'stored_session_id': 'stored-1',
-          'mobile_session_id': _mobileSessionId,
-          'binding_version': 1,
-          'turn_recovery': true,
-          'automatic_resubmit': false,
-        }),
+        GatewaySessionBinding.fromWire(
+          _openResult(),
+          readyCapability: readyCapability,
+          expectedMobileSessionId: _mobileSessionId,
+        ),
         isNotNull,
       );
+      final invalidMobile = _openResult()
+        ..['mobile_session_id'] = 'mob-not-a-uuid';
       expect(
-        GatewaySessionBinding.fromWire(<String, dynamic>{
-          'runtime_session_id': 'runtime-1',
-          'stored_session_id': 'stored-1',
-          'mobile_session_id': 'mob-not-a-uuid',
-          'binding_version': 1,
-          'turn_recovery': true,
-          'automatic_resubmit': false,
-        }),
+        GatewaySessionBinding.fromWire(
+          invalidMobile,
+          readyCapability: readyCapability,
+          expectedMobileSessionId: _mobileSessionId,
+        ),
         isNull,
       );
       expect(
@@ -180,6 +197,131 @@ void main() {
           'created': true,
           'automatic_resubmit': false,
         }),
+        isNotNull,
+      );
+    });
+
+    test('treats session.open capability as route authority', () {
+      final attachmentReady =
+          GatewayTurnRecoveryCapability.fromGatewayReadyFrame(
+            _readyFrame(attachments: true),
+          );
+      final attachmentDowngrade = GatewaySessionBinding.fromWire(
+        _openResult(),
+        readyCapability: attachmentReady,
+        expectedMobileSessionId: _mobileSessionId,
+      );
+      expect(attachmentDowngrade, isNotNull);
+      expect(attachmentDowngrade!.capability.attachmentsSupported, isFalse);
+
+      final coreReady = GatewayTurnRecoveryCapability.fromGatewayReadyFrame(
+        _readyFrame(),
+      );
+      expect(
+        GatewaySessionBinding.fromWire(
+          _openResult(attachments: true),
+          readyCapability: coreReady,
+          expectedMobileSessionId: _mobileSessionId,
+        ),
+        isNull,
+      );
+
+      final missingCoreMethod = _openResult();
+      final recovery =
+          ((missingCoreMethod['capabilities'] as Map)['turn_recovery'] as Map);
+      (recovery['methods'] as List).remove('turn.reconcile');
+      expect(
+        GatewaySessionBinding.fromWire(
+          missingCoreMethod,
+          readyCapability: coreReady,
+          expectedMobileSessionId: _mobileSessionId,
+        ),
+        isNull,
+      );
+    });
+
+    test('intersects every ready and open numeric limit conservatively', () {
+      final readyCapability =
+          GatewayTurnRecoveryCapability.fromGatewayReadyFrame(
+            _readyFrame(attachments: true),
+          );
+      final open = _openResult(attachments: true);
+      final openRecovery =
+          ((open['capabilities'] as Map)['turn_recovery'] as Map);
+      openRecovery['event_retention_seconds'] = 43200;
+      openRecovery['turn_retention_seconds'] = 302400;
+      openRecovery['max_event_bytes'] = 131072;
+      openRecovery['max_turn_bytes'] = 2097152;
+      openRecovery['terminal_event_reserve_bytes'] = 512;
+      openRecovery['max_prompt_bytes'] = 32768;
+      openRecovery['reconcile_max_events'] = 512;
+      openRecovery['reconcile_max_page_bytes'] = 262144;
+      openRecovery['max_attachments'] = 5;
+      openRecovery['max_file_attachment_bytes'] = 8388608;
+      openRecovery['max_image_attachment_bytes'] = 52428800;
+      openRecovery['max_pdf_attachment_bytes'] = 26214400;
+      openRecovery['max_attachment_registry_bytes'] = 33554432;
+
+      final binding = GatewaySessionBinding.fromWire(
+        open,
+        readyCapability: readyCapability,
+        expectedMobileSessionId: _mobileSessionId,
+      );
+      expect(binding, isNotNull);
+      final effective = binding!.capability;
+      expect(effective.eventRetentionSeconds, 43200);
+      expect(effective.turnRetentionSeconds, 302400);
+      expect(effective.maxEventBytes, 65536);
+      expect(effective.maxTurnBytes, 2097152);
+      expect(effective.terminalEventReserveBytes, 512);
+      expect(effective.maxPromptBytes, 32768);
+      expect(effective.reconcileMaxEvents, 256);
+      expect(effective.reconcileMaxPageBytes, 262144);
+      expect(effective.maxAttachments, 5);
+      expect(effective.maxFileAttachmentBytes, 8388608);
+      expect(effective.maxImageAttachmentBytes, 26214400);
+      expect(effective.maxPdfAttachmentBytes, 26214400);
+      expect(effective.maxAttachmentRegistryBytes, 33554432);
+    });
+
+    test('requires the session.open binding to echo durable authority', () {
+      final readyCapability =
+          GatewayTurnRecoveryCapability.fromGatewayReadyFrame(_readyFrame());
+      expect(
+        GatewaySessionBinding.fromWire(
+          _openResult(),
+          readyCapability: readyCapability,
+          expectedMobileSessionId: '33333333-3333-4333-8333-333333333333',
+        ),
+        isNull,
+      );
+      expect(
+        GatewaySessionBinding.fromWire(
+          _openResult(),
+          readyCapability: readyCapability,
+          expectedMobileSessionId: _mobileSessionId,
+          expectedStoredSessionId: 'stored-other',
+        ),
+        isNull,
+      );
+      expect(
+        GatewaySessionBinding.fromWire(
+          _openResult(),
+          readyCapability: readyCapability,
+          expectedMobileSessionId: _mobileSessionId,
+          expectedStoredSessionId: 'stored-1',
+          minimumBindingVersion: 2,
+        ),
+        isNull,
+      );
+      expect(
+        GatewaySessionBinding.fromWire(
+          _openResult(),
+          readyCapability: readyCapability,
+          expectedMobileSessionId: _mobileSessionId,
+          expectedStoredSessionId: 'stored-1',
+          minimumBindingVersion: 1,
+        ),
         isNotNull,
       );
     });
@@ -236,7 +378,7 @@ void main() {
       final first = GatewayTurnReconcilePage.fromWire(
         _eventPage(
           afterSeq: 0,
-          lastSeq: 4,
+          lastSeq: 3,
           events: <Map<String, dynamic>>[
             _event(1, 'message.start', <String, dynamic>{}),
             _event(2, 'turn.status', <String, dynamic>{'status': 'running'}),
@@ -249,13 +391,12 @@ void main() {
       final second = GatewayTurnReconcilePage.fromWire(
         _eventPage(
           afterSeq: 2,
-          lastSeq: 4,
+          lastSeq: 3,
           events: <Map<String, dynamic>>[
             _event(3, 'message.complete', <String, dynamic>{
               'text': 'done',
               'status': 'completed',
             }),
-            _event(4, 'turn.status', <String, dynamic>{'status': 'completed'}),
           ],
           status: 'completed',
         ),
@@ -270,10 +411,10 @@ void main() {
       expect(state.lastSeq, 2);
       expect(state.requiredAction, GatewayTurnRecoveryAction.reconcile);
       state = state.applyReconcilePage(second!);
-      expect(state.lastSeq, 4);
-      expect(state.status, GatewayTurnStatus.completed);
+      expect(state.lastSeq, 3);
+      expect(state.status, GatewayRecoveryTurnStatus.completed);
       expect(state.requiredAction, GatewayTurnRecoveryAction.none);
-      expect(state.events.map((event) => event.seq), <int>[1, 2, 3, 4]);
+      expect(state.events.map((event) => event.seq), <int>[1, 2, 3]);
       expect(state.applyEvent(state.events.last), same(state));
     });
 
@@ -302,6 +443,119 @@ void main() {
       ).applyEvent(event).applyEvent(conflict);
       expect(state.failure, GatewayTurnRecoveryFailure.duplicateConflict);
       expect(state.requiredAction, GatewayTurnRecoveryAction.stopFailClosed);
+    });
+
+    test('a live sequence gap preserves the cursor and requests reconcile', () {
+      final ack = GatewayTurnAck.fromWire(<String, dynamic>{
+        'accepted': true,
+        'client_turn_id': _clientTurnId,
+        'turn_id': _turnId,
+        'status': 'accepted',
+        'last_seq': 0,
+        'created': true,
+        'automatic_resubmit': false,
+      })!;
+      final missingFirst = GatewayTurnEvent.fromWire(
+        _event(2, 'message.delta', <String, dynamic>{'text': 'late'}),
+      )!;
+
+      final state = GatewayTurnRecoveryState.initial(
+        clientTurnId: _clientTurnId,
+      ).applyAck(ack).applyEvent(missingFirst);
+
+      expect(state.failure, isNull);
+      expect(state.lastSeq, 0);
+      expect(state.events, isEmpty);
+      expect(state.reconcilePending, isTrue);
+      expect(state.requiredAction, GatewayTurnRecoveryAction.reconcile);
+    });
+
+    test('message start and complete drive the durable lifecycle', () {
+      final ack = GatewayTurnAck.fromWire(<String, dynamic>{
+        'accepted': true,
+        'client_turn_id': _clientTurnId,
+        'turn_id': _turnId,
+        'status': 'accepted',
+        'last_seq': 0,
+        'created': true,
+        'automatic_resubmit': false,
+      })!;
+      var state = GatewayTurnRecoveryState.initial(
+        clientTurnId: _clientTurnId,
+      ).applyAck(ack);
+
+      state = state.applyEvent(
+        GatewayTurnEvent.fromWire(_event(1, 'message.start', const {}))!,
+      );
+      expect(state.status, GatewayRecoveryTurnStatus.running);
+      state = state.applyEvent(
+        GatewayTurnEvent.fromWire(
+          _event(2, 'message.delta', <String, dynamic>{'text': 'done'}),
+        )!,
+      );
+      expect(state.status, GatewayRecoveryTurnStatus.running);
+      state = state.applyEvent(
+        GatewayTurnEvent.fromWire(
+          _event(3, 'message.complete', <String, dynamic>{
+            'text': 'done',
+            'status': 'completed',
+          }),
+        )!,
+      );
+      expect(state.status, GatewayRecoveryTurnStatus.completed);
+      expect(state.isTerminal, isTrue);
+      expect(state.requiredAction, GatewayTurnRecoveryAction.none);
+    });
+
+    test('terminal state accepts only an exact duplicate event', () {
+      final ack = GatewayTurnAck.fromWire(<String, dynamic>{
+        'accepted': true,
+        'client_turn_id': _clientTurnId,
+        'turn_id': _turnId,
+        'status': 'accepted',
+        'last_seq': 0,
+        'created': true,
+        'automatic_resubmit': false,
+      })!;
+      final start = GatewayTurnEvent.fromWire(
+        _event(1, 'message.start', const {}),
+      )!;
+      final complete = GatewayTurnEvent.fromWire(
+        _event(2, 'message.complete', <String, dynamic>{
+          'text': 'done',
+          'status': 'completed',
+        }),
+      )!;
+      final terminal = GatewayTurnRecoveryState.initial(
+        clientTurnId: _clientTurnId,
+      ).applyAck(ack).applyEvent(start).applyEvent(complete);
+
+      expect(terminal.applyEvent(complete), same(terminal));
+      final conflictingDuplicate = GatewayTurnEvent.fromWire(
+        _event(2, 'message.complete', <String, dynamic>{
+          'text': 'different',
+          'status': 'completed',
+        }),
+      )!;
+      expect(
+        terminal.applyEvent(conflictingDuplicate).failure,
+        GatewayTurnRecoveryFailure.duplicateConflict,
+      );
+      for (final late in <GatewayTurnEvent>[
+        GatewayTurnEvent.fromWire(
+          _event(3, 'message.delta', <String, dynamic>{'text': 'late'}),
+        )!,
+        GatewayTurnEvent.fromWire(
+          _event(4, 'message.delta', <String, dynamic>{'text': 'gap'}),
+        )!,
+        GatewayTurnEvent.fromWire(
+          _event(3, 'turn.status', <String, dynamic>{'status': 'completed'}),
+        )!,
+      ]) {
+        final failed = terminal.applyEvent(late);
+        expect(failed.failure, GatewayTurnRecoveryFailure.invalidTransition);
+        expect(failed.requiredAction, GatewayTurnRecoveryAction.stopFailClosed);
+      }
     });
 
     test('rejects a reconcile cursor beyond the server last sequence', () {
@@ -357,7 +611,7 @@ void main() {
         clientTurnId: _clientTurnId,
       ).markDisconnected().applyReconcilePage(page!);
       expect(state.snapshot?.assistant.text, 'durable result');
-      expect(state.status, GatewayTurnStatus.completed);
+      expect(state.status, GatewayRecoveryTurnStatus.completed);
       expect(state.lastSeq, 9);
       expect(state.requiredAction, GatewayTurnRecoveryAction.none);
     });

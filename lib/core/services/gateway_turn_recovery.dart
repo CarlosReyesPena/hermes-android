@@ -21,7 +21,7 @@ enum GatewayTurnRecoveryFailure {
 class GatewayTurnRecoveryState {
   final String clientTurnId;
   final String? turnId;
-  final GatewayTurnStatus? status;
+  final GatewayRecoveryTurnStatus? status;
   final int lastSeq;
   final Map<int, GatewayTurnEvent> eventsBySeq;
   final GatewayTurnSnapshot? snapshot;
@@ -121,25 +121,42 @@ class GatewayTurnRecoveryState {
           ? this
           : _fail(GatewayTurnRecoveryFailure.duplicateConflict);
     }
+    if (isTerminal) {
+      // A terminal turn is immutable. Only the exact duplicate handled above
+      // is idempotent; any unseen sequence (including a gap) is a violation.
+      return _fail(GatewayTurnRecoveryFailure.invalidTransition);
+    }
     if (event.seq <= lastSeq) {
       // A terminal snapshot may cover sequences whose individual events were
       // compacted. They are already materialized from the client's view.
       return this;
     }
     if (event.seq != lastSeq + 1) {
-      return _fail(GatewayTurnRecoveryFailure.sequenceGap);
+      // Live delivery may race listener installation or a transport break.
+      // Keep the last contiguous cursor and recover the missing range from the
+      // durable server. A sequence gap never authorizes another submit.
+      return _copyWith(reconcilePending: true);
     }
 
     var nextStatus = status;
-    if (event.type == 'turn.status') {
-      final parsed = GatewayTurnStatus.fromWire(event.payload['status']);
+    GatewayRecoveryTurnStatus? eventStatus;
+    if (event.type == 'message.start') {
+      eventStatus = GatewayRecoveryTurnStatus.running;
+    } else if (event.type == 'message.complete' ||
+        event.type == 'turn.status') {
+      final parsed = GatewayRecoveryTurnStatus.fromWire(
+        event.payload['status'],
+      );
       if (parsed == null) {
         return _fail(GatewayTurnRecoveryFailure.protocolViolation);
       }
-      if (nextStatus != null && !_transitionAllowed(nextStatus, parsed)) {
+      eventStatus = parsed;
+    }
+    if (eventStatus != null) {
+      if (nextStatus != null && !_transitionAllowed(nextStatus, eventStatus)) {
         return _fail(GatewayTurnRecoveryFailure.invalidTransition);
       }
-      nextStatus = parsed;
+      nextStatus = eventStatus;
     }
 
     final nextEvents = Map<int, GatewayTurnEvent>.from(eventsBySeq)
@@ -221,7 +238,7 @@ class GatewayTurnRecoveryState {
 
   GatewayTurnRecoveryState _copyWith({
     String? turnId,
-    GatewayTurnStatus? status,
+    GatewayRecoveryTurnStatus? status,
     int? lastSeq,
     Map<int, GatewayTurnEvent>? eventsBySeq,
     GatewayTurnSnapshot? snapshot,
@@ -243,30 +260,36 @@ class GatewayTurnRecoveryState {
   }
 }
 
-bool _transitionAllowed(GatewayTurnStatus from, GatewayTurnStatus to) {
+bool _transitionAllowed(
+  GatewayRecoveryTurnStatus from,
+  GatewayRecoveryTurnStatus to,
+) {
   if (from == to) return true;
   if (from.isTerminal) return false;
   return switch (from) {
-    GatewayTurnStatus.accepted =>
-      to == GatewayTurnStatus.running ||
-          to == GatewayTurnStatus.failed ||
-          to == GatewayTurnStatus.interrupted,
-    GatewayTurnStatus.running =>
-      to == GatewayTurnStatus.waitingInput ||
-          to == GatewayTurnStatus.completed ||
-          to == GatewayTurnStatus.failed ||
-          to == GatewayTurnStatus.interrupted,
-    GatewayTurnStatus.waitingInput =>
-      to == GatewayTurnStatus.running ||
-          to == GatewayTurnStatus.failed ||
-          to == GatewayTurnStatus.interrupted,
-    GatewayTurnStatus.completed ||
-    GatewayTurnStatus.failed ||
-    GatewayTurnStatus.interrupted => false,
+    GatewayRecoveryTurnStatus.accepted =>
+      to == GatewayRecoveryTurnStatus.running ||
+          to == GatewayRecoveryTurnStatus.failed ||
+          to == GatewayRecoveryTurnStatus.interrupted,
+    GatewayRecoveryTurnStatus.running =>
+      to == GatewayRecoveryTurnStatus.waitingInput ||
+          to == GatewayRecoveryTurnStatus.completed ||
+          to == GatewayRecoveryTurnStatus.failed ||
+          to == GatewayRecoveryTurnStatus.interrupted,
+    GatewayRecoveryTurnStatus.waitingInput =>
+      to == GatewayRecoveryTurnStatus.running ||
+          to == GatewayRecoveryTurnStatus.failed ||
+          to == GatewayRecoveryTurnStatus.interrupted,
+    GatewayRecoveryTurnStatus.completed ||
+    GatewayRecoveryTurnStatus.failed ||
+    GatewayRecoveryTurnStatus.interrupted => false,
   };
 }
 
-bool _snapshotTransitionAllowed(GatewayTurnStatus from, GatewayTurnStatus to) {
+bool _snapshotTransitionAllowed(
+  GatewayRecoveryTurnStatus from,
+  GatewayRecoveryTurnStatus to,
+) {
   if (from == to) return true;
   if (from.isTerminal) return false;
   // A server-selected snapshot may skip replayed intermediate states but can

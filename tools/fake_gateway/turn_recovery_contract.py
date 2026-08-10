@@ -156,8 +156,16 @@ def _attachment_digest(attachments: list[dict[str, object]]) -> str:
 class TurnRecoveryContractLedger:
     """Small persistent fake ledger plus per-process runtime bindings."""
 
-    def __init__(self, ledger_path: Path | None = None) -> None:
+    def __init__(
+        self,
+        ledger_path: Path | None = None,
+        *,
+        server_profile: str = "fixture-recovery-a",
+    ) -> None:
+        if not server_profile or server_profile != server_profile.strip():
+            raise ValueError("server_profile is invalid")
         self._ledger_path = ledger_path
+        self._server_profile = server_profile
         self._lock = threading.RLock()
         self._durable = self._load()
         self._durable["process_generation"] += 1
@@ -283,13 +291,14 @@ class TurnRecoveryContractLedger:
                 "binding_count": len(self._durable["bindings"]),
                 "turn_count": len(turns),
                 "submit_attempt_count": int(self._durable["submit_attempt_count"]),
+                "execution_count": int(self._durable["execution_count"]),
                 "turns": [
                     {
                         "turn_id": turn["turn_id"],
                         "client_turn_id": turn["client_turn_id"],
                         "status": turn["status"],
                         "last_seq": turn["last_seq"],
-                        "prompt_submit_count": turn["prompt_submit_count"],
+                        "execution_count": turn["execution_count"],
                     }
                     for turn in turns.values()
                 ],
@@ -301,6 +310,7 @@ class TurnRecoveryContractLedger:
             "binding_counter": 0,
             "turn_counter": 0,
             "submit_attempt_count": 0,
+            "execution_count": 0,
             "process_generation": 0,
             "bindings": {},
             "turns": {},
@@ -313,7 +323,152 @@ class TurnRecoveryContractLedger:
             raise RuntimeError("turn recovery fixture ledger is invalid")
         if set(decoded) != set(empty):
             raise RuntimeError("turn recovery fixture ledger schema drift")
+        self._validate_loaded_ledger(decoded)
         return decoded
+
+    def _validate_loaded_ledger(self, decoded: dict[str, Any]) -> None:
+        counter_names = {
+            "binding_counter",
+            "turn_counter",
+            "submit_attempt_count",
+            "execution_count",
+            "process_generation",
+        }
+        if any(
+            type(decoded.get(name)) is not int or decoded[name] < 0
+            for name in counter_names
+        ):
+            raise RuntimeError("turn recovery fixture ledger counter drift")
+        bindings = decoded.get("bindings")
+        turns = decoded.get("turns")
+        turn_by_client = decoded.get("turn_by_client")
+        if not all(isinstance(value, dict) for value in (bindings, turns, turn_by_client)):
+            raise RuntimeError("turn recovery fixture ledger collection drift")
+
+        binding_fields = {
+            "profile",
+            "mobile_session_id",
+            "stored_session_id",
+            "binding_version",
+        }
+        stored_ids: set[str] = set()
+        for binding_key, binding in bindings.items():
+            if not isinstance(binding_key, str) or not isinstance(binding, dict):
+                raise RuntimeError("turn recovery fixture binding drift")
+            if set(binding) != binding_fields:
+                raise RuntimeError("turn recovery fixture binding schema drift")
+            profile = binding.get("profile")
+            mobile_session_id = _canonical_uuid(binding.get("mobile_session_id"))
+            stored_session_id = binding.get("stored_session_id")
+            binding_version = binding.get("binding_version")
+            if (
+                profile != self._server_profile
+                or mobile_session_id is None
+                or not isinstance(stored_session_id, str)
+                or not stored_session_id
+                or type(binding_version) is not int
+                or binding_version <= 0
+                or binding_key != f"{profile}\u001f{mobile_session_id}"
+                or stored_session_id in stored_ids
+            ):
+                raise RuntimeError("turn recovery fixture binding is invalid")
+            stored_ids.add(stored_session_id)
+
+        turn_fields = {
+            "turn_id",
+            "stored_session_id",
+            "profile",
+            "client_turn_id",
+            "request_digest",
+            "attachment_manifest_digest",
+            "status",
+            "last_seq",
+            "first_retained_seq",
+            "events",
+            "message_id",
+            "assistant_text",
+            "final_message_ref",
+            "execution_count",
+        }
+        expected_turn_by_client: dict[str, str] = {}
+        execution_total = 0
+        for turn_id, turn in turns.items():
+            if not isinstance(turn_id, str) or not isinstance(turn, dict):
+                raise RuntimeError("turn recovery fixture turn drift")
+            if set(turn) != turn_fields:
+                raise RuntimeError("turn recovery fixture turn schema drift")
+            client_turn_id = _canonical_uuid(turn.get("client_turn_id"))
+            stored_session_id = turn.get("stored_session_id")
+            status = turn.get("status")
+            last_seq = turn.get("last_seq")
+            first_retained_seq = turn.get("first_retained_seq")
+            events = turn.get("events")
+            execution_count = turn.get("execution_count")
+            if (
+                turn.get("turn_id") != turn_id
+                or stored_session_id not in stored_ids
+                or turn.get("profile") != self._server_profile
+                or client_turn_id is None
+                or status
+                not in {
+                    "accepted",
+                    "running",
+                    "waiting_input",
+                    "completed",
+                    "failed",
+                    "interrupted",
+                }
+                or type(last_seq) is not int
+                or last_seq < 0
+                or type(first_retained_seq) is not int
+                or first_retained_seq <= 0
+                or first_retained_seq > last_seq + 1
+                or not isinstance(events, list)
+                or type(execution_count) is not int
+                or execution_count != 1
+            ):
+                raise RuntimeError("turn recovery fixture turn is invalid")
+            for digest_name in ("request_digest", "attachment_manifest_digest"):
+                digest = turn.get(digest_name)
+                if (
+                    not isinstance(digest, str)
+                    or len(digest) != 64
+                    or any(character not in "0123456789abcdef" for character in digest)
+                ):
+                    raise RuntimeError("turn recovery fixture digest is invalid")
+            for scalar_name in ("message_id", "assistant_text"):
+                if not isinstance(turn.get(scalar_name), str):
+                    raise RuntimeError("turn recovery fixture message drift")
+            if type(turn.get("final_message_ref")) is not int:
+                raise RuntimeError("turn recovery fixture message ref drift")
+            previous_seq = first_retained_seq - 1
+            for event in events:
+                if (
+                    not isinstance(event, dict)
+                    or set(event) != {"turn_id", "seq", "message_id", "type", "payload"}
+                    or event.get("turn_id") != turn_id
+                    or event.get("message_id") != turn.get("message_id")
+                    or type(event.get("seq")) is not int
+                    or event["seq"] != previous_seq + 1
+                    or not isinstance(event.get("type"), str)
+                    or not isinstance(event.get("payload"), dict)
+                ):
+                    raise RuntimeError("turn recovery fixture event drift")
+                previous_seq = event["seq"]
+            if events and previous_seq != last_seq:
+                raise RuntimeError("turn recovery fixture cursor drift")
+            client_key = f"{stored_session_id}\u001f{client_turn_id}"
+            if client_key in expected_turn_by_client:
+                raise RuntimeError("turn recovery fixture client turn duplicate")
+            expected_turn_by_client[client_key] = turn_id
+            execution_total += execution_count
+
+        if turn_by_client != expected_turn_by_client:
+            raise RuntimeError("turn recovery fixture client index drift")
+        if decoded["execution_count"] != execution_total:
+            raise RuntimeError("turn recovery fixture execution counter drift")
+        if decoded["binding_counter"] < len(bindings) or decoded["turn_counter"] < len(turns):
+            raise RuntimeError("turn recovery fixture allocation counter drift")
 
     def _save(self) -> None:
         if self._ledger_path is None:
@@ -351,12 +506,18 @@ class TurnRecoveryContractLedger:
                 )
             )
             return
-        profile = params.get("profile", "fixture")
-        if not isinstance(profile, str) or not profile or profile != profile.strip():
+        profile_selector = params.get("profile")
+        if profile_selector is not None and profile_selector != self._server_profile:
             await ws.send_str(
-                _rpc_error(request_id, "profile is invalid", 4406, "profile_unavailable")
+                _rpc_error(
+                    request_id,
+                    "server profile scope is unavailable",
+                    4406,
+                    "profile_unavailable",
+                )
             )
             return
+        profile = self._server_profile
         binding_key = f"{profile}\u001f{mobile_session_id}"
         with self._lock:
             binding = self._durable["bindings"].get(binding_key)
@@ -468,12 +629,12 @@ class TurnRecoveryContractLedger:
                         )
                     )
                     return
-                turn["prompt_submit_count"] += 1
                 self._save()
                 await ws.send_str(_rpc_result(request_id, self._ack(turn, False)))
                 return
 
             self._durable["turn_counter"] += 1
+            self._durable["execution_count"] += 1
             counter = int(self._durable["turn_counter"])
             turn_id = f"turn-recovery-{counter}"
             turn: dict[str, Any] = {
@@ -490,7 +651,7 @@ class TurnRecoveryContractLedger:
                 "message_id": f"message-recovery-{counter}",
                 "assistant_text": "",
                 "final_message_ref": counter,
-                "prompt_submit_count": 1,
+                "execution_count": 1,
             }
             self._durable["turns"][turn_id] = turn
             self._durable["turn_by_client"][client_key] = turn_id
@@ -561,7 +722,6 @@ class TurnRecoveryContractLedger:
             {"text": turn["assistant_text"], "status": "completed"},
         )
         turn["status"] = "completed"
-        self._append_event(turn, "turn.status", {"status": "completed"})
         self._save()
 
     async def _finish_turn_async(
@@ -583,7 +743,6 @@ class TurnRecoveryContractLedger:
                 "message.complete",
                 {"text": "Durable recovery completed.", "status": "completed"},
             ),
-            ("turn.status", {"status": "completed"}),
         ]
         delta_count = 0
         connected = True
@@ -593,6 +752,7 @@ class TurnRecoveryContractLedger:
                 turn["status"] = str(event_payload["status"])
             if event_type == "message.complete":
                 turn["assistant_text"] = str(event_payload["text"])
+                turn["status"] = str(event_payload["status"])
             self._save()
             if connected:
                 await self._emit(ws, turn, event, runtime_session_id)
