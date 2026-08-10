@@ -98,6 +98,26 @@ void main() {
     expect(projection.finalMessageRef, 42);
     expect(projection.attachmentManifestDigest, _manifestDigest);
   });
+
+  test('rehydrated terminal result projects after process recreation', () {
+    final state = GatewayTurnRecoveryState.rehydrate(
+      clientTurnId: _clientTurnId,
+      turnId: _turnId,
+      status: GatewayRecoveryTurnStatus.completed,
+      lastSeq: 8,
+      ackUncertain: false,
+      terminalEventRecorded: true,
+      terminalResult: GatewayTurnTerminalResult(
+        messageId: _messageId,
+        assistantText: 'Recovered from encrypted journal',
+      ),
+    );
+
+    final projection = GatewayTurnUiProjection.fromState(state);
+    expect(projection.messageId, _messageId);
+    expect(projection.assistantText, 'Recovered from encrypted journal');
+    expect(projection.isTerminal, isTrue);
+  });
 }
 
 GatewayTurnRecoveryState _acceptedState() =>

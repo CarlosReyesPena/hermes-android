@@ -52,6 +52,21 @@ class GatewayTurnUiProjection {
       );
     }
 
+    final terminalResult = state.terminalResult;
+    if (terminalResult != null) {
+      return GatewayTurnUiProjection(
+        clientTurnId: state.clientTurnId,
+        turnId: state.turnId,
+        messageId: terminalResult.messageId,
+        assistantText: terminalResult.assistantText,
+        status: state.status,
+        failure: state.failure,
+        lastSeq: state.lastSeq,
+        finalMessageRef: null,
+        attachmentManifestDigest: null,
+      );
+    }
+
     String? messageId;
     var assistantText = '';
     for (final event in state.events) {

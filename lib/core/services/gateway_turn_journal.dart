@@ -176,11 +176,12 @@ class GatewayTurnJournalBinding {
   }
 }
 
-/// Metadata-only write-ahead record for one client intent.
+/// Bounded write-ahead record for one client intent.
 ///
-/// It references a separately durable binding. Prompt text, attachment
-/// manifests, outputs, credentials, endpoints, and runtime session IDs are not
-/// permitted in this schema.
+/// It references a separately durable binding. Only the stable message ID and
+/// bounded assistant text required to render a completed turn may accompany
+/// lifecycle metadata. Prompt text, attachments, tool output, reasoning,
+/// credentials, endpoints, and runtime session IDs remain prohibited.
 class GatewayTurnJournalEntry {
   static const allowedJsonKeys = <String>{
     'binding_id',
@@ -190,6 +191,7 @@ class GatewayTurnJournalEntry {
     'last_seq',
     'event_payload_bytes',
     'terminal_event_recorded',
+    'terminal_result',
     'ack_uncertain',
     'failure',
     'updated_at_epoch_ms',
@@ -202,6 +204,7 @@ class GatewayTurnJournalEntry {
   final int lastSeq;
   final int eventPayloadBytes;
   final bool terminalEventRecorded;
+  final GatewayTurnTerminalResult? terminalResult;
   final bool ackUncertain;
   final GatewayTurnRecoveryFailure? failure;
   final int updatedAtEpochMs;
@@ -214,6 +217,7 @@ class GatewayTurnJournalEntry {
     required int lastSeq,
     required int eventPayloadBytes,
     required bool terminalEventRecorded,
+    GatewayTurnTerminalResult? terminalResult,
     required bool ackUncertain,
     GatewayTurnRecoveryFailure? failure,
     required int updatedAtEpochMs,
@@ -225,6 +229,15 @@ class GatewayTurnJournalEntry {
         eventPayloadBytes < 0 ||
         terminalEventRecorded &&
             (status?.isTerminal != true || turnId == null || lastSeq == 0) ||
+        terminalResult != null &&
+            (status?.isTerminal != true ||
+                turnId == null ||
+                lastSeq == 0 ||
+                ackUncertain ||
+                failure != null) ||
+        status == GatewayRecoveryTurnStatus.completed &&
+            failure == null &&
+            terminalResult == null ||
         failure != null && ackUncertain ||
         updatedAtEpochMs <= 0) {
       throw ArgumentError('Invalid recovery journal entry.');
@@ -237,6 +250,7 @@ class GatewayTurnJournalEntry {
       lastSeq: lastSeq,
       eventPayloadBytes: eventPayloadBytes,
       terminalEventRecorded: terminalEventRecorded,
+      terminalResult: terminalResult,
       ackUncertain: ackUncertain,
       failure: failure,
       updatedAtEpochMs: updatedAtEpochMs,
@@ -251,6 +265,7 @@ class GatewayTurnJournalEntry {
     required this.lastSeq,
     required this.eventPayloadBytes,
     required this.terminalEventRecorded,
+    required this.terminalResult,
     required this.ackUncertain,
     required this.failure,
     required this.updatedAtEpochMs,
@@ -266,6 +281,7 @@ class GatewayTurnJournalEntry {
     int? lastSeq,
     int? eventPayloadBytes,
     bool? terminalEventRecorded,
+    GatewayTurnTerminalResult? terminalResult,
     bool? ackUncertain,
     GatewayTurnRecoveryFailure? failure,
     int? updatedAtEpochMs,
@@ -279,6 +295,7 @@ class GatewayTurnJournalEntry {
       eventPayloadBytes: eventPayloadBytes ?? this.eventPayloadBytes,
       terminalEventRecorded:
           terminalEventRecorded ?? this.terminalEventRecorded,
+      terminalResult: terminalResult ?? this.terminalResult,
       ackUncertain: ackUncertain ?? this.ackUncertain,
       failure: failure ?? this.failure,
       updatedAtEpochMs: updatedAtEpochMs ?? this.updatedAtEpochMs,
@@ -293,13 +310,24 @@ class GatewayTurnJournalEntry {
     'last_seq': lastSeq,
     'event_payload_bytes': eventPayloadBytes,
     'terminal_event_recorded': terminalEventRecorded,
+    if (terminalResult != null)
+      'terminal_result': <String, Object>{
+        'message_id': terminalResult!.messageId,
+        'assistant_text': terminalResult!.assistantText,
+      },
     'ack_uncertain': ackUncertain,
     if (failure != null) 'failure': failure!.name,
     'updated_at_epoch_ms': updatedAtEpochMs,
   };
 
-  static GatewayTurnJournalEntry _fromJson(Map<String, dynamic> value) {
-    if (value.keys.any((key) => !allowedJsonKeys.contains(key))) {
+  static GatewayTurnJournalEntry _fromJson(
+    Map<String, dynamic> value, {
+    required bool legacyV3,
+  }) {
+    final acceptedKeys = legacyV3
+        ? allowedJsonKeys.difference(const {'terminal_result'})
+        : allowedJsonKeys;
+    if (value.keys.any((key) => !acceptedKeys.contains(key))) {
       throw const GatewayTurnJournalException();
     }
     final statusRaw = value['status'];
@@ -310,6 +338,29 @@ class GatewayTurnJournalEntry {
     final failure = failureRaw == null
         ? null
         : _recoveryFailureFromWire(failureRaw);
+    final terminalRaw = value['terminal_result'];
+    GatewayTurnTerminalResult? terminalResult;
+    if (terminalRaw != null) {
+      if (terminalRaw is! Map) throw const GatewayTurnJournalException();
+      final terminal = Map<String, dynamic>.from(terminalRaw);
+      if (terminal.length != 2 ||
+          terminal.keys.toSet().difference(const {
+            'message_id',
+            'assistant_text',
+          }).isNotEmpty ||
+          terminal['message_id'] is! String ||
+          terminal['assistant_text'] is! String) {
+        throw const GatewayTurnJournalException();
+      }
+      try {
+        terminalResult = GatewayTurnTerminalResult(
+          messageId: terminal['message_id'] as String,
+          assistantText: terminal['assistant_text'] as String,
+        );
+      } on ArgumentError {
+        throw const GatewayTurnJournalException();
+      }
+    }
     if (statusRaw != null && status == null ||
         failureRaw != null && failure == null ||
         value['binding_id'] is! String ||
@@ -323,6 +374,10 @@ class GatewayTurnJournalEntry {
       throw const GatewayTurnJournalException();
     }
     try {
+      final legacyUnrecoverableCompletion =
+          legacyV3 &&
+          status == GatewayRecoveryTurnStatus.completed &&
+          failure == null;
       return GatewayTurnJournalEntry(
         bindingIdentity: value['binding_id'] as String,
         clientTurnId: value['client_turn_id'] as String,
@@ -331,8 +386,13 @@ class GatewayTurnJournalEntry {
         lastSeq: value['last_seq'] as int,
         eventPayloadBytes: value['event_payload_bytes'] as int,
         terminalEventRecorded: value['terminal_event_recorded'] as bool,
-        ackUncertain: value['ack_uncertain'] as bool,
-        failure: failure,
+        terminalResult: terminalResult,
+        ackUncertain: legacyUnrecoverableCompletion
+            ? false
+            : value['ack_uncertain'] as bool,
+        failure: legacyUnrecoverableCompletion
+            ? GatewayTurnRecoveryFailure.protocolViolation
+            : failure,
         updatedAtEpochMs: value['updated_at_epoch_ms'] as int,
       );
     } on ArgumentError {
@@ -352,10 +412,11 @@ class GatewayTurnJournalSnapshot {
 }
 
 class GatewayTurnJournal {
-  static const schema = 'hermes.android.turn-journal.v3';
+  static const schema = 'hermes.android.turn-journal.v4';
+  static const compatibleLegacySchema = 'hermes.android.turn-journal.v3';
   static const maxBindings = 64;
   static const maxEntries = 64;
-  static const maxEncodedBytes = 64 * 1024;
+  static const maxEncodedBytes = 5 * 1024 * 1024;
   static const activeRetention = Duration(days: 7);
   static const terminalRetention = Duration(hours: 24);
 
@@ -560,8 +621,9 @@ class GatewayTurnJournal {
       final decoded = jsonDecode(encoded);
       if (decoded is! Map) throw const GatewayTurnJournalException();
       final root = Map<String, dynamic>.from(decoded);
+      final legacyV3 = root['schema'] == compatibleLegacySchema;
       if (root.length != 3 ||
-          root['schema'] != schema ||
+          root['schema'] != schema && !legacyV3 ||
           root['bindings'] is! List ||
           root['entries'] is! List) {
         throw const GatewayTurnJournalException();
@@ -589,6 +651,7 @@ class GatewayTurnJournal {
         if (rawEntry is! Map) throw const GatewayTurnJournalException();
         final entry = GatewayTurnJournalEntry._fromJson(
           Map<String, dynamic>.from(rawEntry),
+          legacyV3: legacyV3,
         );
         if (!bindingIds.contains(entry.bindingIdentity) ||
             !entryIds.add(entry.entryIdentity)) {
@@ -596,7 +659,9 @@ class GatewayTurnJournal {
         }
         entries.add(entry);
       }
-      return _JournalData(bindings: bindings, entries: entries);
+      final data = _JournalData(bindings: bindings, entries: entries);
+      if (legacyV3) await _writeData(data);
+      return data;
     } on GatewayTurnJournalException {
       rethrow;
     } catch (_) {
@@ -819,6 +884,9 @@ void _validateEntryUpdate(
       next.lastSeq < previous.lastSeq ||
       next.eventPayloadBytes < previous.eventPayloadBytes ||
       previous.terminalEventRecorded && !next.terminalEventRecorded ||
+      previous.terminalResult != null &&
+          (next.terminalResult == null ||
+              !previous.terminalResult!.sameResult(next.terminalResult!)) ||
       next.updatedAtEpochMs < previous.updatedAtEpochMs) {
     throw const GatewayTurnJournalException();
   }
@@ -831,6 +899,7 @@ void _validateEntryUpdate(
           next.lastSeq != previous.lastSeq ||
           next.eventPayloadBytes != previous.eventPayloadBytes ||
           next.terminalEventRecorded != previous.terminalEventRecorded ||
+          !_sameTerminalResult(next.terminalResult, previous.terminalResult) ||
           next.ackUncertain != previous.ackUncertain ||
           nextFailure != previousFailure)) {
     throw const GatewayTurnJournalException();
@@ -849,10 +918,19 @@ void _validateEntryUpdate(
           next.lastSeq != previous.lastSeq ||
           next.eventPayloadBytes != previous.eventPayloadBytes ||
           next.terminalEventRecorded != previous.terminalEventRecorded ||
+          !_sameTerminalResult(next.terminalResult, previous.terminalResult) ||
           next.ackUncertain != previous.ackUncertain ||
           previousFailure != null && nextFailure != previousFailure)) {
     throw const GatewayTurnJournalException();
   }
+}
+
+bool _sameTerminalResult(
+  GatewayTurnTerminalResult? left,
+  GatewayTurnTerminalResult? right,
+) {
+  if (left == null || right == null) return left == null && right == null;
+  return left.sameResult(right);
 }
 
 bool _journalTransitionAllowed(

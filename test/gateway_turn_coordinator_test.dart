@@ -45,6 +45,43 @@ class _MemoryJournalStore implements GatewayTurnJournalStore {
   }
 }
 
+class _CrashJournalSlot {
+  String? value;
+  final ackSealed = Completer<void>();
+}
+
+class _CrashJournalStore implements GatewayTurnJournalStore {
+  final _CrashJournalSlot slot;
+  final bool crashOnAckSeal;
+
+  _CrashJournalStore(this.slot, {this.crashOnAckSeal = false});
+
+  @override
+  Future<void> delete() async => slot.value = null;
+
+  @override
+  Future<void> deleteLegacy() async {}
+
+  @override
+  Future<String?> read() async => slot.value;
+
+  @override
+  Future<String?> readLegacy() async => null;
+
+  @override
+  Future<void> write(String newValue) async {
+    slot.value = newValue;
+    if (crashOnAckSeal &&
+        newValue.contains('"turn_id":"turn-1"') &&
+        newValue.contains('"ack_uncertain":true')) {
+      if (!slot.ackSealed.isCompleted) slot.ackSealed.complete();
+      // The write reached durable storage; the original process never gets
+      // control back to begin reconcile.
+      await Completer<void>().future;
+    }
+  }
+}
+
 class _SharedMemoryJournalSlot {
   final Object authority = Object();
   String? value;
@@ -302,6 +339,7 @@ GatewayTurnJournalEntry _entry({
   int lastSeq = 0,
   int eventPayloadBytes = 0,
   bool terminalEventRecorded = false,
+  GatewayTurnTerminalResult? terminalResult,
   bool ackUncertain = true,
   GatewayTurnRecoveryFailure? failure,
   int updatedAtEpochMs = _baseMs,
@@ -313,6 +351,14 @@ GatewayTurnJournalEntry _entry({
   lastSeq: lastSeq,
   eventPayloadBytes: eventPayloadBytes,
   terminalEventRecorded: terminalEventRecorded,
+  terminalResult:
+      terminalResult ??
+      (status == GatewayRecoveryTurnStatus.completed && failure == null
+          ? GatewayTurnTerminalResult(
+              messageId: 'message-$clientTurnId',
+              assistantText: 'Durable recovery completed.',
+            )
+          : null),
   ackUncertain: ackUncertain,
   failure: failure,
   updatedAtEpochMs: updatedAtEpochMs,
@@ -603,11 +649,19 @@ void main() {
         status: GatewayRecoveryTurnStatus.completed,
         lastSeq: 9,
         ackUncertain: false,
+        terminalResult: GatewayTurnTerminalResult(
+          messageId: 'message-terminal',
+          assistantText: 'Durable recovery completed.',
+        ),
       );
 
       expect(terminal.isTerminal, isTrue);
       expect(terminal.isFailClosed, isFalse);
       expect(terminal.requiredAction, GatewayTurnRecoveryAction.none);
+      expect(
+        terminal.terminalResult?.assistantText,
+        'Durable recovery completed.',
+      );
     });
 
     test('fails closed on impossible durable combinations', () {
@@ -2643,6 +2697,74 @@ void main() {
       },
     );
 
+    test(
+      'controller recreation returns durable terminal without resubmit',
+      () async {
+        late _GatewayFixture fixture;
+        fixture = await _GatewayFixture.start(
+          handler: (request, connectionIndex) {
+            final params = request['params'] as Map<String, dynamic>;
+            if (request['method'] == 'session.open') {
+              return _openResult(
+                mobileSessionId: params['mobile_session_id'] as String,
+                connectionIndex: connectionIndex,
+                storedSessionId: 'stored-a',
+                bindingVersion: 2,
+              );
+            }
+            throw StateError('Unexpected method ${request['method']}');
+          },
+        );
+        final store = _MemoryJournalStore();
+        final journal = GatewayTurnJournal(store: store);
+        final binding = _binding();
+        await journal.upsertBinding(binding);
+        await journal.upsert(
+          _entry(
+            binding: binding,
+            turnId: 'turn-terminal-recreated',
+            status: GatewayRecoveryTurnStatus.completed,
+            lastSeq: 7,
+            terminalEventRecorded: true,
+            terminalResult: GatewayTurnTerminalResult(
+              messageId: 'message-terminal-recreated',
+              assistantText: 'Recovered after process recreation.',
+            ),
+            ackUncertain: false,
+          ),
+        );
+        final coordinator = _coordinator(fixture: fixture, journal: journal);
+        final observed = <GatewayTurnRecoveryState>[];
+
+        try {
+          final recovered = await coordinator.recoverPending(
+            onState: observed.add,
+          );
+          expect(recovered, hasLength(1));
+          expect(observed, hasLength(1));
+          expect(
+            recovered.single.terminalResult?.assistantText,
+            'Recovered after process recreation.',
+          );
+          expect(
+            fixture.requests.where(
+              (request) => request['method'] == 'prompt.submit',
+            ),
+            isEmpty,
+          );
+          expect(
+            fixture.requests.where(
+              (request) => request['method'] == 'turn.reconcile',
+            ),
+            isEmpty,
+          );
+        } finally {
+          await coordinator.close();
+          await fixture.close();
+        }
+      },
+    );
+
     test('WAL write failure sends zero prompt.submit requests', () async {
       final fixture = await _GatewayFixture.start();
       final store = _MemoryJournalStore();
@@ -2711,6 +2833,170 @@ void main() {
         await fixture.close();
       }
     });
+
+    test(
+      'completed ACK reconciles payload before terminal persistence',
+      () async {
+        late _GatewayFixture fixture;
+        fixture = await _GatewayFixture.start(
+          handler: (request, connectionIndex) {
+            final params = request['params'] as Map<String, dynamic>;
+            if (request['method'] == 'session.open') {
+              return _openResult(
+                mobileSessionId: params['mobile_session_id'] as String,
+                connectionIndex: connectionIndex,
+              );
+            }
+            if (request['method'] == 'prompt.submit') {
+              return <String, dynamic>{
+                'accepted': true,
+                'automatic_resubmit': false,
+                'client_turn_id': params['client_turn_id'],
+                'turn_id': 'turn-1',
+                'status': 'completed',
+                'last_seq': 0,
+                'created': true,
+              };
+            }
+            if (request['method'] == 'turn.reconcile') {
+              return _snapshotPage(
+                clientTurnId: _clientA,
+                text: 'Completed before ACK was observed.',
+              );
+            }
+            throw StateError('Unexpected method ${request['method']}');
+          },
+        );
+        final journal = GatewayTurnJournal(store: _MemoryJournalStore());
+        final coordinator = _coordinator(fixture: fixture, journal: journal);
+
+        try {
+          final state = await coordinator.submit(text: 'fast completion');
+          expect(state.status, GatewayRecoveryTurnStatus.completed);
+          expect(
+            state.terminalResult?.assistantText,
+            'Completed before ACK was observed.',
+          );
+          expect(state.isFailClosed, isFalse);
+          expect(
+            fixture.requests.where(
+              (request) => request['method'] == 'prompt.submit',
+            ),
+            hasLength(1),
+          );
+          expect(
+            fixture.requests.where(
+              (request) => request['method'] == 'turn.reconcile',
+            ),
+            hasLength(1),
+          );
+          expect((await journal.loadAll()).single.terminalResult, isNotNull);
+        } finally {
+          await coordinator.close();
+          await fixture.close();
+        }
+      },
+    );
+
+    test(
+      'restart after completed ACK seal reconciles without resubmit',
+      () async {
+        final slot = _CrashJournalSlot();
+        late _GatewayFixture fixture;
+        fixture = await _GatewayFixture.start(
+          handler: (request, connectionIndex) {
+            final params = request['params'] as Map<String, dynamic>;
+            if (request['method'] == 'session.open') {
+              return _openResult(
+                mobileSessionId: params['mobile_session_id'] as String,
+                connectionIndex: connectionIndex,
+                storedSessionId: 'stored-1',
+                bindingVersion: connectionIndex,
+              );
+            }
+            if (request['method'] == 'prompt.submit') {
+              return <String, dynamic>{
+                'accepted': true,
+                'automatic_resubmit': false,
+                'client_turn_id': params['client_turn_id'],
+                'turn_id': 'turn-1',
+                'status': 'completed',
+                'last_seq': 0,
+                'created': true,
+              };
+            }
+            if (request['method'] == 'turn.reconcile') {
+              return _snapshotPage(
+                clientTurnId: _clientA,
+                text: 'Recovered after completed ACK seal.',
+              );
+            }
+            throw StateError('Unexpected method ${request['method']}');
+          },
+        );
+        final first = _coordinator(
+          fixture: fixture,
+          journal: GatewayTurnJournal(
+            store: _CrashJournalStore(slot, crashOnAckSeal: true),
+          ),
+        );
+
+        try {
+          unawaited(first.submit(text: 'complete during process loss'));
+          await slot.ackSealed.future.timeout(const Duration(seconds: 5));
+          final restartedJournal = GatewayTurnJournal(
+            store: _CrashJournalStore(slot),
+          );
+          final sealed = await restartedJournal.loadAll();
+          expect(sealed, hasLength(1));
+          expect(sealed.single.turnId, 'turn-1');
+          expect(sealed.single.status, isNull);
+          expect(sealed.single.ackUncertain, isTrue);
+
+          final restarted = _coordinator(
+            fixture: fixture,
+            journal: restartedJournal,
+          );
+          try {
+            final recovered = await restarted.recoverPending();
+            expect(recovered, hasLength(1));
+            expect(
+              recovered.single.status,
+              GatewayRecoveryTurnStatus.completed,
+            );
+            expect(
+              recovered.single.terminalResult?.assistantText,
+              'Recovered after completed ACK seal.',
+            );
+            expect(recovered.single.isFailClosed, isFalse);
+          } finally {
+            await restarted.close();
+          }
+
+          expect(
+            fixture.requests.where(
+              (request) => request['method'] == 'prompt.submit',
+            ),
+            hasLength(1),
+          );
+          expect(
+            fixture.requests.where(
+              (request) => request['method'] == 'turn.reconcile',
+            ),
+            hasLength(1),
+          );
+          expect(
+            (await restartedJournal.loadAll())
+                .single
+                .terminalResult
+                ?.assistantText,
+            'Recovered after completed ACK seal.',
+          );
+        } finally {
+          await fixture.close();
+        }
+      },
+    );
 
     test(
       'stages two images and one document on the submit socket in manifest order',

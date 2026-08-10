@@ -94,6 +94,7 @@ GatewayTurnJournalEntry _entry({
   int lastSeq = 0,
   int eventPayloadBytes = 0,
   bool terminalEventRecorded = false,
+  GatewayTurnTerminalResult? terminalResult,
   bool ackUncertain = true,
   GatewayTurnRecoveryFailure? failure,
   int updatedAtEpochMs = _baseMs,
@@ -105,6 +106,14 @@ GatewayTurnJournalEntry _entry({
   lastSeq: lastSeq,
   eventPayloadBytes: eventPayloadBytes,
   terminalEventRecorded: terminalEventRecorded,
+  terminalResult:
+      terminalResult ??
+      (status == GatewayRecoveryTurnStatus.completed && failure == null
+          ? GatewayTurnTerminalResult(
+              messageId: 'message-$clientTurnId',
+              assistantText: 'Durable recovery completed.',
+            )
+          : null),
   ackUncertain: ackUncertain,
   failure: failure,
   updatedAtEpochMs: updatedAtEpochMs,
@@ -146,7 +155,7 @@ Future<void> _seedBinding(
 ]) => journal.upsertBinding(binding ?? _binding());
 
 void main() {
-  group('durable turn journal v3', () {
+  group('durable turn journal v4', () {
     test('round-trips a durable binding and metadata-only turn', () async {
       final store = _MemoryJournalStore();
       final firstProcess = GatewayTurnJournal(store: store);
@@ -594,6 +603,8 @@ void main() {
             binding: binding,
             turnId: 'terminal-old',
             status: GatewayRecoveryTurnStatus.completed,
+            lastSeq: 1,
+            terminalEventRecorded: true,
             ackUncertain: false,
             updatedAtEpochMs: now
                 .subtract(const Duration(hours: 25))
@@ -758,13 +769,6 @@ void main() {
           ackUncertain: false,
           updatedAtEpochMs: _baseMs + 13,
         ),
-        _entry(
-          turnId: 'turn-authoritative',
-          status: GatewayRecoveryTurnStatus.completed,
-          lastSeq: 5,
-          ackUncertain: true,
-          updatedAtEpochMs: _baseMs + 13,
-        ),
       ]) {
         await expectLater(
           journal.upsert(invalid),
@@ -772,6 +776,17 @@ void main() {
         );
         expect(store.value, terminal);
       }
+      expect(
+        () => _entry(
+          turnId: 'turn-authoritative',
+          status: GatewayRecoveryTurnStatus.completed,
+          lastSeq: 5,
+          ackUncertain: true,
+          updatedAtEpochMs: _baseMs + 13,
+        ),
+        throwsArgumentError,
+      );
+      expect(store.value, terminal);
     });
 
     test(
@@ -872,12 +887,12 @@ void main() {
     );
 
     test(
-      'keeps v3 in the same authority slot while purging legacy v1',
+      'keeps v4 in the same authority slot while purging legacy v1',
       () async {
         final store = _MemoryJournalStore();
         final journal = GatewayTurnJournal(store: store);
         await _seedBinding(journal);
-        final v3Authority = store.value;
+        final v4Authority = store.value;
         store.v1Value = jsonEncode(<String, Object>{
           'schema': 'hermes.android.turn-journal.v1',
           'entries': const <Object>[],
@@ -888,37 +903,84 @@ void main() {
           throwsA(isA<GatewayTurnJournalException>()),
         );
         expect(store.v1Value, isNull);
-        expect(store.value, v3Authority);
+        expect(store.value, v4Authority);
         expect((await journal.loadSnapshot()).bindings, hasLength(1));
 
         final root = jsonDecode(store.value!) as Map<String, dynamic>;
-        expect(root['schema'], 'hermes.android.turn-journal.v3');
-        // A downgraded v2 reader sees incompatible v3 in its own slot; there is
+        expect(root['schema'], GatewayTurnJournal.schema);
+        // A downgraded v2 reader sees incompatible v4 in its own slot; there is
         // no parallel v2 authority to revive after rollback.
         expect(root['schema'], isNot('hermes.android.turn-journal.v2'));
       },
     );
 
     test(
+      'migrates active v3 and quarantines payload-free completed v3',
+      () async {
+        final store = _MemoryJournalStore();
+        final journal = GatewayTurnJournal(store: store);
+        final binding = _binding();
+        await journal.upsertBinding(binding);
+        await journal.upsert(
+          _entry(
+            binding: binding,
+            turnId: 'turn-active-v3',
+            status: GatewayRecoveryTurnStatus.running,
+            lastSeq: 2,
+            ackUncertain: true,
+          ),
+        );
+        await journal.upsert(
+          _entry(
+            binding: binding,
+            clientTurnId: _uuidFor(2),
+            turnId: 'turn-completed-v3',
+            status: GatewayRecoveryTurnStatus.completed,
+            lastSeq: 7,
+            terminalEventRecorded: true,
+            ackUncertain: false,
+            updatedAtEpochMs: _baseMs + 1,
+          ),
+          now: DateTime.fromMillisecondsSinceEpoch(_baseMs + 2, isUtc: true),
+        );
+
+        final legacy = jsonDecode(store.value!) as Map<String, dynamic>;
+        legacy['schema'] = GatewayTurnJournal.compatibleLegacySchema;
+        for (final raw in legacy['entries'] as List<dynamic>) {
+          (raw as Map<String, dynamic>).remove('terminal_result');
+        }
+        store.value = jsonEncode(legacy);
+
+        final migrated = await GatewayTurnJournal(store: store).loadAll();
+        final active = migrated.singleWhere(
+          (entry) => entry.turnId == 'turn-active-v3',
+        );
+        final completed = migrated.singleWhere(
+          (entry) => entry.turnId == 'turn-completed-v3',
+        );
+        expect(active.failure, isNull);
+        expect(active.status, GatewayRecoveryTurnStatus.running);
+        expect(completed.failure, GatewayTurnRecoveryFailure.protocolViolation);
+        expect(completed.terminalResult, isNull);
+        expect(
+          (jsonDecode(store.value!) as Map<String, dynamic>)['schema'],
+          GatewayTurnJournal.schema,
+        );
+      },
+    );
+
+    test(
       'bounds UTF-8 bytes before parsing current or incompatible data',
       () async {
-        final bindings = <Object>[
-          for (
-            var index = 1;
-            index <= GatewayTurnJournal.maxBindings;
-            index += 1
-          )
-            _binding(
-              connectionId: '${_repeat('😀', 100)}-$index',
-              localSessionId: '${_repeat('界', 150)}-$index',
-              mobileSessionId: _uuidFor(index),
-              storedSessionId: 'stored-$index',
-            ).toJson(),
-        ];
+        final padding = _repeat(
+          '😀',
+          GatewayTurnJournal.maxEncodedBytes ~/ 4 + 128,
+        );
         final encoded = jsonEncode(<String, Object>{
           'schema': GatewayTurnJournal.schema,
-          'bindings': bindings,
+          'bindings': const <Object>[],
           'entries': const <Object>[],
+          'padding': padding,
         });
         expect(encoded.length, lessThan(GatewayTurnJournal.maxEncodedBytes));
         expect(
@@ -934,7 +996,7 @@ void main() {
 
         final oversizedV2 = jsonEncode(<String, Object>{
           'schema': 'hermes.android.turn-journal.v2',
-          'runtime_session_id': _repeat('😀', 20000),
+          'runtime_session_id': padding,
           'entries': const <Object>[],
         });
         expect(
@@ -1037,6 +1099,8 @@ void main() {
             clientTurnId: _uuidFor(64),
             turnId: 'terminal-safe',
             status: GatewayRecoveryTurnStatus.completed,
+            lastSeq: 1,
+            terminalEventRecorded: true,
             ackUncertain: false,
             updatedAtEpochMs: _baseMs + 64,
           ),
@@ -1256,7 +1320,12 @@ void main() {
             (root['bindings'] as List).single as Map<String, dynamic>;
         final entry = (root['entries'] as List).single as Map<String, dynamic>;
         expect(binding.keys.toSet(), GatewayTurnJournalBinding.allowedJsonKeys);
-        expect(entry.keys.toSet(), GatewayTurnJournalEntry.allowedJsonKeys);
+        expect(
+          entry.keys.toSet(),
+          GatewayTurnJournalEntry.allowedJsonKeys.difference(const <String>{
+            'terminal_result',
+          }),
+        );
         expect(entry['event_payload_bytes'], 404);
         expect(entry['terminal_event_recorded'], isFalse);
         expect(entry['failure'], 'protocolViolation');

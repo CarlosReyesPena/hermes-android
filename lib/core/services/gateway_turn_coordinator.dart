@@ -861,6 +861,7 @@ class GatewayTurnCoordinator {
           ackUncertain: entry.ackUncertain,
           eventPayloadBytes: entry.eventPayloadBytes,
           terminalEventRecorded: entry.terminalEventRecorded,
+          terminalResult: entry.terminalResult,
           failure: entry.failure,
         );
         _states[entry.clientTurnId] = state;
@@ -1354,13 +1355,18 @@ class GatewayTurnCoordinator {
     lastSeq: state.lastSeq,
     eventPayloadBytes: state.eventPayloadBytes,
     terminalEventRecorded: state.terminalEventRecorded,
+    terminalResult: state.terminalResult,
     ackUncertain: state.ackUncertain,
     failure: state.failure,
     updatedAtEpochMs: updatedAtEpochMs,
   );
 
   void _settleIfDone(GatewayTurnRecoveryState state) {
-    if (state.isTerminal || state.isFailClosed) _settleState(state);
+    if (state.isFailClosed ||
+        state.isTerminal &&
+            state.requiredAction == GatewayTurnRecoveryAction.none) {
+      _settleState(state);
+    }
   }
 
   void _settleState(GatewayTurnRecoveryState state) {
