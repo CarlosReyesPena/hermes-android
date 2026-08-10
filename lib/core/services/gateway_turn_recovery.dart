@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import '../models/gateway_turn_contract.dart';
 
 enum GatewayTurnRecoveryAction { none, reconcile, stopFailClosed }
@@ -23,6 +25,8 @@ class GatewayTurnRecoveryState {
   final String? turnId;
   final GatewayRecoveryTurnStatus? status;
   final int lastSeq;
+  final int eventPayloadBytes;
+  final bool terminalEventRecorded;
   final Map<int, GatewayTurnEvent> eventsBySeq;
   final GatewayTurnSnapshot? snapshot;
   final bool ackUncertain;
@@ -33,17 +37,73 @@ class GatewayTurnRecoveryState {
     : turnId = null,
       status = null,
       lastSeq = 0,
+      eventPayloadBytes = 0,
+      terminalEventRecorded = false,
       eventsBySeq = const {},
       snapshot = null,
       ackUncertain = false,
       reconcilePending = false,
       failure = null;
 
+  /// Restores the metadata-only reducer baseline stored by the durable
+  /// journal. Historical payloads remain absent; the next accepted event must
+  /// begin at exactly `lastSeq + 1`, or recovery fails closed.
+  factory GatewayTurnRecoveryState.rehydrate({
+    required String clientTurnId,
+    required String? turnId,
+    required GatewayRecoveryTurnStatus? status,
+    required int lastSeq,
+    required bool ackUncertain,
+    int eventPayloadBytes = 0,
+    bool terminalEventRecorded = false,
+    GatewayTurnRecoveryFailure? failure,
+  }) {
+    final initial = GatewayTurnRecoveryState.initial(
+      clientTurnId: clientTurnId,
+    );
+    final validTurnId = turnId == null || _validRecoveryReference(turnId);
+    final hasServerState = turnId != null;
+    final structurallyValid =
+        _canonicalRecoveryUuid(clientTurnId) &&
+        validTurnId &&
+        lastSeq >= 0 &&
+        eventPayloadBytes >= 0 &&
+        (!terminalEventRecorded ||
+            status?.isTerminal == true && turnId != null && lastSeq > 0) &&
+        (hasServerState || status == null && lastSeq == 0) &&
+        (status != null || lastSeq == 0) &&
+        (failure == null || !ackUncertain);
+    final activeCombination =
+        failure != null ||
+        ((hasServerState || ackUncertain) &&
+            (status != null || ackUncertain) &&
+            !(status?.isTerminal == true && ackUncertain));
+    final validCombination = structurallyValid && activeCombination;
+    if (!validCombination) {
+      return initial._fail(GatewayTurnRecoveryFailure.protocolViolation);
+    }
+    return GatewayTurnRecoveryState._(
+      clientTurnId: clientTurnId,
+      turnId: turnId,
+      status: status,
+      lastSeq: lastSeq,
+      eventPayloadBytes: eventPayloadBytes,
+      terminalEventRecorded: terminalEventRecorded,
+      eventsBySeq: const {},
+      snapshot: null,
+      ackUncertain: ackUncertain,
+      reconcilePending: failure == null && status?.isTerminal != true,
+      failure: failure,
+    );
+  }
+
   const GatewayTurnRecoveryState._({
     required this.clientTurnId,
     required this.turnId,
     required this.status,
     required this.lastSeq,
+    required this.eventPayloadBytes,
+    required this.terminalEventRecorded,
     required this.eventsBySeq,
     required this.snapshot,
     required this.ackUncertain,
@@ -69,6 +129,9 @@ class GatewayTurnRecoveryState {
     return values;
   }
 
+  static int payloadBytesFor(GatewayTurnEvent event) =>
+      utf8.encode(jsonEncode(event.payload)).length;
+
   GatewayTurnRecoveryState markSubmissionStarted() {
     if (failure != null || isTerminal) return this;
     return _copyWith(ackUncertain: true, reconcilePending: false);
@@ -77,6 +140,12 @@ class GatewayTurnRecoveryState {
   GatewayTurnRecoveryState markDisconnected() {
     if (failure != null || isTerminal) return this;
     return _copyWith(ackUncertain: true, reconcilePending: false);
+  }
+
+  /// Retains only metadata needed for bounded terminal/failure introspection.
+  GatewayTurnRecoveryState releasePayloads() {
+    if (eventsBySeq.isEmpty && snapshot == null) return this;
+    return _copyWith(eventsBySeq: const {}, clearSnapshot: true);
   }
 
   GatewayTurnRecoveryState applyAck(GatewayTurnAck ack) {
@@ -110,7 +179,10 @@ class GatewayTurnRecoveryState {
     );
   }
 
-  GatewayTurnRecoveryState applyEvent(GatewayTurnEvent event) {
+  GatewayTurnRecoveryState applyEvent(
+    GatewayTurnEvent event, {
+    int? payloadBytes,
+  }) {
     if (failure != null) return this;
     if (turnId != null && turnId != event.turnId) {
       return _fail(GatewayTurnRecoveryFailure.turnMismatch);
@@ -136,6 +208,10 @@ class GatewayTurnRecoveryState {
       // Keep the last contiguous cursor and recover the missing range from the
       // durable server. A sequence gap never authorizes another submit.
       return _copyWith(reconcilePending: true);
+    }
+    final acceptedPayloadBytes = payloadBytes ?? payloadBytesFor(event);
+    if (acceptedPayloadBytes < 0) {
+      return _fail(GatewayTurnRecoveryFailure.protocolViolation);
     }
 
     var nextStatus = status;
@@ -165,12 +241,19 @@ class GatewayTurnRecoveryState {
       turnId: turnId ?? event.turnId,
       status: nextStatus,
       lastSeq: event.seq,
+      eventPayloadBytes: eventPayloadBytes + acceptedPayloadBytes,
+      terminalEventRecorded:
+          terminalEventRecorded ||
+          event.type == 'turn.status' && eventStatus?.isTerminal == true,
       eventsBySeq: Map<int, GatewayTurnEvent>.unmodifiable(nextEvents),
       ackUncertain: false,
     );
   }
 
-  GatewayTurnRecoveryState applyReconcilePage(GatewayTurnReconcilePage page) {
+  GatewayTurnRecoveryState applyReconcilePage(
+    GatewayTurnReconcilePage page, {
+    Map<int, int>? payloadBytesBySeq,
+  }) {
     if (failure != null) return this;
     if (turnId != null && turnId != page.turnId) {
       return _fail(GatewayTurnRecoveryFailure.turnMismatch);
@@ -201,7 +284,10 @@ class GatewayTurnRecoveryState {
       reconcilePending: false,
     );
     for (final event in page.events) {
-      next = next.applyEvent(event);
+      next = next.applyEvent(
+        event,
+        payloadBytes: payloadBytesBySeq?[event.seq],
+      );
       if (next.failure != null) return next;
     }
     if (next.lastSeq != page.nextAfterSeq) {
@@ -229,6 +315,7 @@ class GatewayTurnRecoveryState {
   }
 
   GatewayTurnRecoveryState _fail(GatewayTurnRecoveryFailure reason) {
+    if (failure != null) return this;
     return _copyWith(
       failure: reason,
       ackUncertain: false,
@@ -240,8 +327,11 @@ class GatewayTurnRecoveryState {
     String? turnId,
     GatewayRecoveryTurnStatus? status,
     int? lastSeq,
+    int? eventPayloadBytes,
+    bool? terminalEventRecorded,
     Map<int, GatewayTurnEvent>? eventsBySeq,
     GatewayTurnSnapshot? snapshot,
+    bool clearSnapshot = false,
     bool? ackUncertain,
     bool? reconcilePending,
     GatewayTurnRecoveryFailure? failure,
@@ -251,14 +341,29 @@ class GatewayTurnRecoveryState {
       turnId: turnId ?? this.turnId,
       status: status ?? this.status,
       lastSeq: lastSeq ?? this.lastSeq,
+      eventPayloadBytes: eventPayloadBytes ?? this.eventPayloadBytes,
+      terminalEventRecorded:
+          terminalEventRecorded ?? this.terminalEventRecorded,
       eventsBySeq: eventsBySeq ?? this.eventsBySeq,
-      snapshot: snapshot ?? this.snapshot,
+      snapshot: clearSnapshot ? null : snapshot ?? this.snapshot,
       ackUncertain: ackUncertain ?? this.ackUncertain,
       reconcilePending: reconcilePending ?? this.reconcilePending,
       failure: failure ?? this.failure,
     );
   }
 }
+
+bool _canonicalRecoveryUuid(String value) =>
+    RegExp(
+      r'^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$',
+    ).hasMatch(value) &&
+    value != '00000000-0000-0000-0000-000000000000';
+
+bool _validRecoveryReference(String value) =>
+    value.isNotEmpty &&
+    value.length <= 256 &&
+    value.trim() == value &&
+    !value.codeUnits.any((unit) => unit < 32 || unit >= 127 && unit <= 159);
 
 bool _transitionAllowed(
   GatewayRecoveryTurnStatus from,

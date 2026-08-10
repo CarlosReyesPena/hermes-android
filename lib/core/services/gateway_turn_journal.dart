@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../models/gateway_turn_contract.dart';
+import 'gateway_turn_recovery.dart';
 
 abstract interface class GatewayTurnJournalStore {
   Future<String?> read();
@@ -17,8 +18,19 @@ abstract interface class GatewayTurnJournalStore {
   Future<void> deleteLegacy();
 }
 
+/// Optional shared read-modify-write authority for store wrappers that target
+/// the same physical slot. The token carries no journal data or secret.
+abstract interface class GatewayTurnJournalSerializationAuthority {
+  Object get journalSerializationAuthority;
+}
+
 /// Android Keystore-backed production store for the single bounded journal.
-class FlutterSecureGatewayTurnJournalStore implements GatewayTurnJournalStore {
+class FlutterSecureGatewayTurnJournalStore
+    implements
+        GatewayTurnJournalStore,
+        GatewayTurnJournalSerializationAuthority {
+  // Keep the v2 slot name intentionally. A rollback must encounter the v3
+  // schema in the same authority slot, never create a parallel v2 journal.
   static const _key = 'gateway_turn_journal_v2';
   static const _legacyKey = 'gateway_turn_journal_v1';
   static const AndroidOptions _androidOptions = AndroidOptions(
@@ -26,11 +38,15 @@ class FlutterSecureGatewayTurnJournalStore implements GatewayTurnJournalStore {
     migrateWithBackup: true,
     storageNamespace: 'hermes_android_turn_recovery',
   );
+  static final Object _sharedSerializationAuthority = Object();
 
   final FlutterSecureStorage _storage;
 
   FlutterSecureGatewayTurnJournalStore({FlutterSecureStorage? storage})
     : _storage = storage ?? FlutterSecureStorage(aOptions: _androidOptions);
+
+  @override
+  Object get journalSerializationAuthority => _sharedSerializationAuthority;
 
   @override
   Future<String?> read() => _storage.read(key: _key);
@@ -42,7 +58,9 @@ class FlutterSecureGatewayTurnJournalStore implements GatewayTurnJournalStore {
   Future<void> delete() => _storage.delete(key: _key);
 
   @override
-  Future<String?> readLegacy() => _storage.read(key: _legacyKey);
+  Future<String?> readLegacy() => _storage
+      .containsKey(key: _legacyKey)
+      .then((present) => present ? 'incompatible' : null);
 
   @override
   Future<void> deleteLegacy() => _storage.delete(key: _legacyKey);
@@ -118,7 +136,7 @@ class GatewayTurnJournalBinding {
   });
 
   String get bindingIdentity =>
-      jsonEncode(<String>[connectionId, endpointDigest, localSessionId]);
+      _journalScopeIdentity(connectionId, endpointDigest, localSessionId);
 
   Map<String, Object> toJson() => <String, Object>{
     'connection_id': connectionId,
@@ -170,7 +188,10 @@ class GatewayTurnJournalEntry {
     'turn_id',
     'status',
     'last_seq',
+    'event_payload_bytes',
+    'terminal_event_recorded',
     'ack_uncertain',
+    'failure',
     'updated_at_epoch_ms',
   };
 
@@ -179,7 +200,10 @@ class GatewayTurnJournalEntry {
   final String? turnId;
   final GatewayRecoveryTurnStatus? status;
   final int lastSeq;
+  final int eventPayloadBytes;
+  final bool terminalEventRecorded;
   final bool ackUncertain;
+  final GatewayTurnRecoveryFailure? failure;
   final int updatedAtEpochMs;
 
   factory GatewayTurnJournalEntry({
@@ -188,13 +212,20 @@ class GatewayTurnJournalEntry {
     String? turnId,
     GatewayRecoveryTurnStatus? status,
     required int lastSeq,
+    required int eventPayloadBytes,
+    required bool terminalEventRecorded,
     required bool ackUncertain,
+    GatewayTurnRecoveryFailure? failure,
     required int updatedAtEpochMs,
   }) {
     if (!_boundedReference(bindingIdentity) ||
         !_canonicalUuid(clientTurnId) ||
         turnId != null && !_boundedIdentity(turnId) ||
         lastSeq < 0 ||
+        eventPayloadBytes < 0 ||
+        terminalEventRecorded &&
+            (status?.isTerminal != true || turnId == null || lastSeq == 0) ||
+        failure != null && ackUncertain ||
         updatedAtEpochMs <= 0) {
       throw ArgumentError('Invalid recovery journal entry.');
     }
@@ -204,7 +235,10 @@ class GatewayTurnJournalEntry {
       turnId: turnId,
       status: status,
       lastSeq: lastSeq,
+      eventPayloadBytes: eventPayloadBytes,
+      terminalEventRecorded: terminalEventRecorded,
       ackUncertain: ackUncertain,
+      failure: failure,
       updatedAtEpochMs: updatedAtEpochMs,
     );
   }
@@ -215,7 +249,10 @@ class GatewayTurnJournalEntry {
     required this.turnId,
     required this.status,
     required this.lastSeq,
+    required this.eventPayloadBytes,
+    required this.terminalEventRecorded,
     required this.ackUncertain,
+    required this.failure,
     required this.updatedAtEpochMs,
   });
 
@@ -227,7 +264,10 @@ class GatewayTurnJournalEntry {
     String? turnId,
     GatewayRecoveryTurnStatus? status,
     int? lastSeq,
+    int? eventPayloadBytes,
+    bool? terminalEventRecorded,
     bool? ackUncertain,
+    GatewayTurnRecoveryFailure? failure,
     int? updatedAtEpochMs,
   }) {
     return GatewayTurnJournalEntry(
@@ -236,7 +276,11 @@ class GatewayTurnJournalEntry {
       turnId: turnId ?? this.turnId,
       status: status ?? this.status,
       lastSeq: lastSeq ?? this.lastSeq,
+      eventPayloadBytes: eventPayloadBytes ?? this.eventPayloadBytes,
+      terminalEventRecorded:
+          terminalEventRecorded ?? this.terminalEventRecorded,
       ackUncertain: ackUncertain ?? this.ackUncertain,
+      failure: failure ?? this.failure,
       updatedAtEpochMs: updatedAtEpochMs ?? this.updatedAtEpochMs,
     );
   }
@@ -247,7 +291,10 @@ class GatewayTurnJournalEntry {
     if (turnId != null) 'turn_id': turnId,
     if (status != null) 'status': status!.wireValue,
     'last_seq': lastSeq,
+    'event_payload_bytes': eventPayloadBytes,
+    'terminal_event_recorded': terminalEventRecorded,
     'ack_uncertain': ackUncertain,
+    if (failure != null) 'failure': failure!.name,
     'updated_at_epoch_ms': updatedAtEpochMs,
   };
 
@@ -259,11 +306,18 @@ class GatewayTurnJournalEntry {
     final status = statusRaw == null
         ? null
         : GatewayRecoveryTurnStatus.fromWire(statusRaw);
+    final failureRaw = value['failure'];
+    final failure = failureRaw == null
+        ? null
+        : _recoveryFailureFromWire(failureRaw);
     if (statusRaw != null && status == null ||
+        failureRaw != null && failure == null ||
         value['binding_id'] is! String ||
         value['client_turn_id'] is! String ||
         value['turn_id'] != null && value['turn_id'] is! String ||
         value['last_seq'] is! int ||
+        value['event_payload_bytes'] is! int ||
+        value['terminal_event_recorded'] is! bool ||
         value['ack_uncertain'] is! bool ||
         value['updated_at_epoch_ms'] is! int) {
       throw const GatewayTurnJournalException();
@@ -275,7 +329,10 @@ class GatewayTurnJournalEntry {
         turnId: value['turn_id'] as String?,
         status: status,
         lastSeq: value['last_seq'] as int,
+        eventPayloadBytes: value['event_payload_bytes'] as int,
+        terminalEventRecorded: value['terminal_event_recorded'] as bool,
         ackUncertain: value['ack_uncertain'] as bool,
+        failure: failure,
         updatedAtEpochMs: value['updated_at_epoch_ms'] as int,
       );
     } on ArgumentError {
@@ -295,7 +352,7 @@ class GatewayTurnJournalSnapshot {
 }
 
 class GatewayTurnJournal {
-  static const schema = 'hermes.android.turn-journal.v2';
+  static const schema = 'hermes.android.turn-journal.v3';
   static const maxBindings = 64;
   static const maxEntries = 64;
   static const maxEncodedBytes = 64 * 1024;
@@ -303,10 +360,74 @@ class GatewayTurnJournal {
   static const terminalRetention = Duration(hours: 24);
 
   final GatewayTurnJournalStore _store;
-  Future<void> _tail = Future<void>.value();
+  final _GatewayTurnJournalSerializationQueue _serializationQueue;
 
   GatewayTurnJournal({GatewayTurnJournalStore? store})
-    : _store = store ?? FlutterSecureGatewayTurnJournalStore();
+    : this._(store ?? FlutterSecureGatewayTurnJournalStore());
+
+  GatewayTurnJournal._(GatewayTurnJournalStore store)
+    : _store = store,
+      _serializationQueue = _journalSerializationQueueFor(store);
+
+  /// Returns the absorbing, payload-free failure for this authority and local
+  /// binding scope. The weak authority ledger exists only for this process.
+  GatewayTurnRecoveryState? processPoisonedFailure({
+    required String connectionId,
+    required String endpointDigest,
+    required String localSessionId,
+  }) {
+    final scope = _validatedJournalScope(
+      connectionId,
+      endpointDigest,
+      localSessionId,
+    );
+    return _serializationQueue.processPoisonedFailures[scope] ??
+        _serializationQueue.authorityWideProcessPoison;
+  }
+
+  /// Count-only hooks for bounded lifecycle verification. No poison reset is
+  /// exposed by this API.
+  int get processPoisonedScopeCount =>
+      _serializationQueue.processPoisonedFailures.length;
+
+  bool get authorityWideProcessPoisoned =>
+      _serializationQueue.authorityWideProcessPoison != null;
+
+  /// Atomically records the first failure whose durable seal could not be
+  /// verified. There is deliberately no reset API; only process restart drops
+  /// the weak authority ledger.
+  void recordProcessPoison({
+    required String connectionId,
+    required String endpointDigest,
+    required String localSessionId,
+    required GatewayTurnRecoveryState failure,
+  }) {
+    if (!failure.isFailClosed) {
+      throw ArgumentError.value(
+        failure,
+        'failure',
+        'Failure is not fail-closed.',
+      );
+    }
+    final scope = _validatedJournalScope(
+      connectionId,
+      endpointDigest,
+      localSessionId,
+    );
+    final queue = _serializationQueue;
+    if (queue.authorityWideProcessPoison != null ||
+        queue.processPoisonedFailures.containsKey(scope)) {
+      return;
+    }
+    final released = failure.releasePayloads();
+    if (queue.processPoisonedFailures.length >= maxBindings) {
+      // Never evict an absorbing scope poison. Escalation bounds memory while
+      // stopping every scope that shares this physical journal authority.
+      queue.authorityWideProcessPoison = released;
+      return;
+    }
+    queue.processPoisonedFailures[scope] = released;
+  }
 
   Future<GatewayTurnJournalSnapshot> loadSnapshot() {
     return _serialized(() async => _freeze(await _readData()));
@@ -424,15 +545,14 @@ class GatewayTurnJournal {
   }
 
   Future<T> _serialized<T>(Future<T> Function() action) {
-    final run = _tail.then((_) => action());
-    _tail = run.then<void>((_) {}, onError: (_, _) {});
+    final run = _serializationQueue.tail.then((_) => action());
+    _serializationQueue.tail = run.then<void>((_) {}, onError: (_, _) {});
     return run;
   }
 
   Future<_JournalData> _readData() async {
     try {
-      await _rejectLegacyState();
-      final encoded = await _store.read();
+      final encoded = await _readCurrentAfterLegacyPurge();
       if (encoded == null) return _JournalData.empty();
       if (utf8.encode(encoded).length > maxEncodedBytes) {
         throw const GatewayTurnJournalException();
@@ -495,6 +615,7 @@ class GatewayTurnJournal {
       if (ageMs < 0) return false;
       return entry.isTerminal &&
           !entry.ackUncertain &&
+          entry.failure == null &&
           ageMs > terminalRetention.inMilliseconds;
     });
     data.entries.sort(
@@ -504,6 +625,7 @@ class GatewayTurnJournal {
       final removable =
           data.entries
               .where((entry) => entry.isTerminal && !entry.ackUncertain)
+              .where((entry) => entry.failure == null)
               .toList()
             ..sort(
               (left, right) =>
@@ -604,19 +726,33 @@ class GatewayTurnJournal {
     );
   }
 
-  Future<void> _rejectLegacyState() async {
+  Future<String?> _readCurrentAfterLegacyPurge() async {
     try {
-      final legacy = await _store.readLegacy();
-      if (legacy == null) return;
-      await _store.deleteLegacy();
-      if (await _store.readLegacy() != null) {
+      final hasV1 = await _store.readLegacy() != null;
+      final encoded = await _store.read();
+      if (encoded != null && utf8.encode(encoded).length > maxEncodedBytes) {
         throw const GatewayTurnJournalException();
+      }
+      final hasIncompatibleCurrent = _hasLegacySchema(encoded);
+      if (!hasV1 && !hasIncompatibleCurrent) return encoded;
+
+      if (hasV1) {
+        await _store.deleteLegacy();
+        if (await _store.readLegacy() != null) {
+          throw const GatewayTurnJournalException();
+        }
+      }
+      if (hasIncompatibleCurrent) {
+        await _store.delete();
+        if (await _store.read() != null) {
+          throw const GatewayTurnJournalException();
+        }
       }
     } catch (_) {
       throw const GatewayTurnJournalException();
     }
-    // The first encounter always stops. No v1 field, especially a runtime
-    // session ID, is ever read or migrated into the v2 authority record.
+    // The first encounter always stops. No v2/v1 field, especially a runtime
+    // session ID, is ever parsed or migrated into the v3 authority record.
     throw const GatewayTurnJournalException();
   }
 }
@@ -630,6 +766,50 @@ class _JournalData {
   factory _JournalData.empty() => _JournalData(bindings: [], entries: []);
 }
 
+class _GatewayTurnJournalSerializationQueue {
+  Future<void> tail = Future<void>.value();
+  final Map<String, GatewayTurnRecoveryState> processPoisonedFailures = {};
+  GatewayTurnRecoveryState? authorityWideProcessPoison;
+}
+
+final Expando<_GatewayTurnJournalSerializationQueue>
+_journalSerializationQueues = Expando<_GatewayTurnJournalSerializationQueue>(
+  'gateway-turn-journal-serialization',
+);
+
+_GatewayTurnJournalSerializationQueue _journalSerializationQueueFor(
+  GatewayTurnJournalStore store,
+) {
+  final authority = store is GatewayTurnJournalSerializationAuthority
+      ? (store as GatewayTurnJournalSerializationAuthority)
+            .journalSerializationAuthority
+      : store;
+  final existing = _journalSerializationQueues[authority];
+  if (existing != null) return existing;
+  final created = _GatewayTurnJournalSerializationQueue();
+  _journalSerializationQueues[authority] = created;
+  return created;
+}
+
+String _validatedJournalScope(
+  String connectionId,
+  String endpointDigest,
+  String localSessionId,
+) {
+  if (!_boundedIdentity(connectionId) ||
+      !_lowerHexDigest(endpointDigest) ||
+      !_boundedIdentity(localSessionId)) {
+    throw ArgumentError('Invalid recovery journal scope.');
+  }
+  return _journalScopeIdentity(connectionId, endpointDigest, localSessionId);
+}
+
+String _journalScopeIdentity(
+  String connectionId,
+  String endpointDigest,
+  String localSessionId,
+) => jsonEncode(<String>[connectionId, endpointDigest, localSessionId]);
+
 void _validateEntryUpdate(
   GatewayTurnJournalEntry previous,
   GatewayTurnJournalEntry next,
@@ -637,7 +817,22 @@ void _validateEntryUpdate(
   final previousTurnId = previous.turnId;
   if (previousTurnId != null && next.turnId != previousTurnId ||
       next.lastSeq < previous.lastSeq ||
+      next.eventPayloadBytes < previous.eventPayloadBytes ||
+      previous.terminalEventRecorded && !next.terminalEventRecorded ||
       next.updatedAtEpochMs < previous.updatedAtEpochMs) {
+    throw const GatewayTurnJournalException();
+  }
+
+  final previousFailure = previous.failure;
+  final nextFailure = next.failure;
+  if (previousFailure != null &&
+      (next.turnId != previous.turnId ||
+          next.status != previous.status ||
+          next.lastSeq != previous.lastSeq ||
+          next.eventPayloadBytes != previous.eventPayloadBytes ||
+          next.terminalEventRecorded != previous.terminalEventRecorded ||
+          next.ackUncertain != previous.ackUncertain ||
+          nextFailure != previousFailure)) {
     throw const GatewayTurnJournalException();
   }
 
@@ -652,7 +847,10 @@ void _validateEntryUpdate(
       (next.turnId != previous.turnId ||
           next.status != previous.status ||
           next.lastSeq != previous.lastSeq ||
-          next.ackUncertain != previous.ackUncertain)) {
+          next.eventPayloadBytes != previous.eventPayloadBytes ||
+          next.terminalEventRecorded != previous.terminalEventRecorded ||
+          next.ackUncertain != previous.ackUncertain ||
+          previousFailure != null && nextFailure != previousFailure)) {
     throw const GatewayTurnJournalException();
   }
 }
@@ -698,4 +896,25 @@ bool _canonicalUuid(String value) {
       RegExp(
         r'^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$',
       ).hasMatch(value);
+}
+
+GatewayTurnRecoveryFailure? _recoveryFailureFromWire(Object? value) {
+  if (value is! String) return null;
+  for (final failure in GatewayTurnRecoveryFailure.values) {
+    if (failure.name == value) return failure;
+  }
+  return null;
+}
+
+bool _hasLegacySchema(String? encoded) {
+  if (encoded == null) return false;
+  try {
+    final decoded = jsonDecode(encoded);
+    if (decoded is! Map) return false;
+    final schema = decoded['schema'];
+    return schema == 'hermes.android.turn-journal.v2' ||
+        schema == 'hermes.android.turn-journal.v1';
+  } catch (_) {
+    return false;
+  }
 }
