@@ -28,6 +28,7 @@ enum GatewayTurnCapabilityFailure {
   missingProtocol,
   unsupportedProtocol,
   missingCapability,
+  unsupportedCapabilityVersion,
   unsupportedCapability,
   unsafeShadowCapability,
   automaticResubmitNotDisabled,
@@ -244,9 +245,30 @@ class GatewayTurnRecoveryCapability {
   static GatewayTurnRecoveryCapability _fromRecoveryPayload(
     Map<String, dynamic> recovery,
   ) {
-    if (_exactInt(recovery['version']) != capabilityVersion ||
-        _exactInt(recovery['prompt_submit_version']) != promptSubmitVersion ||
-        recovery['execution_route'] != executionRoute ||
+    final advertisedVersion = _positiveInt(recovery['version']);
+    final advertisedPromptVersion = _positiveInt(
+      recovery['prompt_submit_version'],
+    );
+    if (advertisedVersion == null || advertisedPromptVersion == null) {
+      return const GatewayTurnRecoveryCapability.unsupported(
+        GatewayTurnCapabilityFailure.unsupportedCapability,
+      );
+    }
+    if (advertisedVersion != capabilityVersion ||
+        advertisedPromptVersion != promptSubmitVersion) {
+      final normalized = <String, dynamic>{
+        ...recovery,
+        'version': capabilityVersion,
+        'prompt_submit_version': promptSubmitVersion,
+      };
+      final shape = _fromRecoveryPayload(normalized);
+      return shape.supported
+          ? const GatewayTurnRecoveryCapability.unsupported(
+              GatewayTurnCapabilityFailure.unsupportedCapabilityVersion,
+            )
+          : shape;
+    }
+    if (recovery['execution_route'] != executionRoute ||
         recovery['mobile_session_id_format'] != 'canonical_lowercase_uuid' ||
         recovery['client_turn_id_format'] != 'canonical_lowercase_uuid') {
       return const GatewayTurnRecoveryCapability.unsupported(

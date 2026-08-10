@@ -2314,6 +2314,94 @@ void main() {
     });
 
     test(
+      'generic malformed recovery shapes never grant legacy fallback',
+      () async {
+        final frames = <Map<String, dynamic>>[];
+        for (var index = 0; index < 4; index += 1) {
+          final frame = _readyFrame();
+          final payload =
+              (frame['params'] as Map<String, dynamic>)['payload']
+                  as Map<String, dynamic>;
+          final capabilities = payload['capabilities'] as Map<String, dynamic>;
+          final recovery =
+              capabilities['turn_recovery'] as Map<String, dynamic>;
+          switch (index) {
+            case 0:
+              capabilities['turn_recovery'] = <String, dynamic>{};
+            case 1:
+              recovery['version'] = '2';
+            case 2:
+              recovery['methods'] = 'session.open';
+            case 3:
+              (recovery['methods'] as List).remove('turn.interrupt');
+          }
+          frames.add(frame);
+        }
+
+        for (final frame in frames) {
+          final fixture = await _GatewayFixture.start(readyFrame: frame);
+          final store = _MemoryJournalStore();
+          final coordinator = _coordinator(
+            fixture: fixture,
+            journal: GatewayTurnJournal(store: store),
+          );
+          try {
+            await expectLater(
+              coordinator.recoverPending(),
+              throwsA(
+                isA<GatewayTurnCoordinatorException>().having(
+                  (error) => error.failure,
+                  'failure',
+                  GatewayTurnCoordinatorFailure.invalidResponse,
+                ),
+              ),
+            );
+            expect(fixture.requests, isEmpty);
+            expect(store.value, isNull);
+          } finally {
+            await coordinator.close();
+            await fixture.close();
+          }
+        }
+      },
+    );
+
+    test(
+      'fully valid numeric recovery version mismatch permits fallback',
+      () async {
+        final recovery = _recoveryCapability()..['version'] = 3;
+        final fixture = await _GatewayFixture.start(
+          readyFrame: _readyFrame(recovery: recovery),
+          handler: (request, _) => throw StateError(
+            'Version fallback must not call ${request['method']}',
+          ),
+        );
+        final store = _MemoryJournalStore();
+        final coordinator = _coordinator(
+          fixture: fixture,
+          journal: GatewayTurnJournal(store: store),
+        );
+        try {
+          await expectLater(
+            coordinator.recoverPending(),
+            throwsA(
+              isA<GatewayTurnCoordinatorException>().having(
+                (error) => error.failure,
+                'failure',
+                GatewayTurnCoordinatorFailure.unsupportedCapability,
+              ),
+            ),
+          );
+          expect(fixture.requests, isEmpty);
+          expect(store.value, isNull);
+        } finally {
+          await coordinator.close();
+          await fixture.close();
+        }
+      },
+    );
+
+    test(
       'failed definitive-error seal poisons all reopen and recovery paths',
       () async {
         final promptSeen = Completer<void>();

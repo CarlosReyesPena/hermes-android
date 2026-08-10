@@ -138,7 +138,7 @@ void main() {
         GatewayTurnRecoveryCapability.fromGatewayReadyFrame(
           _readyFrame(version: 1),
         ).failure,
-        GatewayTurnCapabilityFailure.unsupportedCapability,
+        GatewayTurnCapabilityFailure.unsupportedCapabilityVersion,
       );
       expect(
         GatewayTurnRecoveryCapability.fromGatewayReadyFrame(
@@ -161,6 +161,34 @@ void main() {
       expect(
         GatewayTurnRecoveryCapability.fromGatewayReadyFrame(drift).supported,
         isFalse,
+      );
+
+      final malformedVersion = _readyFrame();
+      final malformedRecovery =
+          ((((malformedVersion['params'] as Map)['payload']
+                      as Map)['capabilities']
+                  as Map)['turn_recovery']
+              as Map<String, dynamic>);
+      malformedRecovery['version'] = '2';
+      expect(
+        GatewayTurnRecoveryCapability.fromGatewayReadyFrame(
+          malformedVersion,
+        ).failure,
+        GatewayTurnCapabilityFailure.unsupportedCapability,
+      );
+
+      final invalidShapeAtNewVersion = _readyFrame(version: 3);
+      final invalidShapeRecovery =
+          ((((invalidShapeAtNewVersion['params'] as Map)['payload']
+                      as Map)['capabilities']
+                  as Map)['turn_recovery']
+              as Map<String, dynamic>);
+      (invalidShapeRecovery['methods'] as List).remove('turn.interrupt');
+      expect(
+        GatewayTurnRecoveryCapability.fromGatewayReadyFrame(
+          invalidShapeAtNewVersion,
+        ).failure,
+        GatewayTurnCapabilityFailure.unsupportedCapability,
       );
     });
   });

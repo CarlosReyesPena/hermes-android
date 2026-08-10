@@ -1712,7 +1712,7 @@ bool _readyFailureAllowsLegacy(
       final capabilities = payload['capabilities'];
       return capabilities is Map<String, dynamic> &&
           !capabilities.containsKey('turn_recovery');
-    case GatewayTurnCapabilityFailure.unsupportedCapability:
+    case GatewayTurnCapabilityFailure.unsupportedCapabilityVersion:
       final capabilities = payload['capabilities'];
       return protocol is Map<String, dynamic> &&
           capabilities is Map<String, dynamic> &&
@@ -1723,6 +1723,7 @@ bool _readyFailureAllowsLegacy(
     case GatewayTurnCapabilityFailure.automaticResubmitNotDisabled:
     case GatewayTurnCapabilityFailure.invalidRetention:
     case GatewayTurnCapabilityFailure.invalidLimits:
+    case GatewayTurnCapabilityFailure.unsupportedCapability:
       return false;
   }
 }
