@@ -1,14 +1,44 @@
-# Hermes Android
+# Hermes Android — Remote Gateway Community Edition
 
 Android client for [Hermes Agent](https://hermes-agent.nousresearch.com/) — chat with your Hermes sessions from a phone or tablet over local Wi-Fi or a private Tailscale network.
 
+This repository is a community extension of
+[rusty4444/hermes-android](https://github.com/rusty4444/hermes-android),
+focused on feature parity with Hermes Desktop when it is used as a Remote
+Gateway. It preserves the upstream history and attribution and is not an
+official Hermes Agent or Nous Research release.
+
 ## Current release
 
-- Version: **1.0.8**
-- Package: `com.hermesagent.hermes_android`
-- Recommended APK for most modern phones: `app-arm64-v8a-release.apk`
-- Other APKs: `app-armeabi-v7a-release.apk`, `app-x86_64-release.apk`
-- Download: [GitHub Releases](https://github.com/rusty4444/hermes-android/releases/latest)
+- Version: **1.0.13-hermesapk.13**
+- Test package: `com.hermesagent.hermes_android.dev`
+- Recommended APK for modern phones: ARM64 debug test build from this
+  repository's Releases page.
+- The community APK uses the Android Debug certificate and is intended for
+  controlled testing. A production Release build requires a private release
+  keystore and must never be signed with the debug key.
+- Upstream releases remain available from
+  [rusty4444/hermes-android](https://github.com/rusty4444/hermes-android/releases).
+
+## Remote Gateway edition highlights
+
+- One Desktop Gateway JSON-RPC session for text, images, and files.
+- Copy/select text, Read aloud, Stop, Edit and resend, Regenerate, and export.
+- Up to 10 Remote Gateway attachments per draft, capped at 64 MiB total;
+  generic files retain the 16 MiB per-file limit.
+- File-backed app cache, metadata-sanitized JPEG/PNG/WebP images, ordered
+  sequential upload, accessible reordering, remove, and individual retry.
+  Sanitized JPEG inputs remain JPEG; PNG and WebP inputs are emitted as PNG.
+- Legacy REST remains fail-closed to one image and does not expose multi-select.
+- Per-chat model and thinking effort without changing the profile default.
+- Search, Rename, Branch, and Delete for remote conversations.
+- Native approval, sudo/secret, clarification, reasoning, tool activity,
+  notifications, background results, reviews, and subagent status.
+- Persistent reconnect/session resume and defensive retry handling.
+
+See [CHANGELOG.md](CHANGELOG.md) for the complete `.13` change list and
+[docs/HERMESAPK_DEVELOPMENT_LOG.md](docs/HERMESAPK_DEVELOPMENT_LOG.md) for the
+sanitized implementation and validation record.
 
 ## What's new in v1.0.8
 
@@ -77,12 +107,14 @@ Hermes Agent docs: <https://hermes-agent.nousresearch.com/docs>
 
 ### Install the APK
 
-Download the latest APK from the [GitHub Releases](https://github.com/rusty4444/hermes-android/releases/latest) page.
+Download the community test APK from this repository's
+[GitHub Releases](../../releases) page. For the upstream application, use the
+[official upstream Releases](https://github.com/rusty4444/hermes-android/releases/latest).
 
 For most Android phones, install the arm64 APK:
 
 ```bash
-adb install app-arm64-v8a-release.apk
+adb install Hermes-Agent-Dev-1.0.13-hermesapk.13-arm64-debug.apk
 ```
 
 If sideloading directly on Android, enable **Install unknown apps** for your browser or file manager, then open the downloaded APK.
@@ -363,6 +395,13 @@ mkdir -p release-apks
 cp build/app/outputs/flutter-apk/app-*-release.apk release-apks/
 ```
 
+`pubspec.yaml` declares the base Android `versionCode`. Flutter's
+`--split-per-abi` packaging adds an ABI offset to each split; for arm64-v8a the
+effective APK manifest value is `base + 2000`. For Build N1, base `2127`
+therefore produces effective arm64 code `4127`. CI reads the completed APK with
+`aapt` and fails if that relationship drifts. Release-floor checks continue to
+apply to the base value and must not be weakened to rely on an ABI offset.
+
 Output files:
 
 ```text
@@ -446,8 +485,9 @@ lib/
 ├── main.dart                          # App shell, saved connections, navigation drawer
 ├── core/
 │   ├── models/
-│   │   ├── connection.dart            # SavedConnection model and host normalization
-│   │   └── session.dart               # Session model
+│   │   ├── attachment_draft.dart       # File-backed image/file composer model
+│   │   ├── connection.dart             # SavedConnection model and host normalization
+│   │   └── session.dart                # Session model
 │   ├── screens/
 │   │   ├── session_list_screen.dart   # Session browser
 │   │   ├── chat_screen.dart           # Chat with SSE streaming
@@ -456,6 +496,7 @@ lib/
 │   │   ├── skills_screen.dart         # Skills browser
 │   │   └── cron_screen.dart           # Cron job manager
 │   ├── services/
+│   │   ├── attachment_draft_service.dart # Cache, sanitization, limits, upload order
 │   │   ├── connection_manager.dart    # Saved connections, Gateway API, Dashboard API
 │   │   └── ws_client.dart             # JSON-RPC WebSocket client for future dashboard/TUI use
 │   └── utils/

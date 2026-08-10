@@ -22,6 +22,10 @@ class SavedConnection {
   final String? dashboardPrefix;
   final bool dashboardProxied;
 
+  /// Optional Hermes Desktop remote-gateway origin. This is intentionally
+  /// separate from the mobile OpenAI-compatible API and admin dashboard.
+  final String? desktopGatewayUrl;
+
   /// Explicit dashboard port. When null, [dashboardPort] falls back to the
   /// default topology (see below). Set this when the dashboard is exposed on a
   /// non-default port.
@@ -45,6 +49,7 @@ class SavedConnection {
     this.gatewayPrefix,
     this.dashboardPrefix,
     this.dashboardProxied = false,
+    this.desktopGatewayUrl,
     this.dashboardPortOverride,
     this.dashboardUsername,
     this.dashboardPassword,
@@ -122,13 +127,16 @@ class SavedConnection {
     );
   }
 
+  /// Serializes non-secret connection metadata for SharedPreferences.
+  ///
+  /// [apiKey] and [dashboardPassword] intentionally never cross this boundary;
+  /// [ConnectionManager] persists them in the platform secure store instead.
   Map<String, dynamic> toMap() {
     final m = <String, dynamic>{
       'id': id,
       'label': label,
       'host': host,
       'port': port,
-      'api_key': apiKey,
       'use_https': useHttps,
       'dashboard_port': dashboardPortOverride,
     };
@@ -141,11 +149,11 @@ class SavedConnection {
     if (dashboardProxied) {
       m['dashboard_proxied'] = dashboardProxied;
     }
+    if (desktopGatewayUrl != null && desktopGatewayUrl!.isNotEmpty) {
+      m['desktop_gateway_url'] = desktopGatewayUrl;
+    }
     if (dashboardUsername != null && dashboardUsername!.isNotEmpty) {
       m['dashboard_username'] = dashboardUsername;
-    }
-    if (dashboardPassword != null && dashboardPassword!.isNotEmpty) {
-      m['dashboard_password'] = dashboardPassword;
     }
     return m;
   }
@@ -161,11 +169,14 @@ class SavedConnection {
       label: map['label'] as String,
       host: map['host'] as String,
       port: (map['port'] as int?) ?? 8642,
+      // Legacy plaintext fields are accepted only so ConnectionManager can
+      // migrate existing installs before rewriting sanitized metadata.
       apiKey: (map['api_key'] as String?) ?? '',
       useHttps: (map['use_https'] as bool?) ?? false,
       gatewayPrefix: map['gateway_prefix'] as String?,
       dashboardPrefix: map['dashboard_prefix'] as String?,
       dashboardProxied: (map['dashboard_proxied'] as bool?) ?? false,
+      desktopGatewayUrl: nonEmpty(map['desktop_gateway_url']),
       dashboardPortOverride: map['dashboard_port'] as int?,
       dashboardUsername: nonEmpty(map['dashboard_username']),
       dashboardPassword: nonEmpty(map['dashboard_password']),
@@ -184,6 +195,7 @@ class SavedConnection {
     String? gatewayPrefix,
     String? dashboardPrefix,
     bool? dashboardProxied,
+    String? desktopGatewayUrl,
     int? dashboardPortOverride,
     String? dashboardUsername,
     String? dashboardPassword,
@@ -192,6 +204,7 @@ class SavedConnection {
     bool clearDashboardPort = false,
     bool clearDashboardUsername = false,
     bool clearDashboardPassword = false,
+    bool clearDesktopGatewayUrl = false,
   }) {
     return SavedConnection(
       id: id,
@@ -207,6 +220,9 @@ class SavedConnection {
           ? null
           : (dashboardPrefix ?? this.dashboardPrefix),
       dashboardProxied: dashboardProxied ?? this.dashboardProxied,
+      desktopGatewayUrl: clearDesktopGatewayUrl
+          ? null
+          : (desktopGatewayUrl ?? this.desktopGatewayUrl),
       dashboardPortOverride: clearDashboardPort
           ? null
           : (dashboardPortOverride ?? this.dashboardPortOverride),

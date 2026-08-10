@@ -4,6 +4,84 @@ All notable changes to this project are documented here. This project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html). Release notes for
 versions prior to 1.0.7 are in the **What's new** sections of the [README](README.md).
 
+## [1.0.14-hermesapk.14] - 2026-07-30
+
+### Added
+
+- Remote Gateway attachments now identify the mobile source channel and active
+  ATLAS profile so the server can register them in the canonical document inbox.
+- The attachment response carries the document-intake status without exposing
+  credentials or raw user/session identifiers.
+
+### Changed
+
+- Chat upload remains available if document catalog registration is temporarily
+  unavailable and shows a non-blocking pending notice to the operator.
+
+### Validation
+
+- Static analysis passes with `--fatal-infos`.
+- 113 Flutter tests pass.
+- The synthetic Desktop Gateway contract suite passes with the extended
+  `atlas_intake` response.
+- An ARM64 debug APK builds successfully. It remains a private test artifact
+  signed with the Android debug certificate.
+
+## [1.0.13-hermesapk.13] - 2026-07-30
+
+Community Remote Gateway edition based on Hermes Android 1.0.13.
+
+### Added
+
+- A unified Desktop Gateway JSON-RPC chat transport with session resume/create,
+  reconnect handling, streaming, interruption, and persistent chat mapping.
+- Per-chat model and thinking-effort selection. Supported effort values follow
+  the Hermes Desktop contract: `none`, `minimal`, `low`, `medium`, `high`,
+  `xhigh`, `max`, and `ultra`.
+- Up to 10 mixed attachments per message, 16 MiB each, uploaded through
+  `file.attach`, with per-file progress, remove, failure, and retry states.
+- Selectable Markdown, Copy, Read aloud, Edit and resend, Regenerate, Stop,
+  conversation export, session search, Rename, Branch, and Delete.
+- Native handling for approval, sudo, secret, clarification, notification,
+  reasoning, interim message, tool activity, background result, review summary,
+  and subagent events from Hermes Desktop Gateway.
+- A local synthetic Desktop Gateway fixture and contract test suite under
+  `tools/fake_gateway`.
+- A separate debug application ID (`com.hermesagent.hermes_android.dev`) so the
+  community test build can coexist with the upstream application.
+
+### Changed
+
+- Text, images, and files in Desktop Gateway profiles now share one session and
+  one JSON-RPC transport instead of splitting new messages across REST and
+  WebSocket paths.
+- Model and thinking overrides are scoped to one conversation; the profile
+  default remains controlled from Settings.
+- Release signing no longer falls back to the Android debug key. A real release
+  requires an explicitly configured private keystore.
+
+### Fixed
+
+- Branch actions no longer open a dialog while the popup route is being torn
+  down, preventing the Flutter `_dependents.isEmpty` assertion.
+- If Hermes creates a branch but returns a late JSON-RPC error, the app refreshes
+  history and reconciles the successful result instead of showing a false
+  failure.
+- Dashboard dialogs no longer refresh their parent while an IME-dependent route
+  is closing.
+- Microphone permission is requested only after an explicit microphone action.
+- Session identity, official terminal events, retry state, delayed events, and
+  duplicate tool progress are handled defensively.
+
+### Validation
+
+- 110 Flutter tests pass.
+- The synthetic gateway contract suite covers Dashboard authentication,
+  session lifecycle, model/reasoning configuration, attachments, streaming,
+  interruption, interactive requests, activity, notifications, and subagents.
+- The ARM64 debug build was validated on a physical Android phone connected to a
+  private Remote Gateway network.
+
 ## [1.0.13]
 
 ### Changed

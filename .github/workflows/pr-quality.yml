@@ -1,6 +1,7 @@
 name: PR Quality Checks
 
 on:
+  workflow_dispatch:
   pull_request:
     branches: [main]
   push:
@@ -37,12 +38,50 @@ jobs:
         run: flutter pub get
         id: pub_get
 
+      - name: Verify release identity and upgrade versionCode
+        env:
+          MINIMUM_INSTALLED_VERSION_CODE: '2127'
+          REQUIRED_BASE_VERSION_CODE: '2130'
+        run: |
+          python3 - <<'PY'
+          import os
+          import pathlib
+          import re
+
+          match = re.search(
+              r"^version:\s*([^\s+]+)\+(\d+)\s*$",
+              pathlib.Path("pubspec.yaml").read_text(),
+              re.M,
+          )
+          if not match:
+              raise SystemExit("pubspec.yaml must declare versionName+versionCode")
+
+          version_name, version_code_text = match.groups()
+          version_code = int(version_code_text)
+          minimum = int(os.environ["MINIMUM_INSTALLED_VERSION_CODE"])
+          required_base = int(os.environ["REQUIRED_BASE_VERSION_CODE"])
+          if version_code <= minimum:
+              raise SystemExit(
+                  f"versionCode {version_code} must be greater than {minimum}"
+              )
+          if version_code != required_base:
+              raise SystemExit(
+                  f"versionCode {version_code} does not match required base "
+                  f"{required_base}"
+              )
+
+          print(
+              f"Verified {version_name}+{version_code}; upgrade floor is {minimum}; "
+              f"required base is {required_base}"
+          )
+          PY
+
       # ── Step 1: Static analysis ──────────────────────────
       - name: Static analysis
         id: analyze
         continue-on-error: true
         run: |
-          flutter analyze --fatal-infos 2>&1 | tee analyze_output.txt
+          flutter analyze --no-pub --fatal-infos 2>&1 | tee analyze_output.txt
           exit ${PIPESTATUS[0]}
 
       # ── Step 2: Run tests ────────────────────────────────
@@ -50,7 +89,7 @@ jobs:
         id: test
         continue-on-error: true
         run: |
-          flutter test --reporter=expanded 2>&1 | tee test_output.txt
+          flutter test --no-pub --reporter=expanded 2>&1 | tee test_output.txt
           exit ${PIPESTATUS[0]}
 
       # ── Step 3: Summary & failure report ─────────────────

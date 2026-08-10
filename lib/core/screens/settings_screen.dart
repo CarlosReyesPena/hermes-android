@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/connection_manager.dart';
+import '../widgets/text_size_settings_card.dart';
 import '../../main.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
@@ -125,7 +126,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     try {
       await _client.setModel('main', _selectedProvider, _selectedModel);
       setState(() {
-        _successMsg = 'Model set to $_selectedModel — applies to new sessions';
+        _successMsg =
+            'Profile default set to $_selectedModel. Chats with their own model keep that override.';
       });
     } catch (e) {
       setState(() {
@@ -187,7 +189,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
       padding: const EdgeInsets.all(16),
       children: [
         // ---- Section: Model ----
-        _buildSectionHeader('Model Selection'),
+        _buildSectionHeader('Profile default model'),
+        Text(
+          'Changes the default for ${widget.connection.label}. Use the selector in a chat to override only that conversation.',
+          style: Theme.of(context).textTheme.bodySmall,
+        ),
+        const SizedBox(height: 8),
         if (_modelInfo != null)
           Card(
             child: Padding(
@@ -203,7 +210,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ),
                       const SizedBox(width: 8),
                       Text(
-                        'Current Model',
+                        'Current profile default',
                         style: Theme.of(context).textTheme.titleSmall,
                       ),
                     ],
@@ -279,7 +286,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             child: FilledButton.icon(
               onPressed: _applyModel,
               icon: const Icon(Icons.check),
-              label: const Text('Apply Model'),
+              label: const Text('Set profile default'),
             ),
           ),
         ],
@@ -311,6 +318,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
         // ---- Section: Theme ----
         _buildSectionHeader('Appearance'),
         _ThemeToggle(),
+        const SizedBox(height: 8),
+        TextSizeSettingsCard(
+          preferences: context
+              .findAncestorStateOfType<HermesAppState>()!
+              .widget
+              .connManager
+              .prefs,
+          onChanged: (preference) => context
+              .findAncestorStateOfType<HermesAppState>()!
+              .setTextSizePreference(preference),
+        ),
         const SizedBox(height: 8),
         _VerboseToggle(),
         const SizedBox(height: 16),
@@ -606,9 +624,7 @@ class _VoicePickerState extends State<_VoicePicker> {
       } catch (_) {}
     }
 
-    _voices.sort(
-      (a, b) => (a['locale'] ?? '').compareTo(b['locale'] ?? ''),
-    );
+    _voices.sort((a, b) => (a['locale'] ?? '').compareTo(b['locale'] ?? ''));
 
     if (!mounted) return;
     setState(() => _loading = false);
@@ -636,8 +652,8 @@ class _VoicePickerState extends State<_VoicePicker> {
     final gender = name.contains('male')
         ? '(male)'
         : name.contains('female')
-            ? '(female)'
-            : '';
+        ? '(female)'
+        : '';
     return '$locale $gender  [$name]';
   }
 
@@ -666,10 +682,7 @@ class _VoicePickerState extends State<_VoicePicker> {
     }
 
     final items = <DropdownMenuItem<Map<String, String>?>>[
-      const DropdownMenuItem(
-        value: null,
-        child: Text('Auto (device default)'),
-      ),
+      const DropdownMenuItem(value: null, child: Text('Auto (device default)')),
       ..._voices.map(
         (v) => DropdownMenuItem(
           value: v,
@@ -731,8 +744,7 @@ class _SessionSourcesFilterState extends State<_SessionSourcesFilter> {
 
   Set<String> _excluded = {};
 
-  String get _prefsKey =>
-      'excluded_session_sources_${widget.connectionId}';
+  String get _prefsKey => 'excluded_session_sources_${widget.connectionId}';
 
   @override
   void initState() {
@@ -743,8 +755,7 @@ class _SessionSourcesFilterState extends State<_SessionSourcesFilter> {
   Future<void> _load() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
-      _excluded =
-          prefs.getStringList(_prefsKey)?.toSet() ?? {};
+      _excluded = prefs.getStringList(_prefsKey)?.toSet() ?? {};
     });
   }
 
@@ -770,8 +781,10 @@ class _SessionSourcesFilterState extends State<_SessionSourcesFilter> {
           final isVisible = !_excluded.contains(source);
           return CheckboxListTile(
             title: Text(label),
-            subtitle: Text(source,
-                style: const TextStyle(fontSize: 12, color: Colors.grey)),
+            subtitle: Text(
+              source,
+              style: const TextStyle(fontSize: 12, color: Colors.grey),
+            ),
             value: isVisible,
             onChanged: (val) => _toggle(source, val ?? true),
             dense: true,
