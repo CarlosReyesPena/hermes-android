@@ -97,6 +97,44 @@ void main() {
   );
 
   testWidgets(
+    'Stop final transcript stays editable and never submits automatically',
+    (tester) async {
+      final voice = FakeVoiceComposerAdapter(
+        finalTranscriptOnStop: 'final dictated words',
+      );
+      var submitCount = 0;
+      await _pumpChat(
+        tester,
+        voice: voice,
+        remoteSubmit:
+            ({required sessionId, required text, required onEvent}) async {
+              submitCount += 1;
+            },
+      );
+      final field = tester.widget<TextField>(find.byType(TextField));
+
+      await tester.enterText(find.byType(TextField), 'Draft');
+      await tester.tap(find.bySemanticsLabel('Start voice input'));
+      await tester.pump();
+      expect(find.byKey(VoiceComposerIndicator.indicatorKey), findsOneWidget);
+
+      voice.emitPartial('interim words');
+      await tester.pump();
+      expect(field.controller!.text, 'Draft interim words');
+      expect(find.byKey(VoiceComposerIndicator.indicatorKey), findsOneWidget);
+      expect(submitCount, 0);
+
+      await tester.tap(find.byKey(VoiceComposerIndicator.stopKey));
+      await tester.pumpAndSettle();
+
+      expect(field.controller!.text, 'Draft final dictated words');
+      expect(find.byKey(VoiceComposerIndicator.indicatorKey), findsNothing);
+      expect(voice.stopCount, 1);
+      expect(submitCount, 0);
+    },
+  );
+
+  testWidgets(
     'Stop keeps dictation and Cancel restores exactly with zero submit',
     (tester) async {
       final voice = FakeVoiceComposerAdapter();

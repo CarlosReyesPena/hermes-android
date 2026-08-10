@@ -49,6 +49,7 @@ void main() {
   Future<AttachmentDraft> cachedDraft(
     String name, {
     AttachmentDraftStatus status = AttachmentDraftStatus.ready,
+    AttachmentDraftKind kind = AttachmentDraftKind.genericFile,
   }) async {
     final file = File('${sandbox.path}${Platform.pathSeparator}$name');
     await file.writeAsString('payload-$name');
@@ -57,8 +58,11 @@ void main() {
       cachedPath: file.path,
       name: name,
       byteLength: await file.length(),
-      mediaType: 'application/octet-stream',
-      kind: AttachmentDraftKind.genericFile,
+      mediaType: kind == AttachmentDraftKind.image
+          ? 'image/png'
+          : 'application/octet-stream',
+      kind: kind,
+      sanitized: kind == AttachmentDraftKind.image,
       status: status,
     );
   }
@@ -169,34 +173,48 @@ void main() {
       );
     });
 
-    test('failed preparation does not discard an existing selection', () async {
-      final retained = await cachedDraft('retained.txt');
-      final drafts = [retained];
-      final unsupported = File(
-        '${sandbox.path}${Platform.pathSeparator}animation.gif',
-      );
-      final gifImage = image_lib.Image(width: 2, height: 2)
-        ..setPixelRgba(0, 0, 0, 0, 255, 255);
-      await unsupported.writeAsBytes(image_lib.encodeGif(gifImage));
+    test(
+      'failed preparation retains two images and a document selection',
+      () async {
+        final firstImage = await cachedDraft(
+          'first.png',
+          kind: AttachmentDraftKind.image,
+        );
+        final secondImage = await cachedDraft(
+          'second.png',
+          kind: AttachmentDraftKind.image,
+        );
+        final document = await cachedDraft('retained.pdf');
+        final drafts = [firstImage, secondImage, document];
+        expect(() => service.validateRemoteDrafts(drafts), returnsNormally);
+        final unsupported = File(
+          '${sandbox.path}${Platform.pathSeparator}animation.gif',
+        );
+        final gifImage = image_lib.Image(width: 2, height: 2)
+          ..setPixelRgba(0, 0, 0, 0, 255, 255);
+        await unsupported.writeAsBytes(image_lib.encodeGif(gifImage));
 
-      await expectLater(
-        service.prepareImage(
-          sourcePath: unsupported.path,
-          displayName: 'animation.gif',
-          existingDrafts: drafts,
-          mode: AttachmentDraftMode.remoteGateway,
-        ),
-        throwsA(
-          isA<AttachmentDraftException>().having(
-            (error) => error.message,
-            'message',
-            contains('Unsupported image format'),
+        await expectLater(
+          service.prepareImage(
+            sourcePath: unsupported.path,
+            displayName: 'animation.gif',
+            existingDrafts: drafts,
+            mode: AttachmentDraftMode.remoteGateway,
           ),
-        ),
-      );
-      expect(drafts, [same(retained)]);
-      expect(await File(retained.cachedPath).exists(), isTrue);
-    });
+          throwsA(
+            isA<AttachmentDraftException>().having(
+              (error) => error.message,
+              'message',
+              contains('Unsupported image format'),
+            ),
+          ),
+        );
+        expect(drafts, [same(firstImage), same(secondImage), same(document)]);
+        for (final draft in drafts) {
+          expect(await File(draft.cachedPath).exists(), isTrue);
+        }
+      },
+    );
 
     test(
       'partial sanitized output is deleted when cache writing fails',

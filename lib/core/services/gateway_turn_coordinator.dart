@@ -35,6 +35,41 @@ class GatewayTurnCoordinatorException implements Exception {
   String toString() => 'Gateway turn coordinator stopped: ${failure.name}.';
 }
 
+enum GatewayTurnAttachmentKind { image, file }
+
+/// Opaque receipt issued by the recovery runtime that staged the attachment.
+///
+/// Paths, `@file:` references, payload bytes, and display names never enter the
+/// durable turn contract. A receipt is accepted by [GatewayTurnCoordinator]
+/// only while the exact transport generation that issued it is still active.
+class GatewayTurnAttachmentReceipt {
+  final String attachmentId;
+  final String clientAttachmentId;
+  final String sha256;
+  final int byteLength;
+  final String mediaType;
+  final GatewayTurnAttachmentKind kind;
+  final int _transportGeneration;
+
+  const GatewayTurnAttachmentReceipt._({
+    required this.attachmentId,
+    required this.clientAttachmentId,
+    required this.sha256,
+    required this.byteLength,
+    required this.mediaType,
+    required this.kind,
+    required this._transportGeneration,
+  });
+
+  Map<String, Object> toWire() => <String, Object>{
+    'attachment_id': attachmentId,
+    'client_attachment_id': clientAttachmentId,
+    'sha256': sha256,
+    'byte_length': byteLength,
+    'media_type': mediaType,
+  };
+}
+
 /// Count-only retention view for bounded lifecycle tests and diagnostics.
 class GatewayTurnCoordinatorRetentionSnapshot {
   final int activeStates;
@@ -158,10 +193,43 @@ class GatewayTurnCoordinatorRegistry {
   Future<GatewayTurnRecoveryState> submit({
     required String localSessionId,
     required String text,
+    List<GatewayTurnAttachmentReceipt> attachments = const [],
     GatewayTurnStateCallback? onState,
   }) async {
     final coordinator = await open(localSessionId);
-    return coordinator.submit(text: text, onState: onState);
+    return coordinator.submit(
+      text: text,
+      attachments: attachments,
+      onState: onState,
+    );
+  }
+
+  Future<GatewayTurnAttachmentReceipt> stageAttachment({
+    required String localSessionId,
+    required String clientAttachmentId,
+    required String name,
+    required String dataUrl,
+    required int byteLength,
+    required String mediaType,
+    required GatewayTurnAttachmentKind kind,
+  }) async {
+    final coordinator = await open(localSessionId);
+    return coordinator.stageAttachment(
+      clientAttachmentId: clientAttachmentId,
+      name: name,
+      dataUrl: dataUrl,
+      byteLength: byteLength,
+      mediaType: mediaType,
+      kind: kind,
+    );
+  }
+
+  Future<void> detachAttachments({
+    required String localSessionId,
+    required Iterable<GatewayTurnAttachmentReceipt> attachments,
+  }) async {
+    final coordinator = await open(localSessionId);
+    await coordinator.detachAttachments(attachments);
   }
 
   Future<List<GatewayTurnRecoveryState>> recoverPending(
@@ -267,11 +335,13 @@ class GatewayTurnCoordinator {
   final LinkedHashMap<String, GatewayTurnRecoveryState> _settledTombstones =
       LinkedHashMap<String, GatewayTurnRecoveryState>();
   final Map<String, int> _durableTimestampFloors = {};
+  final Map<String, GatewayTurnAttachmentReceipt> _stagedAttachments = {};
   final Expando<bool> _usedSockets = Expando<bool>();
   Future<void> _tail = Future<void>.value();
   WsClient? _client;
   GatewaySessionBinding? _runtimeBinding;
   GatewayTurnJournalBinding? _durableBinding;
+  int _transportGeneration = 0;
   bool _closed = false;
 
   GatewayTurnCoordinator({
@@ -333,9 +403,16 @@ class GatewayTurnCoordinator {
 
   Future<GatewayTurnRecoveryState> submit({
     required String text,
+    List<GatewayTurnAttachmentReceipt> attachments = const [],
     GatewayTurnStateCallback? onState,
   }) => _serialized(() async {
     _requireOperational();
+    if (attachments.isNotEmpty &&
+        (_client?.isConnected != true || _runtimeBinding == null)) {
+      throw const GatewayTurnCoordinatorException(
+        GatewayTurnCoordinatorFailure.transportUnavailable,
+      );
+    }
     if (_client?.isConnected != true || _runtimeBinding == null) {
       await _openFreshTransport();
     }
@@ -345,6 +422,7 @@ class GatewayTurnCoordinator {
     if (utf8.encode(text).length > runtime.capability.maxPromptBytes!) {
       throw ArgumentError.value(text, 'text', 'Prompt exceeds gateway limit.');
     }
+    final wireAttachments = _validatedAttachments(attachments, runtime);
 
     final clientTurnId = uuidFactory();
     if (!_canonicalV4Uuid(clientTurnId) ||
@@ -374,32 +452,59 @@ class GatewayTurnCoordinator {
         'version': GatewayTurnRecoveryCapability.promptSubmitVersion,
         'client_turn_id': clientTurnId,
         'text': text,
+        if (wireAttachments.isNotEmpty) 'attachments': wireAttachments,
       });
       result = _resultOrThrow('prompt.submit', response);
     } on JsonRpcError catch (error, stack) {
       if (!_ambiguousJsonRpcFailure(error)) {
-        state = state.failReconcile(
-          GatewayTurnRecoveryFailure.protocolViolation,
+        await _detachRejectedSubmissionAttachments(
+          client: client,
+          runtime: runtime,
+          attachments: attachments,
         );
-        _remember(state);
-        await _persistWireStateOrClose(state, client);
+        try {
+          await journal.remove(
+            _entryFromState(
+              durable,
+              state,
+              updatedAtEpochMs: _nowEpochMs(),
+            ).entryIdentity,
+          );
+        } catch (journalError, journalStack) {
+          state = state.failReconcile(
+            GatewayTurnRecoveryFailure.protocolViolation,
+          );
+          _remember(state);
+          _poisonIfUnpersistedFailure(state);
+          try {
+            await _quarantineAndCloseExactSource(
+              client,
+              sourceOwnedAtDispatch: identical(_client, client),
+              correlatedClientTurnId: state.clientTurnId,
+            );
+          } catch (_) {
+            // Preserve the first journal failure after exact-source shutdown.
+          }
+          Error.throwWithStackTrace(journalError, journalStack);
+        }
+        _discardUnsubmittedState(state);
         Error.throwWithStackTrace(error, stack);
       }
       if (identical(_client, client) && client.isConnected) {
-        return _reconcile(state);
+        return _reconcileSubmittedState(state, attachments);
       }
       rethrow;
     } on GatewayTurnCoordinatorException {
       // A malformed/missing acknowledgement is ambiguous. Resolve only from
       // server authority; this path never writes prompt.submit again.
       if (identical(_client, client) && client.isConnected) {
-        return _reconcile(state);
+        return _reconcileSubmittedState(state, attachments);
       }
       rethrow;
     } catch (error, stack) {
       if (error is IOException || error is TimeoutException) {
         if (identical(_client, client) && client.isConnected) {
-          return _reconcile(state);
+          return _reconcileSubmittedState(state, attachments);
         }
         rethrow;
       }
@@ -411,7 +516,7 @@ class GatewayTurnCoordinator {
     final ack = GatewayTurnAck.fromWire(result);
     if (ack == null) {
       if (identical(_client, client) && client.isConnected) {
-        return _reconcile(state);
+        return _reconcileSubmittedState(state, attachments);
       }
       throw const GatewayTurnCoordinatorException(
         GatewayTurnCoordinatorFailure.invalidResponse,
@@ -432,7 +537,118 @@ class GatewayTurnCoordinator {
     if (state.requiredAction == GatewayTurnRecoveryAction.reconcile) {
       state = await _reconcile(state);
     }
+    if (state.turnId != null) _consumeAttachments(attachments);
     return state;
+  });
+
+  Future<GatewayTurnAttachmentReceipt> stageAttachment({
+    required String clientAttachmentId,
+    required String name,
+    required String dataUrl,
+    required int byteLength,
+    required String mediaType,
+    required GatewayTurnAttachmentKind kind,
+  }) => _serialized(() async {
+    _requireOperational();
+    if (!_boundedIdentity(clientAttachmentId) ||
+        !_boundedIdentity(name) ||
+        byteLength <= 0 ||
+        !_validMediaType(mediaType) ||
+        !dataUrl.startsWith('data:') ||
+        !dataUrl.contains(';base64,')) {
+      throw ArgumentError('Invalid recovery attachment.');
+    }
+    if (_client?.isConnected != true || _runtimeBinding == null) {
+      await _openFreshTransport();
+    }
+    final client = _client!;
+    final runtime = _runtimeBinding!;
+    final capability = runtime.capability;
+    if (!capability.attachmentsSupported) {
+      throw const GatewayTurnCoordinatorException(
+        GatewayTurnCoordinatorFailure.unsupportedCapability,
+      );
+    }
+    final itemLimit = kind == GatewayTurnAttachmentKind.image
+        ? capability.maxImageAttachmentBytes!
+        : capability.maxFileAttachmentBytes!;
+    final stagedBytes = _stagedAttachments.values.fold<int>(
+      0,
+      (total, receipt) => total + receipt.byteLength,
+    );
+    if (byteLength > itemLimit ||
+        _stagedAttachments.length >= capability.maxAttachments! ||
+        stagedBytes + byteLength > capability.maxAttachmentRegistryBytes!) {
+      throw ArgumentError('Attachment exceeds negotiated recovery limits.');
+    }
+
+    final method = kind == GatewayTurnAttachmentKind.image
+        ? 'image.attach_bytes'
+        : 'file.attach';
+    final params = kind == GatewayTurnAttachmentKind.image
+        ? <String, dynamic>{
+            'session_id': runtime.runtimeSessionId,
+            'content_base64': dataUrl,
+            'filename': name,
+          }
+        : <String, dynamic>{
+            'session_id': runtime.runtimeSessionId,
+            'name': name,
+            'path': '',
+            'data_url': dataUrl,
+          };
+    try {
+      final response = await client.send(method, params);
+      final result = _resultOrThrow(method, response);
+      final receipt = _attachmentReceiptFromWire(
+        result,
+        clientAttachmentId: clientAttachmentId,
+        expectedByteLength: byteLength,
+        kind: kind,
+      );
+      if (_stagedAttachments.containsKey(receipt.attachmentId)) {
+        throw const GatewayTurnCoordinatorException(
+          GatewayTurnCoordinatorFailure.invalidResponse,
+        );
+      }
+      _stagedAttachments[receipt.attachmentId] = receipt;
+      return receipt;
+    } catch (error) {
+      if (error is IOException || error is TimeoutException) {
+        await _markTransportLost(client);
+      }
+      rethrow;
+    }
+  });
+
+  Future<void> detachAttachments(
+    Iterable<GatewayTurnAttachmentReceipt> attachments,
+  ) => _serialized(() async {
+    _requireOperational();
+    final client = _client;
+    final runtime = _runtimeBinding;
+    if (client == null || !client.isConnected || runtime == null) {
+      throw const GatewayTurnCoordinatorException(
+        GatewayTurnCoordinatorFailure.transportUnavailable,
+      );
+    }
+    final snapshot = attachments.toList(growable: false);
+    _validatedAttachments(snapshot, runtime);
+    for (final receipt in snapshot) {
+      final response = await client.send('attachment.detach', <String, dynamic>{
+        'session_id': runtime.runtimeSessionId,
+        'version': GatewayTurnRecoveryCapability.promptSubmitVersion,
+        'attachment_id': receipt.attachmentId,
+      });
+      final result = _resultOrThrow('attachment.detach', response);
+      if (result['detached'] != true ||
+          result['attachment_id'] != receipt.attachmentId) {
+        throw const GatewayTurnCoordinatorException(
+          GatewayTurnCoordinatorFailure.invalidResponse,
+        );
+      }
+      _stagedAttachments.remove(receipt.attachmentId);
+    }
   });
 
   Future<List<GatewayTurnRecoveryState>> recoverPending({
@@ -502,6 +718,7 @@ class GatewayTurnCoordinator {
     final client = _client;
     _client = null;
     _runtimeBinding = null;
+    _invalidateStagedAttachments();
     client?.onConnectionChanged = null;
     client?.onStreamEvent = null;
     Object? firstError;
@@ -601,6 +818,8 @@ class GatewayTurnCoordinator {
       );
       await journal.upsertBinding(durable);
       _requireOperational();
+      _invalidateStagedAttachments();
+      _transportGeneration += 1;
       _client = client;
       _runtimeBinding = binding;
       _durableBinding = durable;
@@ -849,6 +1068,7 @@ class GatewayTurnCoordinator {
     if (!identical(_client, source)) return;
     _client = null;
     _runtimeBinding = null;
+    _invalidateStagedAttachments();
     source.onConnectionChanged = null;
     source.onStreamEvent = null;
     Object? firstError;
@@ -909,6 +1129,7 @@ class GatewayTurnCoordinator {
     if (ownsSource) {
       _client = null;
       _runtimeBinding = null;
+      _invalidateStagedAttachments();
     }
     source.onConnectionChanged = null;
     source.onStreamEvent = null;
@@ -1173,6 +1394,7 @@ class GatewayTurnCoordinator {
     _observers.clear();
     _settledTombstones.clear();
     _durableTimestampFloors.clear();
+    _invalidateStagedAttachments();
   }
 
   GatewayTurnRecoveryState? get _processPoisonedFailure =>
@@ -1209,6 +1431,130 @@ class GatewayTurnCoordinator {
     if (value <= 0) throw StateError('Coordinator clock is invalid.');
     return value;
   }
+
+  List<Map<String, Object>> _validatedAttachments(
+    Iterable<GatewayTurnAttachmentReceipt> attachments,
+    GatewaySessionBinding runtime,
+  ) {
+    final snapshot = attachments.toList(growable: false);
+    final capability = runtime.capability;
+    if (snapshot.isEmpty) return const [];
+    if (!capability.attachmentsSupported ||
+        snapshot.length > capability.maxAttachments!) {
+      throw const GatewayTurnCoordinatorException(
+        GatewayTurnCoordinatorFailure.unsupportedCapability,
+      );
+    }
+    final seen = <String>{};
+    var totalBytes = 0;
+    for (final receipt in snapshot) {
+      final staged = _stagedAttachments[receipt.attachmentId];
+      final itemLimit = receipt.kind == GatewayTurnAttachmentKind.image
+          ? capability.maxImageAttachmentBytes!
+          : capability.maxFileAttachmentBytes!;
+      if (!identical(staged, receipt) ||
+          receipt._transportGeneration != _transportGeneration ||
+          !seen.add(receipt.attachmentId) ||
+          receipt.byteLength > itemLimit) {
+        throw const GatewayTurnCoordinatorException(
+          GatewayTurnCoordinatorFailure.invalidResponse,
+        );
+      }
+      totalBytes += receipt.byteLength;
+    }
+    if (totalBytes > capability.maxAttachmentRegistryBytes!) {
+      throw ArgumentError('Attachments exceed the negotiated aggregate limit.');
+    }
+    return List<Map<String, Object>>.unmodifiable(
+      snapshot.map((receipt) => receipt.toWire()),
+    );
+  }
+
+  GatewayTurnAttachmentReceipt _attachmentReceiptFromWire(
+    Map<String, dynamic> result, {
+    required String clientAttachmentId,
+    required int expectedByteLength,
+    required GatewayTurnAttachmentKind kind,
+  }) {
+    if (result['attached'] != true ||
+        result.keys.any(const {'path', 'ref_path', 'ref_text'}.contains)) {
+      throw const GatewayTurnCoordinatorException(
+        GatewayTurnCoordinatorFailure.invalidResponse,
+      );
+    }
+    final attachmentId = result['attachment_id'];
+    final digest = result['sha256'];
+    final byteLength = result['byte_length'];
+    final mediaType = result['media_type'];
+    if (attachmentId is! String ||
+        !_boundedIdentity(attachmentId) ||
+        digest is! String ||
+        !_lowerHexDigest(digest) ||
+        byteLength is! int ||
+        byteLength != expectedByteLength ||
+        mediaType is! String ||
+        !_validMediaType(mediaType)) {
+      throw const GatewayTurnCoordinatorException(
+        GatewayTurnCoordinatorFailure.invalidResponse,
+      );
+    }
+    return GatewayTurnAttachmentReceipt._(
+      attachmentId: attachmentId,
+      clientAttachmentId: clientAttachmentId,
+      sha256: digest,
+      byteLength: byteLength,
+      mediaType: mediaType,
+      kind: kind,
+      transportGeneration: _transportGeneration,
+    );
+  }
+
+  void _consumeAttachments(Iterable<GatewayTurnAttachmentReceipt> attachments) {
+    for (final receipt in attachments) {
+      if (identical(_stagedAttachments[receipt.attachmentId], receipt)) {
+        _stagedAttachments.remove(receipt.attachmentId);
+      }
+    }
+  }
+
+  Future<GatewayTurnRecoveryState> _reconcileSubmittedState(
+    GatewayTurnRecoveryState state,
+    Iterable<GatewayTurnAttachmentReceipt> attachments,
+  ) async {
+    final reconciled = await _reconcile(state);
+    if (reconciled.turnId != null) _consumeAttachments(attachments);
+    return reconciled;
+  }
+
+  Future<void> _detachRejectedSubmissionAttachments({
+    required WsClient client,
+    required GatewaySessionBinding runtime,
+    required Iterable<GatewayTurnAttachmentReceipt> attachments,
+  }) async {
+    for (final receipt in attachments) {
+      try {
+        final response = await client
+            .send('attachment.detach', <String, dynamic>{
+              'session_id': runtime.runtimeSessionId,
+              'version': GatewayTurnRecoveryCapability.promptSubmitVersion,
+              'attachment_id': receipt.attachmentId,
+            });
+        final result = _resultOrThrow('attachment.detach', response);
+        if (result['detached'] != true ||
+            result['attachment_id'] != receipt.attachmentId) {
+          throw const GatewayTurnCoordinatorException(
+            GatewayTurnCoordinatorFailure.invalidResponse,
+          );
+        }
+        _stagedAttachments.remove(receipt.attachmentId);
+      } catch (_) {
+        await _markTransportLost(client);
+        return;
+      }
+    }
+  }
+
+  void _invalidateStagedAttachments() => _stagedAttachments.clear();
 
   Map<String, dynamic> _resultOrThrow(
     String method,
@@ -1296,6 +1642,12 @@ bool _ambiguousJsonRpcFailure(JsonRpcError error) {
   }.contains(error.reason);
 }
 
+/// Whether the gateway returned an authoritative rejection rather than an
+/// ambiguous transport outcome. This never grants automatic resubmission; it
+/// only lets the composer restore the user's local draft for an explicit edit.
+bool gatewayTurnSubmissionWasDefinitelyRejected(Object error) =>
+    error is JsonRpcError && !_ambiguousJsonRpcFailure(error);
+
 bool _coordinatorCapabilitySupported(GatewayTurnRecoveryCapability capability) {
   final maxTurnBytes = capability.maxTurnBytes;
   final terminalReserveBytes = capability.terminalEventReserveBytes;
@@ -1315,3 +1667,9 @@ bool _boundedIdentity(String value) =>
     !value.codeUnits.any((unit) => unit < 32 || unit >= 127 && unit <= 159);
 
 bool _lowerHexDigest(String value) => RegExp(r'^[0-9a-f]{64}$').hasMatch(value);
+
+bool _validMediaType(String value) =>
+    value.isNotEmpty &&
+    value.length <= 256 &&
+    value.trim() == value &&
+    RegExp(r'^[a-z0-9!#$&^_.+-]+/[a-z0-9!#$&^_.+-]+$').hasMatch(value);

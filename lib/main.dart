@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'core/services/connection_manager.dart';
+import 'core/services/gateway_turn_application_controller.dart';
 import 'core/services/text_size_preference.dart';
 import 'core/screens/session_list_screen.dart';
 import 'core/utils/responsive.dart';
@@ -50,6 +53,14 @@ class HermesApp extends StatefulWidget {
 }
 
 class HermesAppState extends State<HermesApp> {
+  late final GatewayTurnApplicationController _turnApplicationController;
+
+  @override
+  void initState() {
+    super.initState();
+    _turnApplicationController = GatewayTurnApplicationController();
+  }
+
   Future<void> setTextSizePreference(TextSizePreference preference) async {
     await TextSizePreferenceStore(widget.connManager.prefs).save(preference);
     if (mounted) setState(() {});
@@ -120,8 +131,17 @@ class HermesAppState extends State<HermesApp> {
           child: child!,
         );
       },
-      home: HomeScreen(connManager: widget.connManager),
+      home: HomeScreen(
+        connManager: widget.connManager,
+        turnApplicationController: _turnApplicationController,
+      ),
     );
+  }
+
+  @override
+  void dispose() {
+    unawaited(_turnApplicationController.close());
+    super.dispose();
   }
 }
 
@@ -173,7 +193,13 @@ class HermesHeader extends StatelessWidget {
 
 class HomeScreen extends StatefulWidget {
   final ConnectionManager connManager;
-  const HomeScreen({required this.connManager, super.key});
+  final GatewayTurnApplicationController turnApplicationController;
+
+  const HomeScreen({
+    required this.connManager,
+    required this.turnApplicationController,
+    super.key,
+  });
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -230,7 +256,12 @@ class _HomeScreenState extends State<HomeScreen> {
     widget.connManager.prefs.setString(_lastConnectionKey, conn.id);
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => SessionListScreen(connection: conn)),
+      MaterialPageRoute(
+        builder: (_) => SessionListScreen(
+          connection: conn,
+          turnApplicationController: widget.turnApplicationController,
+        ),
+      ),
     );
   }
 

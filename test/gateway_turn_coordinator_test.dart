@@ -222,16 +222,23 @@ Map<String, dynamic> _recoveryCapability({
   int maxTurnBytes = 4194304,
   int terminalEventReserveBytes = 1024,
   int reconcileMaxPageBytes = 524288,
+  bool attachments = false,
 }) => <String, dynamic>{
   'version': 2,
   'shadow_only': false,
-  'methods': <String>['session.open', 'turn.reconcile', 'turn.interrupt'],
+  'methods': <String>[
+    'session.open',
+    'turn.reconcile',
+    'turn.interrupt',
+    if (attachments) 'attachment.detach@2',
+  ],
   'prompt_submit_version': 2,
   'applies_to': <String>[
     'session.open',
     'prompt.submit@2',
     'turn.reconcile',
     'turn.interrupt',
+    if (attachments) 'attachment.detach@2',
   ],
   'automatic_resubmit': false,
   'execution_route': 'single_process_in_process',
@@ -245,6 +252,13 @@ Map<String, dynamic> _recoveryCapability({
   'client_turn_id_format': 'canonical_lowercase_uuid',
   'reconcile_max_events': 256,
   'reconcile_max_page_bytes': reconcileMaxPageBytes,
+  if (attachments) ...<String, dynamic>{
+    'max_attachments': 10,
+    'max_file_attachment_bytes': 16777216,
+    'max_image_attachment_bytes': 16777216,
+    'max_pdf_attachment_bytes': 16777216,
+    'max_attachment_registry_bytes': 67108864,
+  },
 };
 
 Map<String, dynamic> _openResult({
@@ -716,63 +730,56 @@ void main() {
       },
     );
 
-    test(
-      'definitive submit errors persist failure without reconcile',
-      () async {
-        for (final reason in <String>[
-          'client_turn_conflict',
-          'auth_failed',
-          'schema_violation',
-        ]) {
-          late _GatewayFixture fixture;
-          fixture = await _GatewayFixture.start(
-            handler: (request, connectionIndex) {
-              final params = request['params'] as Map<String, dynamic>;
-              if (request['method'] == 'session.open') {
-                return _openResult(
-                  mobileSessionId: params['mobile_session_id'] as String,
-                  connectionIndex: connectionIndex,
-                );
-              }
-              if (request['method'] == 'prompt.submit') {
-                return _rpcError(reason);
-              }
-              throw StateError(
-                'Definitive error must not call ${request['method']}',
+    test('definitive submit errors discard WAL without reconcile', () async {
+      for (final reason in <String>[
+        'client_turn_conflict',
+        'auth_failed',
+        'schema_violation',
+      ]) {
+        late _GatewayFixture fixture;
+        fixture = await _GatewayFixture.start(
+          handler: (request, connectionIndex) {
+            final params = request['params'] as Map<String, dynamic>;
+            if (request['method'] == 'session.open') {
+              return _openResult(
+                mobileSessionId: params['mobile_session_id'] as String,
+                connectionIndex: connectionIndex,
               );
-            },
-          );
-          final journal = GatewayTurnJournal(store: _MemoryJournalStore());
-          final coordinator = _coordinator(fixture: fixture, journal: journal);
+            }
+            if (request['method'] == 'prompt.submit') {
+              return _rpcError(reason);
+            }
+            throw StateError(
+              'Definitive error must not call ${request['method']}',
+            );
+          },
+        );
+        final journal = GatewayTurnJournal(store: _MemoryJournalStore());
+        final coordinator = _coordinator(fixture: fixture, journal: journal);
 
-          try {
-            await expectLater(
-              coordinator.submit(text: 'reject definitively'),
-              throwsA(
-                isA<JsonRpcError>().having(
-                  (error) => error.reason,
-                  'reason',
-                  reason,
-                ),
+        try {
+          await expectLater(
+            coordinator.submit(text: 'reject definitively'),
+            throwsA(
+              isA<JsonRpcError>().having(
+                (error) => error.reason,
+                'reason',
+                reason,
               ),
-            );
-            expect(
-              fixture.requests.map((request) => request['method']),
-              <Object?>['session.open', 'prompt.submit'],
-            );
-            final durable = (await journal.loadAll()).single;
-            expect(
-              durable.failure,
-              GatewayTurnRecoveryFailure.protocolViolation,
-            );
-            expect(durable.ackUncertain, isFalse);
-          } finally {
-            await coordinator.close();
-            await fixture.close();
-          }
+            ),
+          );
+          expect(
+            fixture.requests.map((request) => request['method']),
+            <Object?>['session.open', 'prompt.submit'],
+          );
+          expect(await journal.loadAll(), isEmpty);
+          expect(coordinator.stateFor(_clientA), isNull);
+        } finally {
+          await coordinator.close();
+          await fixture.close();
         }
-      },
-    );
+      }
+    });
 
     test(
       'journal failure during close still physically closes the socket',
@@ -2699,6 +2706,297 @@ void main() {
         expect(observed.first.ackUncertain, isFalse);
         expect(observed.last.ackUncertain, isTrue);
         expect((await journal.loadAll()).single.ackUncertain, isTrue);
+      } finally {
+        await coordinator.close();
+        await fixture.close();
+      }
+    });
+
+    test(
+      'stages two images and one document on the submit socket in manifest order',
+      () async {
+        final capability = _recoveryCapability(attachments: true);
+        var attachmentIndex = 0;
+        late _GatewayFixture fixture;
+        fixture = await _GatewayFixture.start(
+          readyFrame: _readyFrame(recovery: capability),
+          handler: (request, connectionIndex) {
+            final params = request['params'] as Map<String, dynamic>;
+            if (request['method'] == 'session.open') {
+              return _openResult(
+                mobileSessionId: params['mobile_session_id'] as String,
+                connectionIndex: connectionIndex,
+                recovery: capability,
+              );
+            }
+            if (request['method'] == 'image.attach_bytes' ||
+                request['method'] == 'file.attach') {
+              attachmentIndex += 1;
+              return <String, dynamic>{
+                'attached': true,
+                'attachment_id': 'attachment-$attachmentIndex',
+                'sha256': _digest,
+                'byte_length': switch (attachmentIndex) {
+                  1 => 4,
+                  2 => 5,
+                  _ => 6,
+                },
+                'media_type': attachmentIndex < 3
+                    ? 'image/png'
+                    : 'application/octet-stream',
+              };
+            }
+            if (request['method'] == 'prompt.submit') {
+              return <String, dynamic>{
+                'accepted': true,
+                'automatic_resubmit': false,
+                'client_turn_id': params['client_turn_id'],
+                'turn_id': 'turn-1',
+                'status': 'accepted',
+                'last_seq': 0,
+                'created': true,
+              };
+            }
+            throw StateError('Unexpected method ${request['method']}');
+          },
+        );
+        final coordinator = _coordinator(
+          fixture: fixture,
+          journal: GatewayTurnJournal(store: _MemoryJournalStore()),
+        );
+
+        try {
+          final first = await coordinator.stageAttachment(
+            clientAttachmentId: 'local-image-one',
+            name: 'one.png',
+            dataUrl: 'data:image/png;base64,AAAA',
+            byteLength: 4,
+            mediaType: 'image/png',
+            kind: GatewayTurnAttachmentKind.image,
+          );
+          final second = await coordinator.stageAttachment(
+            clientAttachmentId: 'local-image-two',
+            name: 'two.png',
+            dataUrl: 'data:image/png;base64,BBBB',
+            byteLength: 5,
+            mediaType: 'image/png',
+            kind: GatewayTurnAttachmentKind.image,
+          );
+          final document = await coordinator.stageAttachment(
+            clientAttachmentId: 'local-document',
+            name: 'notes.txt',
+            dataUrl: 'data:application/octet-stream;base64,CCCC',
+            byteLength: 6,
+            mediaType: 'application/octet-stream',
+            kind: GatewayTurnAttachmentKind.file,
+          );
+
+          await coordinator.submit(
+            text: 'Use these inputs',
+            attachments: [first, second, document],
+          );
+
+          expect(fixture.connectionCount, 1);
+          expect(
+            fixture.requests.map((request) => request['method']),
+            <Object?>[
+              'session.open',
+              'image.attach_bytes',
+              'image.attach_bytes',
+              'file.attach',
+              'prompt.submit',
+            ],
+          );
+          final submit = fixture.requests.last;
+          final submitParams = submit['params'] as Map<String, dynamic>;
+          expect(submitParams['text'], 'Use these inputs');
+          expect(submitParams['text'], isNot(contains('@file:')));
+          expect(submitParams['attachments'], <Map<String, dynamic>>[
+            {
+              'attachment_id': 'attachment-1',
+              'client_attachment_id': 'local-image-one',
+              'sha256': _digest,
+              'byte_length': 4,
+              'media_type': 'image/png',
+            },
+            {
+              'attachment_id': 'attachment-2',
+              'client_attachment_id': 'local-image-two',
+              'sha256': _digest,
+              'byte_length': 5,
+              'media_type': 'image/png',
+            },
+            {
+              'attachment_id': 'attachment-3',
+              'client_attachment_id': 'local-document',
+              'sha256': _digest,
+              'byte_length': 6,
+              'media_type': 'application/octet-stream',
+            },
+          ]);
+        } finally {
+          await coordinator.close();
+          await fixture.close();
+        }
+      },
+    );
+
+    test(
+      'definitive rejection detaches receipts and removes the WAL intent',
+      () async {
+        final capability = _recoveryCapability(attachments: true);
+        late _GatewayFixture fixture;
+        fixture = await _GatewayFixture.start(
+          readyFrame: _readyFrame(recovery: capability),
+          handler: (request, connectionIndex) {
+            final params = request['params'] as Map<String, dynamic>;
+            if (request['method'] == 'session.open') {
+              return _openResult(
+                mobileSessionId: params['mobile_session_id'] as String,
+                connectionIndex: connectionIndex,
+                recovery: capability,
+              );
+            }
+            if (request['method'] == 'image.attach_bytes') {
+              return <String, dynamic>{
+                'attached': true,
+                'attachment_id': 'rejected-attachment',
+                'sha256': _digest,
+                'byte_length': 4,
+                'media_type': 'image/png',
+              };
+            }
+            if (request['method'] == 'prompt.submit') {
+              return _rpcError('schema_violation');
+            }
+            if (request['method'] == 'attachment.detach') {
+              return <String, dynamic>{
+                'detached': true,
+                'attachment_id': params['attachment_id'],
+              };
+            }
+            throw StateError('Unexpected method ${request['method']}');
+          },
+        );
+        final journal = GatewayTurnJournal(store: _MemoryJournalStore());
+        final coordinator = _coordinator(fixture: fixture, journal: journal);
+
+        try {
+          final receipt = await coordinator.stageAttachment(
+            clientAttachmentId: 'local-rejected-image',
+            name: 'rejected.png',
+            dataUrl: 'data:image/png;base64,AAAA',
+            byteLength: 4,
+            mediaType: 'image/png',
+            kind: GatewayTurnAttachmentKind.image,
+          );
+          await expectLater(
+            coordinator.submit(text: 'reject', attachments: [receipt]),
+            throwsA(
+              isA<JsonRpcError>().having(
+                (error) => error.reason,
+                'reason',
+                'schema_violation',
+              ),
+            ),
+          );
+
+          expect(
+            fixture.requests.map((request) => request['method']),
+            <Object?>[
+              'session.open',
+              'image.attach_bytes',
+              'prompt.submit',
+              'attachment.detach',
+            ],
+          );
+          expect(await journal.loadAll(), isEmpty);
+          expect(coordinator.stateFor(_clientA), isNull);
+        } finally {
+          await coordinator.close();
+          await fixture.close();
+        }
+      },
+    );
+
+    test('accepted reconcile releases attachment capacity', () async {
+      final capability = _recoveryCapability(attachments: true);
+      var attachmentIndex = 0;
+      late _GatewayFixture fixture;
+      fixture = await _GatewayFixture.start(
+        readyFrame: _readyFrame(recovery: capability),
+        handler: (request, connectionIndex) {
+          final params = request['params'] as Map<String, dynamic>;
+          if (request['method'] == 'session.open') {
+            return _openResult(
+              mobileSessionId: params['mobile_session_id'] as String,
+              connectionIndex: connectionIndex,
+              recovery: capability,
+            );
+          }
+          if (request['method'] == 'image.attach_bytes') {
+            attachmentIndex += 1;
+            return <String, dynamic>{
+              'attached': true,
+              'attachment_id': 'reconciled-attachment-$attachmentIndex',
+              'sha256': _digest,
+              'byte_length': 1,
+              'media_type': 'image/png',
+            };
+          }
+          if (request['method'] == 'prompt.submit') {
+            return <String, dynamic>{'accepted': true};
+          }
+          if (request['method'] == 'turn.reconcile') {
+            return _reconcilePage(
+              turnId: 'turn-reconciled',
+              status: 'accepted',
+              lastSeq: 0,
+              events: const <Map<String, dynamic>>[],
+              hasMore: false,
+              nextAfterSeq: 0,
+            );
+          }
+          throw StateError('Unexpected method ${request['method']}');
+        },
+      );
+      final coordinator = _coordinator(
+        fixture: fixture,
+        journal: GatewayTurnJournal(store: _MemoryJournalStore()),
+      );
+
+      try {
+        final submittedReceipt = await coordinator.stageAttachment(
+          clientAttachmentId: 'submitted-image',
+          name: 'submitted.png',
+          dataUrl: 'data:image/png;base64,AA==',
+          byteLength: 1,
+          mediaType: 'image/png',
+          kind: GatewayTurnAttachmentKind.image,
+        );
+        final state = await coordinator.submit(
+          text: 'reconcile attachment',
+          attachments: [submittedReceipt],
+        );
+        expect(state.turnId, 'turn-reconciled');
+
+        for (var index = 0; index < 10; index++) {
+          await coordinator.stageAttachment(
+            clientAttachmentId: 'next-image-$index',
+            name: 'next-$index.png',
+            dataUrl: 'data:image/png;base64,AA==',
+            byteLength: 1,
+            mediaType: 'image/png',
+            kind: GatewayTurnAttachmentKind.image,
+          );
+        }
+        expect(attachmentIndex, 11);
+        expect(
+          fixture.requests.where(
+            (request) => request['method'] == 'prompt.submit',
+          ),
+          hasLength(1),
+        );
       } finally {
         await coordinator.close();
         await fixture.close();

@@ -17,6 +17,10 @@ import '../services/connection_manager.dart';
 import '../services/attachment_draft_service.dart';
 import '../services/chat_model_override_store.dart';
 import '../services/desktop_gateway_client.dart';
+import '../services/gateway_turn_application_controller.dart';
+import '../services/gateway_turn_coordinator.dart';
+import '../services/gateway_turn_recovery.dart';
+import '../services/gateway_turn_ui_projection.dart';
 import '../services/voice_composer_adapter.dart';
 import '../services/ws_client.dart';
 import '../models/attachment_draft.dart';
@@ -25,6 +29,7 @@ import '../models/gateway_approval.dart';
 import '../models/gateway_clarify.dart';
 import '../models/gateway_insight.dart';
 import '../models/gateway_sensitive_prompt.dart';
+import '../models/gateway_turn_contract.dart';
 import '../utils/chat_history_scroll.dart';
 import '../utils/message_content.dart';
 import '../utils/responsive.dart';
@@ -101,6 +106,10 @@ class _PendingClarifyPrompt {
 class ChatScreen extends StatefulWidget {
   final SavedConnection connection;
   final Session session;
+  final GatewayTurnApplicationController? turnApplicationController;
+
+  @visibleForTesting
+  final GatewayTurnApplicationSession? testTurnApplicationSession;
 
   @visibleForTesting
   final ApiClient? testApiClient;
@@ -120,6 +129,8 @@ class ChatScreen extends StatefulWidget {
   const ChatScreen({
     required this.connection,
     required this.session,
+    this.turnApplicationController,
+    this.testTurnApplicationSession,
     this.testApiClient,
     this.testAttachmentDraftService,
     this.testRemotePromptSubmit,
@@ -148,6 +159,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   late final Future<ChatModelOverrideStore> _chatModelStore;
   late final Future<void> _sessionModelRestore;
   DesktopGatewayClient? _desktopGateway;
+  GatewayTurnApplicationSession? _turnApplicationSession;
   DesktopConnectionState _desktopConnectionState =
       DesktopConnectionState.disconnected;
 
@@ -165,6 +177,8 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   bool _streaming = false;
   GatewayTurnStatus? _gatewayTurnStatus;
   _ResponseTransport _activeResponseTransport = _ResponseTransport.none;
+  String? _activeClientTurnId;
+  bool _recoveringTurn = false;
   int _responseGeneration = 0;
   bool _approvalDialogOpen = false;
   final List<_PendingSensitivePrompt> _sensitivePromptQueue = [];
@@ -243,7 +257,12 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
         _desktopGateway = null;
       }
     }
-    _fetchMessages();
+    _turnApplicationSession =
+        widget.testTurnApplicationSession ??
+        (_desktopGateway != null
+            ? widget.turnApplicationController?.sessionFor(widget.connection)
+            : null);
+    unawaited(_initializeChat());
     _loadVerboseMode();
     _initVoice();
     _recoverLostImage();
@@ -309,9 +328,16 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed && _desktopGateway != null) {
-      unawaited(_ensureDesktopSession());
+    if (state == AppLifecycleState.resumed) {
+      if (_desktopGateway != null) unawaited(_ensureDesktopSession());
+      if (_turnApplicationSession != null) unawaited(_recoverPendingTurn());
     }
+  }
+
+  Future<void> _initializeChat() async {
+    await _fetchMessages();
+    if (!mounted) return;
+    await _recoverPendingTurn();
   }
 
   Future<void> _ensureDesktopSession() async {
@@ -614,6 +640,159 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
         _loading = false;
       });
     }
+  }
+
+  Future<void> _recoverPendingTurn() async {
+    final turnSession = _turnApplicationSession;
+    if (turnSession == null || _recoveringTurn) return;
+    _recoveringTurn = true;
+    if (mounted && !_streaming) {
+      setState(() {
+        _sending = true;
+        _gatewayTurnStatus = const GatewayTurnStatus(
+          kind: 'recovery',
+          text: 'Recovering Hermes…',
+        );
+      });
+    }
+    try {
+      final states = await turnSession.recoverPending(
+        widget.session.id,
+        onState: _applyGatewayTurnState,
+      );
+      if (!mounted) return;
+      for (final state in states) {
+        _applyGatewayTurnState(state);
+      }
+      if (states.isEmpty && _activeClientTurnId == null) {
+        setState(() {
+          _sending = false;
+          _gatewayTurnStatus = null;
+        });
+      }
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _gatewayTurnStatus = GatewayTurnStatus(
+          kind: 'recovery',
+          text: 'Hermes recovery is unavailable: $error',
+        );
+      });
+    } finally {
+      _recoveringTurn = false;
+    }
+  }
+
+  void _applyGatewayTurnState(GatewayTurnRecoveryState state) {
+    if (!mounted) return;
+    final projection = GatewayTurnUiProjection.fromState(state);
+    final messageIndex = _gatewayAssistantMessageIndex(projection);
+    final shouldCreateMessage =
+        messageIndex == null &&
+        (projection.hasAssistantMaterial || projection.isActive);
+    final previousText = messageIndex == null
+        ? ''
+        : _messages[messageIndex]['content']?.toString() ?? '';
+    final nextText = projection.assistantText;
+    final materialized = previousText.isEmpty && nextText.isNotEmpty;
+    final speakTerminalResponse =
+        projection.isTerminal &&
+        !projection.isFailClosed &&
+        _awaitingVoiceReply &&
+        nextText.isNotEmpty;
+
+    setState(() {
+      final message = messageIndex == null
+          ? <String, dynamic>{
+              'role': 'assistant',
+              'content': nextText,
+              '_gateway_pending_response': projection.isActive,
+            }
+          : _messages[messageIndex];
+      message
+        ..['content'] = nextText
+        ..['_gateway_client_turn_id'] = projection.clientTurnId
+        ..['_gateway_message_id'] = projection.messageId
+        ..['_gateway_last_seq'] = projection.lastSeq
+        ..['_gateway_pending_response'] = projection.isActive;
+      if (projection.finalMessageRef != null) {
+        message['_gateway_final_message_ref'] = projection.finalMessageRef;
+      }
+      if (shouldCreateMessage) _messages.add(message);
+
+      if (projection.isActive) {
+        _activeClientTurnId = projection.clientTurnId;
+        _activeResponseTransport = _ResponseTransport.desktop;
+        _sending = true;
+        _streaming = true;
+        _gatewayTurnStatus = GatewayTurnStatus(
+          kind: 'recovery',
+          text: _gatewayRecoveryStatusText(projection.status),
+        );
+      } else if (_activeClientTurnId == null ||
+          _activeClientTurnId == projection.clientTurnId) {
+        _activeClientTurnId = null;
+        _activeResponseTransport = _ResponseTransport.none;
+        _sending = false;
+        _streaming = false;
+        _awaitingVoiceReply = false;
+        _gatewayTurnStatus = projection.isFailClosed
+            ? const GatewayTurnStatus(
+                kind: 'recovery_failed',
+                text: 'Hermes stopped recovery safely. No prompt was resent.',
+              )
+            : null;
+      }
+    });
+    if (materialized) _registerMaterializedAssistantMessage();
+    if (speakTerminalResponse) unawaited(_speakAssistantText(nextText));
+    if (projection.isActive) {
+      _scrollCoordinator.beginStreaming(isNearEnd: _isNearEnd());
+      _scheduleStreamingFollow();
+    } else {
+      _scheduleScrollTarget(_scrollCoordinator.endStreaming());
+    }
+  }
+
+  int? _gatewayAssistantMessageIndex(GatewayTurnUiProjection projection) {
+    for (var index = _messages.length - 1; index >= 0; index--) {
+      final message = _messages[index];
+      if (message['role'] != 'assistant') continue;
+      if (message['_gateway_client_turn_id'] == projection.clientTurnId) {
+        return index;
+      }
+      if (projection.messageId != null &&
+          (message['_gateway_message_id'] == projection.messageId ||
+              message['message_id'] == projection.messageId ||
+              message['id'] == projection.messageId)) {
+        return index;
+      }
+    }
+    for (var index = _messages.length - 1; index >= 0; index--) {
+      final message = _messages[index];
+      if (message['role'] == 'assistant' &&
+          message['_gateway_pending_response'] == true) {
+        return index;
+      }
+    }
+    if (projection.assistantText.isNotEmpty) {
+      for (var index = _messages.length - 1; index >= 0; index--) {
+        final message = _messages[index];
+        if (message['role'] == 'assistant' &&
+            message['content']?.toString() == projection.assistantText) {
+          return index;
+        }
+      }
+    }
+    return null;
+  }
+
+  String _gatewayRecoveryStatusText(GatewayRecoveryTurnStatus? status) {
+    return switch (status) {
+      GatewayRecoveryTurnStatus.waitingInput => 'Hermes is waiting for input…',
+      GatewayRecoveryTurnStatus.running => 'Hermes is responding…',
+      _ => 'Recovering Hermes…',
+    };
   }
 
   void _extractToolMessages(List<Map<String, dynamic>> messages) {
@@ -1183,6 +1362,14 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
 
     // A remote-gateway profile uses one transport for every prompt. Images and
     // arbitrary files are both attached with the official `file.attach` RPC.
+    if (_turnApplicationSession != null) {
+      await _sendRecoverableGatewayMessage(
+        text: text,
+        attachments: attachments,
+        speakResponse: speakResponse,
+      );
+      return;
+    }
     if (_desktopGateway != null || widget.testRemotePromptSubmit != null) {
       await _sendDesktopGatewayMessage(
         text: text,
@@ -1482,6 +1669,169 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
         });
       }
       _handleSendError(error);
+    }
+  }
+
+  Future<void> _sendRecoverableGatewayMessage({
+    required String text,
+    required List<AttachmentDraft> attachments,
+    required bool speakResponse,
+  }) async {
+    final turnSession = _turnApplicationSession;
+    if (turnSession == null) return;
+    try {
+      _attachmentDraftService.validateRemoteDrafts(attachments);
+    } on AttachmentDraftException catch (error) {
+      _showAttachmentError(error.message);
+      return;
+    }
+
+    _awaitingVoiceReply = speakResponse && _voiceReplyEnabled;
+    final responseGeneration = ++_responseGeneration;
+    _activeResponseTransport = _ResponseTransport.desktop;
+    final staged = <GatewayTurnAttachmentReceipt>[];
+    var attachmentCacheReleased = false;
+
+    void releaseAcceptedAttachmentCache(GatewayTurnRecoveryState state) {
+      if (attachmentCacheReleased ||
+          state.turnId == null ||
+          state.ackUncertain) {
+        return;
+      }
+      attachmentCacheReleased = true;
+      unawaited(_attachmentDraftService.removeAll(attachments));
+    }
+
+    void onState(GatewayTurnRecoveryState state) {
+      releaseAcceptedAttachmentCache(state);
+      if (!mounted || responseGeneration != _responseGeneration) return;
+      _applyGatewayTurnState(state);
+    }
+
+    setState(() {
+      _sending = true;
+      _gatewayTurnStatus = const GatewayTurnStatus(
+        kind: 'upload',
+        text: 'Preparing attachments…',
+      );
+    });
+
+    try {
+      for (var index = 0; index < attachments.length; index++) {
+        final draft = attachments[index];
+        setState(() {
+          draft
+            ..status = AttachmentDraftStatus.uploading
+            ..error = null;
+          _gatewayTurnStatus = GatewayTurnStatus(
+            kind: 'upload',
+            text: 'Uploading ${index + 1}/${attachments.length}: ${draft.name}',
+          );
+        });
+        final dataUrl = await _attachmentDraftService.readDataUrl(draft);
+        final receipt = await turnSession.stageAttachment(
+          localSessionId: widget.session.id,
+          clientAttachmentId: draft.id,
+          name: draft.name,
+          dataUrl: dataUrl,
+          byteLength: draft.byteLength,
+          mediaType: draft.mediaType,
+          kind: draft.isImage
+              ? GatewayTurnAttachmentKind.image
+              : GatewayTurnAttachmentKind.file,
+        );
+        staged.add(receipt);
+        if (!mounted || responseGeneration != _responseGeneration) return;
+        setState(() => draft.status = AttachmentDraftStatus.attached);
+      }
+    } catch (error) {
+      if (staged.isNotEmpty) {
+        try {
+          await turnSession.detachAttachments(
+            localSessionId: widget.session.id,
+            attachments: staged,
+          );
+        } catch (_) {
+          // Closing or quarantining the coordinator also invalidates receipts.
+        }
+      }
+      if (!mounted || responseGeneration != _responseGeneration) return;
+      for (final draft in attachments) {
+        draft
+          ..status = AttachmentDraftStatus.ready
+          ..error = null;
+      }
+      _handleSendError(error);
+      return;
+    }
+
+    final attachmentLabels = attachments
+        .map((attachment) => '[Attached file: ${attachment.name}]')
+        .join('\n');
+    final localContent = [
+      text,
+      attachmentLabels,
+    ].where((part) => part.trim().isNotEmpty).join('\n\n');
+    _textController.clear();
+    _scrollCoordinator.beginStreaming(isNearEnd: _isNearEnd());
+    setState(() {
+      _streaming = true;
+      _gatewayTurnStatus = const GatewayTurnStatus(
+        kind: 'starting',
+        text: 'Starting Hermes…',
+      );
+      _attachmentDrafts.clear();
+      _messages.add({'role': 'user', 'content': localContent});
+      _messages.add({
+        'role': 'assistant',
+        'content': '',
+        '_gateway_pending_response': true,
+      });
+    });
+    _scheduleStreamingFollow();
+
+    try {
+      final state = await turnSession.submit(
+        localSessionId: widget.session.id,
+        text: text,
+        attachments: staged,
+        onState: onState,
+      );
+      releaseAcceptedAttachmentCache(state);
+      if (!mounted || responseGeneration != _responseGeneration) return;
+      _applyGatewayTurnState(state);
+    } catch (error) {
+      if (!mounted || responseGeneration != _responseGeneration) return;
+      if (gatewayTurnSubmissionWasDefinitelyRejected(error)) {
+        setState(() {
+          if (_messages.isNotEmpty &&
+              _messages.last['role'] == 'assistant' &&
+              _messages.last['_gateway_pending_response'] == true) {
+            _messages.removeLast();
+          }
+          if (_messages.isNotEmpty && _messages.last['role'] == 'user') {
+            _messages.removeLast();
+          }
+          _textController.text = text;
+          for (final draft in attachments) {
+            draft
+              ..status = AttachmentDraftStatus.ready
+              ..error = null;
+          }
+          _attachmentDrafts
+            ..clear()
+            ..addAll(attachments);
+        });
+        _handleSendError(error);
+        return;
+      }
+      setState(() {
+        _gatewayTurnStatus = const GatewayTurnStatus(
+          kind: 'recovery',
+          text: 'Delivery is uncertain; recovering without resending…',
+        );
+      });
+      await _recoverPendingTurn();
     }
   }
 
@@ -1943,6 +2293,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     if (!_streaming) return;
 
     final transport = _activeResponseTransport;
+    final activeClientTurnId = _activeClientTurnId;
     ++_responseGeneration;
     _scrollCoordinator.cancelStreaming();
     setState(() {
@@ -1951,6 +2302,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
       _gatewayTurnStatus = null;
       _awaitingVoiceReply = false;
       _activeResponseTransport = _ResponseTransport.none;
+      _activeClientTurnId = null;
       if (_messages.isNotEmpty &&
           _messages.last['role'] == 'assistant' &&
           (_messages.last['content']?.toString().isEmpty ?? true)) {
@@ -1962,10 +2314,16 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
       final interrupted = switch (transport) {
         _ResponseTransport.rest => await _gateway.cancelActiveMessage(),
         _ResponseTransport.desktop =>
-          await _desktopGateway?.interruptPrompt(
-                sessionId: widget.session.id,
-              ) ??
-              false,
+          _turnApplicationSession != null && activeClientTurnId != null
+              ? (await _turnApplicationSession!.interrupt(
+                      localSessionId: widget.session.id,
+                      clientTurnId: activeClientTurnId,
+                    )).status?.isTerminal ==
+                    true
+              : await _desktopGateway?.interruptPrompt(
+                      sessionId: widget.session.id,
+                    ) ??
+                    false,
         _ResponseTransport.none => false,
       };
       if (!mounted) return;

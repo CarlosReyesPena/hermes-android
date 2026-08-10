@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/connection_manager.dart';
 import '../services/desktop_gateway_client.dart';
+import '../services/gateway_turn_application_controller.dart';
 import '../services/ws_client.dart';
 import 'chat_screen.dart';
 import 'settings_screen.dart';
@@ -10,9 +11,48 @@ import 'memory_screen.dart';
 import 'cron_screen.dart';
 import 'skills_screen.dart';
 
+Future<String?> showSessionNameDialog({
+  required BuildContext context,
+  required String title,
+  required String initialValue,
+  required String actionLabel,
+}) async {
+  var draft = initialValue;
+  final result = await showDialog<String>(
+    context: context,
+    builder: (dialogContext) => AlertDialog(
+      title: Text(title),
+      content: TextFormField(
+        initialValue: initialValue,
+        autofocus: true,
+        maxLength: 120,
+        decoration: const InputDecoration(border: OutlineInputBorder()),
+        onChanged: (value) => draft = value,
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(dialogContext),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.pop(dialogContext, draft.trim()),
+          child: Text(actionLabel),
+        ),
+      ],
+    ),
+  );
+  return result?.trim().isEmpty == true ? null : result;
+}
+
 class SessionListScreen extends StatefulWidget {
   final SavedConnection connection;
-  const SessionListScreen({required this.connection, super.key});
+  final GatewayTurnApplicationController turnApplicationController;
+
+  const SessionListScreen({
+    required this.connection,
+    required this.turnApplicationController,
+    super.key,
+  });
 
   @override
   State<SessionListScreen> createState() => _SessionListScreenState();
@@ -67,7 +107,12 @@ class _SessionListScreenState extends State<SessionListScreen> {
     if (!mounted) return;
     Navigator.pushReplacement(
       context,
-      MaterialPageRoute(builder: (_) => SessionListScreen(connection: profile)),
+      MaterialPageRoute(
+        builder: (_) => SessionListScreen(
+          connection: profile,
+          turnApplicationController: widget.turnApplicationController,
+        ),
+      ),
     );
   }
 
@@ -122,38 +167,12 @@ class _SessionListScreenState extends State<SessionListScreen> {
     required String title,
     required String initialValue,
     required String actionLabel,
-  }) async {
-    final controller = TextEditingController(text: initialValue);
-    final result = await showDialog<String>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(title),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          maxLength: 120,
-          decoration: const InputDecoration(border: OutlineInputBorder()),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () =>
-                Navigator.pop(dialogContext, controller.text.trim()),
-            child: Text(actionLabel),
-          ),
-        ],
-      ),
-    );
-    // Let the dialog route finish its reverse transition before disposing the
-    // controller used by its TextField. This also avoids retaining inherited
-    // dependencies while the popup action route is being dismantled.
-    await Future<void>.delayed(kThemeAnimationDuration);
-    controller.dispose();
-    return result?.trim().isEmpty == true ? null : result;
-  }
+  }) => showSessionNameDialog(
+    context: context,
+    title: title,
+    initialValue: initialValue,
+    actionLabel: actionLabel,
+  );
 
   Future<void> _renameSession(Session session) async {
     final gateway = _desktopGateway;
@@ -340,8 +359,11 @@ class _SessionListScreenState extends State<SessionListScreen> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) =>
-            ChatScreen(connection: widget.connection, session: session),
+        builder: (_) => ChatScreen(
+          connection: widget.connection,
+          session: session,
+          turnApplicationController: widget.turnApplicationController,
+        ),
       ),
     );
   }
@@ -661,6 +683,8 @@ class _SessionListScreenState extends State<SessionListScreen> {
                           builder: (_) => ChatScreen(
                             connection: widget.connection,
                             session: session,
+                            turnApplicationController:
+                                widget.turnApplicationController,
                           ),
                         ),
                       );
