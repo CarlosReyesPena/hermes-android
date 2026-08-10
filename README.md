@@ -1,24 +1,28 @@
-# Hermes Android — Remote Gateway Community Edition
+# Hermes Android — v2.0.0
 
 Android client for [Hermes Agent](https://hermes-agent.nousresearch.com/) — chat with your Hermes sessions from a phone or tablet over local Wi-Fi or a private Tailscale network.
 
-This repository is a community extension of
-[rusty4444/hermes-android](https://github.com/rusty4444/hermes-android),
-focused on feature parity with Hermes Desktop when it is used as a Remote
-Gateway. It preserves the upstream history and attribution and is not an
-official Hermes Agent or Nous Research release.
+> **v2.0.0** merges the community Remote Gateway edition contributed by
+> [@CristianGCiocoi](https://github.com/CristianGCiocoi), with review and
+> testing from [@AI-Guru](https://github.com/AI-Guru) and
+> [@grunjol](https://github.com/grunjol). The merge brings a unified Desktop
+> Gateway JSON-RPC transport, per-chat model selection, multi-attachment uploads,
+> durable turn recovery, voice dictation, and a comprehensive test suite.
+> See [CHANGELOG.md](CHANGELOG.md) for the full list and the
+> [merge PR thread](https://github.com/rusty4444/hermes-android/issues/81) for
+> the community discussion.
 
 ## Current release
 
-- Version: **1.0.13-hermesapk.13**
-- Test package: `com.hermesagent.hermes_android.dev`
-- Recommended APK for modern phones: ARM64 debug test build from this
-  repository's Releases page.
-- The community APK uses the Android Debug certificate and is intended for
-  controlled testing. A production Release build requires a private release
-  keystore and must never be signed with the debug key.
-- Upstream releases remain available from
-  [rusty4444/hermes-android](https://github.com/rusty4444/hermes-android/releases).
+- Version: **2.0.0** (build 2130)
+- Package: `com.hermesagent.hermes_android`
+- Recommended APK for modern phones: ARM64 release build from the
+  [Releases](https://github.com/rusty4444/hermes-android/releases) page.
+- Production builds are signed with a private release keystore. Debug APKs
+  signed with the Android debug certificate remain available for testing
+  under the `com.hermesagent.hermes_android.dev` package ID.
+- Previous upstream releases remain available from the
+  [Releases](https://github.com/rusty4444/hermes-android/releases) page.
 
 ## Remote Gateway edition highlights
 
@@ -107,14 +111,13 @@ Hermes Agent docs: <https://hermes-agent.nousresearch.com/docs>
 
 ### Install the APK
 
-Download the community test APK from this repository's
-[GitHub Releases](../../releases) page. For the upstream application, use the
-[official upstream Releases](https://github.com/rusty4444/hermes-android/releases/latest).
+Download the latest APK from this repository's
+[GitHub Releases](https://github.com/rusty4444/hermes-android/releases) page.
 
-For most Android phones, install the arm64 APK:
+For most Android phones, install the ARM64 APK:
 
 ```bash
-adb install Hermes-Agent-Dev-1.0.13-hermesapk.13-arm64-debug.apk
+adb install Hermes-Android-2.0.0-arm64-release.apk
 ```
 
 If sideloading directly on Android, enable **Install unknown apps** for your browser or file manager, then open the downloaded APK.
@@ -397,8 +400,8 @@ cp build/app/outputs/flutter-apk/app-*-release.apk release-apks/
 
 `pubspec.yaml` declares the base Android `versionCode`. Flutter's
 `--split-per-abi` packaging adds an ABI offset to each split; for arm64-v8a the
-effective APK manifest value is `base + 2000`. For Build N1, base `2127`
-therefore produces effective arm64 code `4127`. CI reads the completed APK with
+effective APK manifest value is `base + 2000`. For v2.0.0, base `2130`
+therefore produces effective arm64 code `4130`. CI reads the completed APK with
 `aapt` and fails if that relationship drifts. Release-floor checks continue to
 apply to the base value and must not be weakened to rely on an ABI offset.
 
@@ -508,8 +511,10 @@ lib/
 
 ## Credits
 
+- **CristianGCiocoi** — community Remote Gateway edition: unified JSON-RPC transport, per-chat model selection, multi-attachment uploads, durable turn recovery, voice dictation, gateway contract test suite, and the comprehensive CHANGELOG. Merged in v2.0.0.
+- **AI-Guru** — detailed review, independent testing, and scroll-offset bug identification for the community edition.
+- **grunjol** — technical review and transport-architecture feedback for the community edition; also contributed PR #68: reverse-proxy path prefix and proxied dashboard support.
 - **louquillio** — contributed PR #74: session source filters in Settings.
-- **grunjol** — contributed PR #68: reverse-proxy path prefix and proxied dashboard support.
 - **sternbergm** — contributed PR #67: password-protected dashboards and configurable dashboard port.
 
 ## License
