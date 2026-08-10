@@ -163,15 +163,12 @@ Future<void> _expectFailClosedPromptDisconnect(
     await socketClosed.future.timeout(const Duration(seconds: 5));
 
     expect(surfacedError, isA<Exception>());
-    if (point == _PromptDisconnectPoint.beforeAck) {
-      expect(surfacedError.toString(), 'Exception: Connection closed');
-    } else {
-      expect(surfacedError, isA<JsonRpcError>());
-      expect(
-        surfacedError.toString(),
-        'JsonRpcError(prompt.submit): Desktop gateway connection closed',
-      );
-    }
+    expect(surfacedError, isA<JsonRpcError>());
+    expect(
+      surfacedError.toString(),
+      'JsonRpcError(prompt.submit): Desktop gateway connection closed',
+    );
+    expect((surfacedError as JsonRpcError).reason, 'connection_closed');
     expect(connectionCount, 1);
     expect(requests, hasLength(1));
     expect(requests.single['params'], {
@@ -183,8 +180,8 @@ Future<void> _expectFailClosedPromptDisconnect(
       hasLength(expectedDeltaCount),
     );
     expect(events.where((event) => event.type == 'turn.end'), isEmpty);
-    expect(events.where((event) => event.type == 'turn.error'), hasLength(1));
-    expect(events.last.isComplete, isTrue);
+    expect(events.where((event) => event.type == 'turn.error'), isEmpty);
+    expect(events.where((event) => event.isComplete), isEmpty);
   } finally {
     client.close();
     await socketSubscription.cancel();
@@ -1078,6 +1075,675 @@ void main() {
       );
     });
 
+    test(
+      'pins an immutable gateway.ready received before its waiter',
+      () async {
+        final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+        final callbackFrames = <Map<String, dynamic>>[];
+        final applicationEvents = <StreamEvent>[];
+        final readyFrame = <String, dynamic>{
+          'jsonrpc': '2.0',
+          'method': 'event',
+          'params': {
+            'type': 'gateway.ready',
+            'payload': {
+              'capabilities': ['turn.resume', 'turn.recover'],
+              'limits': {
+                'recovery': {'max_attempts': 2},
+              },
+            },
+          },
+        };
+        final socketSubscription = server
+            .transform(WebSocketTransformer())
+            .listen((socket) {
+              socket.add(jsonEncode(readyFrame));
+            });
+        final client = WsClient('http://127.0.0.1:${server.port}')
+          ..onGatewayReady = callbackFrames.add
+          ..onStreamEvent = applicationEvents.add;
+
+        try {
+          await client.connect();
+          final frame = await client.waitForGatewayReady();
+
+          expect(frame, readyFrame);
+          expect(callbackFrames, hasLength(1));
+          expect(applicationEvents, isEmpty);
+          expect(
+            () => (frame['params'] as Map<String, dynamic>)['type'] = 'drift',
+            throwsUnsupportedError,
+          );
+          final payload =
+              (frame['params'] as Map<String, dynamic>)['payload']
+                  as Map<String, dynamic>;
+          final limits = payload['limits'] as Map<String, dynamic>;
+          expect(
+            () => (limits['recovery'] as Map<String, dynamic>)['max_attempts'] =
+                99,
+            throwsUnsupportedError,
+          );
+          expect(
+            () => (payload['capabilities'] as List<dynamic>).add('unsafe'),
+            throwsUnsupportedError,
+          );
+        } finally {
+          client.close();
+          await socketSubscription.cancel();
+          await server.close(force: true);
+        }
+      },
+    );
+
+    test('delivers gateway.ready to a waiter registered first', () async {
+      final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+      final socketSeen = Completer<WebSocket>();
+      final socketSubscription = server
+          .transform(WebSocketTransformer())
+          .listen((socket) {
+            socketSeen.complete(socket);
+          });
+      final client = WsClient('http://127.0.0.1:${server.port}');
+
+      try {
+        await client.connect();
+        final readyFuture = client.waitForGatewayReady();
+        final socket = await socketSeen.future;
+        socket.add(
+          jsonEncode({
+            'jsonrpc': '2.0',
+            'method': 'event',
+            'params': {
+              'type': 'gateway.ready',
+              'payload': {'generation': 1},
+            },
+          }),
+        );
+
+        final frame = await readyFuture.timeout(const Duration(seconds: 5));
+        expect((frame['params'] as Map<String, dynamic>)['payload'], {
+          'generation': 1,
+        });
+      } finally {
+        client.close();
+        await socketSubscription.cancel();
+        await server.close(force: true);
+      }
+    });
+
+    test('fails a gateway.ready waiter when the socket closes first', () async {
+      final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+      final socketSubscription = server
+          .transform(WebSocketTransformer())
+          .listen((socket) {
+            Timer(const Duration(milliseconds: 50), () {
+              unawaited(socket.close(WebSocketStatus.goingAway, 'no ready'));
+            });
+          });
+      final client = WsClient('http://127.0.0.1:${server.port}');
+
+      try {
+        await client.connect();
+        await expectLater(
+          client.waitForGatewayReady(timeout: const Duration(seconds: 5)),
+          throwsA(
+            isA<JsonRpcError>()
+                .having((error) => error.method, 'method', 'gateway.ready')
+                .having((error) => error.reason, 'reason', 'connection_closed'),
+          ),
+        );
+      } finally {
+        client.close();
+        await socketSubscription.cancel();
+        await server.close(force: true);
+      }
+    });
+
+    test(
+      'invalidates buffered frames from a closed socket across reconnect',
+      () async {
+        final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+        final firstSocketSeen = Completer<WebSocket>();
+        final secondSocketSeen = Completer<WebSocket>();
+        var connectionCount = 0;
+        final socketSubscription = server
+            .transform(WebSocketTransformer())
+            .listen((socket) {
+              connectionCount += 1;
+              socket.listen((_) {});
+              if (connectionCount == 1) {
+                firstSocketSeen.complete(socket);
+              } else {
+                secondSocketSeen.complete(socket);
+              }
+            });
+        final readyGenerations = <int>[];
+        final eventTexts = <String>[];
+        final newEventSeen = Completer<void>();
+        final connectionChanges = <bool>[];
+        final client = WsClient('http://127.0.0.1:${server.port}')
+          ..onGatewayReady = (frame) {
+            final params = frame['params'] as Map<String, dynamic>;
+            final payload = params['payload'] as Map<String, dynamic>;
+            readyGenerations.add(payload['generation'] as int);
+          }
+          ..onStreamEvent = (event) {
+            eventTexts.add(event.data['text'] as String);
+            if (event.data['text'] == 'new' && !newEventSeen.isCompleted) {
+              newEventSeen.complete();
+            }
+          }
+          ..onConnectionChanged = connectionChanges.add;
+
+        try {
+          await client.connect();
+          final firstSocket = await firstSocketSeen.future;
+          firstSocket.add(
+            jsonEncode({
+              'jsonrpc': '2.0',
+              'method': 'event',
+              'params': {
+                'type': 'gateway.ready',
+                'payload': {'generation': 1},
+              },
+            }),
+          );
+          firstSocket.add(
+            jsonEncode({
+              'jsonrpc': '2.0',
+              'method': 'event',
+              'params': {
+                'type': 'message.delta',
+                'session_id': 'old-session',
+                'payload': {'text': 'old'},
+              },
+            }),
+          );
+          client.close();
+
+          await client.connect();
+          final secondSocket = await secondSocketSeen.future;
+          secondSocket.add(
+            jsonEncode({
+              'jsonrpc': '2.0',
+              'method': 'event',
+              'params': {
+                'type': 'gateway.ready',
+                'payload': {'generation': 2},
+              },
+            }),
+          );
+          secondSocket.add(
+            jsonEncode({
+              'jsonrpc': '2.0',
+              'method': 'event',
+              'params': {
+                'type': 'message.delta',
+                'session_id': 'new-session',
+                'payload': {'text': 'new'},
+              },
+            }),
+          );
+
+          final ready = await client.waitForGatewayReady();
+          await newEventSeen.future.timeout(const Duration(seconds: 5));
+          expect(
+            ((ready['params'] as Map<String, dynamic>)['payload']
+                as Map<String, dynamic>)['generation'],
+            2,
+          );
+          expect(readyGenerations, [2]);
+          expect(eventTexts, ['new']);
+          expect(connectionChanges, [true, false, true]);
+        } finally {
+          client.close();
+          await socketSubscription.cancel();
+          await server.close(force: true);
+        }
+      },
+    );
+
+    test('isolates throwing connected and disconnected observers', () async {
+      final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+      final serverSocketClosed = Completer<void>();
+      final socketSubscription = server
+          .transform(WebSocketTransformer())
+          .listen((socket) {
+            socket.listen(
+              (_) {},
+              onDone: () {
+                if (!serverSocketClosed.isCompleted) {
+                  serverSocketClosed.complete();
+                }
+              },
+            );
+          });
+      final connectionChanges = <bool>[];
+      final client = WsClient('http://127.0.0.1:${server.port}')
+        ..onConnectionChanged = (connected) {
+          connectionChanges.add(connected);
+          throw StateError('synthetic connection observer failure');
+        };
+
+      try {
+        await client.connect();
+        expect(client.isConnected, isTrue);
+        expect(() => client.close(), returnsNormally);
+        await serverSocketClosed.future.timeout(const Duration(seconds: 5));
+        expect(client.isConnected, isFalse);
+        expect(connectionChanges, [true, false]);
+      } finally {
+        client.close();
+        await socketSubscription.cancel();
+        await server.close(force: true);
+      }
+    });
+
+    test(
+      'terminalizes every session despite throwing global and turn observers',
+      () async {
+        final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+        final requests = <Map<String, dynamic>>[];
+        final socketSubscription = server
+            .transform(WebSocketTransformer())
+            .listen((socket) {
+              socket.listen((raw) {
+                final request =
+                    jsonDecode(raw as String) as Map<String, dynamic>;
+                requests.add(request);
+                socket.add(
+                  jsonEncode({
+                    'jsonrpc': '2.0',
+                    'id': request['id'],
+                    'result': {'accepted': true},
+                  }),
+                );
+                if (requests.length == 2) {
+                  socket.add(
+                    jsonEncode({
+                      'jsonrpc': '2.0',
+                      'method': 'event',
+                      'params': {
+                        'type': 'message.delta',
+                        'session_id': 'shared-session',
+                        'payload': {'text': 'delta'},
+                      },
+                    }),
+                  );
+                  socket.add(
+                    jsonEncode({
+                      'jsonrpc': '2.0',
+                      'method': 'event',
+                      'params': {
+                        'type': 'turn.end',
+                        'session_id': 'shared-session',
+                        'payload': {'status': 'complete'},
+                      },
+                    }),
+                  );
+                }
+              });
+            });
+        final globalTypes = <String>[];
+        final firstTypes = <String>[];
+        final secondTypes = <String>[];
+        final client = WsClient('http://127.0.0.1:${server.port}')
+          ..onStreamEvent = (event) {
+            globalTypes.add(event.type);
+            throw StateError('synthetic global observer failure');
+          };
+
+        try {
+          await client.connect();
+          final first = client.submitPrompt(
+            'first',
+            sessionId: 'shared-session',
+            onEvent: (event) {
+              firstTypes.add(event.type);
+              throw StateError('synthetic first session observer failure');
+            },
+            timeout: const Duration(seconds: 5),
+          );
+          final second = client.submitPrompt(
+            'second',
+            sessionId: 'shared-session',
+            onEvent: (event) {
+              secondTypes.add(event.type);
+              if (event.isComplete) {
+                throw StateError('synthetic terminal observer failure');
+              }
+            },
+            timeout: const Duration(seconds: 5),
+          );
+
+          await Future.wait([
+            first,
+            second,
+          ]).timeout(const Duration(seconds: 5));
+          expect(requests, hasLength(2));
+          expect(globalTypes, ['message.delta', 'turn.end']);
+          expect(firstTypes, ['message.delta', 'turn.end']);
+          expect(secondTypes, ['message.delta', 'turn.end']);
+        } finally {
+          client.close();
+          await socketSubscription.cancel();
+          await server.close(force: true);
+        }
+      },
+    );
+
+    test('completes and cleans a stream before its observer throws', () async {
+      final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+      final requests = <Map<String, dynamic>>[];
+      final socketSubscription = server
+          .transform(WebSocketTransformer())
+          .listen((socket) {
+            socket.listen((raw) {
+              final request = jsonDecode(raw as String) as Map<String, dynamic>;
+              requests.add(request);
+              if (request['method'] == 'fixture.stream') {
+                socket.add(
+                  jsonEncode({
+                    'jsonrpc': '2.0',
+                    'id': request['id'],
+                    'method': 'done',
+                    'params': {'status': 'complete'},
+                    'result': {'accepted': true},
+                  }),
+                );
+              } else {
+                socket.add(
+                  jsonEncode({
+                    'jsonrpc': '2.0',
+                    'id': request['id'],
+                    'result': {'status': 'interrupted'},
+                  }),
+                );
+              }
+            });
+          });
+      var streamCallbackCount = 0;
+      final client = WsClient('http://127.0.0.1:${server.port}');
+
+      try {
+        await client.connect();
+        final response = await client.sendStreaming(
+          'fixture.stream',
+          const {},
+          onEvent: (_) {
+            streamCallbackCount += 1;
+            throw StateError('synthetic stream observer failure');
+          },
+          timeout: const Duration(seconds: 5),
+        );
+        expect(response['result'], {'accepted': true});
+        expect(streamCallbackCount, 1);
+
+        await client.interruptSession('after-stream');
+        expect(requests.map((request) => request['method']), [
+          'fixture.stream',
+          'session.interrupt',
+        ]);
+      } finally {
+        client.close();
+        await socketSubscription.cancel();
+        await server.close(force: true);
+      }
+    });
+
+    test(
+      'ignores an exact ready duplicate and closes on ready drift',
+      () async {
+        final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+        final callbackFrames = <Map<String, dynamic>>[];
+        final applicationEvents = <StreamEvent>[];
+        final connectionChanges = <bool>[];
+        final disconnected = Completer<void>();
+        final serverSocketClosed = Completer<void>();
+        final firstFrame = <String, dynamic>{
+          'jsonrpc': '2.0',
+          'method': 'event',
+          'params': {
+            'type': 'gateway.ready',
+            'payload': {
+              'capabilities': ['turn.resume'],
+            },
+          },
+        };
+        final socketSubscription = server
+            .transform(WebSocketTransformer())
+            .listen((socket) {
+              socket.listen(
+                (_) {},
+                onDone: () {
+                  if (!serverSocketClosed.isCompleted) {
+                    serverSocketClosed.complete();
+                  }
+                },
+              );
+              socket.add(jsonEncode(firstFrame));
+              socket.add(jsonEncode(firstFrame));
+              Timer(const Duration(milliseconds: 100), () {
+                socket.add(
+                  jsonEncode({
+                    'jsonrpc': '2.0',
+                    'method': 'event',
+                    'params': {
+                      'type': 'gateway.ready',
+                      'payload': {
+                        'capabilities': ['turn.resume', 'unexpected'],
+                      },
+                    },
+                  }),
+                );
+              });
+            });
+        final client = WsClient('http://127.0.0.1:${server.port}')
+          ..onGatewayReady = callbackFrames.add
+          ..onStreamEvent = applicationEvents.add
+          ..onConnectionChanged = (connected) {
+            connectionChanges.add(connected);
+            if (!connected && !disconnected.isCompleted) {
+              disconnected.complete();
+              throw StateError('synthetic observer failure');
+            }
+          };
+
+        try {
+          await client.connect();
+          expect(await client.waitForGatewayReady(), firstFrame);
+          await disconnected.future.timeout(const Duration(seconds: 5));
+          await serverSocketClosed.future.timeout(const Duration(seconds: 5));
+
+          expect(callbackFrames, hasLength(1));
+          expect(applicationEvents, isEmpty);
+          expect(connectionChanges, [true, false]);
+          await expectLater(
+            client.waitForGatewayReady(),
+            throwsA(
+              isA<JsonRpcError>().having(
+                (error) => error.reason,
+                'reason',
+                'gateway_ready_drift',
+              ),
+            ),
+          );
+        } finally {
+          client.close();
+          await socketSubscription.cancel();
+          await server.close(force: true);
+        }
+      },
+    );
+
+    test(
+      'parses complete gateway error metadata without resubmitting',
+      () async {
+        final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+        var requestCount = 0;
+        final socketSubscription = server
+            .transform(WebSocketTransformer())
+            .listen((socket) {
+              socket.listen((raw) {
+                final request =
+                    jsonDecode(raw as String) as Map<String, dynamic>;
+                requestCount += 1;
+                socket.add(
+                  jsonEncode({
+                    'jsonrpc': '2.0',
+                    'id': request['id'],
+                    'error': {
+                      'message': 'Synthetic denial',
+                      'code': -32091,
+                      'data': {
+                        'reason': 'fixture_denied',
+                        'safe_to_resubmit': true,
+                        'nested': {
+                          'attempts': [1, 2],
+                        },
+                      },
+                    },
+                  }),
+                );
+              });
+            });
+        final client = WsClient('http://127.0.0.1:${server.port}');
+
+        try {
+          await client.connect();
+          JsonRpcError? surfaced;
+          try {
+            await client.interruptSession('fixture-session');
+          } on JsonRpcError catch (error) {
+            surfaced = error;
+          }
+
+          expect(surfaced, isNotNull);
+          expect(surfaced!.message, 'Synthetic denial');
+          expect(surfaced.code, -32091);
+          expect(surfaced.reason, 'fixture_denied');
+          expect(surfaced.safeToResubmit, isTrue);
+          expect(surfaced.data['nested'], {
+            'attempts': [1, 2],
+          });
+          expect(
+            () =>
+                ((surfaced!.data['nested'] as Map<String, dynamic>)['attempts']
+                        as List<dynamic>)
+                    .add(3),
+            throwsUnsupportedError,
+          );
+          await Future<void>.delayed(const Duration(milliseconds: 50));
+          expect(requestCount, 1);
+        } finally {
+          client.close();
+          await socketSubscription.cancel();
+          await server.close(force: true);
+        }
+      },
+    );
+
+    test('treats safe_to_resubmit as exact boolean metadata only', () {
+      final falseError = JsonRpcError.fromGateway('fixture', {
+        'data': {'safe_to_resubmit': false},
+      }, fallbackMessage: 'fallback');
+      final missingError = JsonRpcError.fromGateway(
+        'fixture',
+        const {},
+        fallbackMessage: 'fallback',
+      );
+      final wrongTypeError = JsonRpcError.fromGateway('fixture', {
+        'data': {'safe_to_resubmit': 'true'},
+      }, fallbackMessage: 'fallback');
+
+      expect(falseError.safeToResubmit, isFalse);
+      expect(missingError.safeToResubmit, isFalse);
+      expect(wrongTypeError.safeToResubmit, isFalse);
+    });
+
+    test(
+      'removes timeout listeners across reconnect and consecutive submits',
+      () async {
+        final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+        var requestCount = 0;
+        var connectionCount = 0;
+        final secondAck = Completer<void>();
+        final socketSubscription = server
+            .transform(WebSocketTransformer())
+            .listen((socket) {
+              connectionCount += 1;
+              socket.listen((raw) {
+                final request =
+                    jsonDecode(raw as String) as Map<String, dynamic>;
+                requestCount += 1;
+                socket.add(
+                  jsonEncode({
+                    'jsonrpc': '2.0',
+                    'id': request['id'],
+                    'result': {'accepted': true},
+                  }),
+                );
+                if (requestCount == 2 && !secondAck.isCompleted) {
+                  secondAck.complete();
+                }
+              });
+            });
+        final connectionChanges = <bool>[];
+        final client = WsClient('http://127.0.0.1:${server.port}')
+          ..onConnectionChanged = connectionChanges.add;
+
+        try {
+          await client.connect();
+          await expectLater(
+            client.submitPrompt(
+              'timeout fixture',
+              sessionId: 'timeout-session',
+              onEvent: (_) {},
+              timeout: const Duration(milliseconds: 100),
+            ),
+            throwsA(
+              isA<JsonRpcError>()
+                  .having((error) => error.method, 'method', 'prompt.submit')
+                  .having((error) => error.message, 'message', 'Timeout'),
+            ),
+          );
+
+          client.close();
+          await client.connect();
+          final secondSubmit = client.submitPrompt(
+            'close fixture',
+            sessionId: 'close-session',
+            onEvent: (_) {},
+            timeout: const Duration(seconds: 5),
+          );
+          final secondExpectation = expectLater(
+            secondSubmit,
+            throwsA(
+              isA<JsonRpcError>()
+                  .having((error) => error.method, 'method', 'prompt.submit')
+                  .having(
+                    (error) => error.reason,
+                    'reason',
+                    'connection_closed',
+                  ),
+            ),
+          );
+          await secondAck.future.timeout(const Duration(seconds: 5));
+          client.close();
+          client.close();
+          await secondExpectation;
+
+          expect(requestCount, 2);
+          expect(connectionCount, 2);
+          expect(connectionChanges, [true, false, true, false]);
+        } finally {
+          client.close();
+          await socketSubscription.cancel();
+          await server.close(force: true);
+        }
+      },
+    );
+
     test('fails closed when the socket closes before prompt ACK', () async {
       await _expectFailClosedPromptDisconnect(
         _PromptDisconnectPoint.beforeAck,
@@ -1529,6 +2195,131 @@ void main() {
         'text': 'Hello',
         'session_id': 'gateway-session-123',
       });
+    });
+
+    test('snapshots exact typed event envelope convenience fields', () {
+      final params = <String, dynamic>{
+        'type': 'message.delta',
+        'session_id': 'gateway-session-123',
+        'turn_id': 'turn-456',
+        'seq': 7,
+        'message_id': 'message-789',
+        'payload': {
+          'text': 'Hello',
+          'nested': {
+            'parts': ['one', 'two'],
+          },
+        },
+      };
+      final event = WsClient.parseGatewayEvent(params);
+
+      expect(event, isNotNull);
+      expect(event!.sessionId, 'gateway-session-123');
+      expect(event.turnId, 'turn-456');
+      expect(event.seq, 7);
+      expect(event.messageId, 'message-789');
+      expect(event.envelope, params);
+
+      (params['payload'] as Map<String, dynamic>)['text'] = 'mutated source';
+      params['turn_id'] = 'mutated source';
+      expect(event.data['text'], 'Hello');
+      expect(event.turnId, 'turn-456');
+      expect(event.envelope['turn_id'], 'turn-456');
+      expect(
+        () =>
+            ((event.data['nested'] as Map<String, dynamic>)['parts']
+                    as List<dynamic>)
+                .add('three'),
+        throwsUnsupportedError,
+      );
+      expect(() => event.envelope['seq'] = 8, throwsUnsupportedError);
+    });
+
+    test('does not normalize wrong envelope field types', () {
+      final event = WsClient.parseGatewayEvent({
+        'type': 'message.delta',
+        'session_id': 123,
+        'sid': false,
+        'turn_id': 456,
+        'seq': '7',
+        'message_id': 789,
+        'payload': {'text': 'Hello'},
+      });
+
+      expect(event, isNotNull);
+      expect(event!.sessionId, isNull);
+      expect(event.turnId, isNull);
+      expect(event.seq, isNull);
+      expect(event.messageId, isNull);
+      expect(event.data.containsKey('session_id'), isFalse);
+    });
+
+    test('rejects untrimmed control or overbound envelope IDs', () {
+      final invalidIds = <String>[
+        ' leading',
+        'trailing ',
+        'line\nbreak',
+        'delete\u007fcontrol',
+        'c1\u0085control',
+        List<String>.filled(257, 'x').join(),
+      ];
+
+      for (final invalidId in invalidIds) {
+        final event = WsClient.parseGatewayEvent({
+          'type': 'message.delta',
+          'session_id': invalidId,
+          'sid': false,
+          'turn_id': invalidId,
+          'seq': 1,
+          'message_id': invalidId,
+          'payload': {'text': 'Hello'},
+        });
+
+        expect(event, isNotNull, reason: invalidId);
+        expect(event!.sessionId, isNull, reason: invalidId);
+        expect(event.turnId, isNull, reason: invalidId);
+        expect(event.messageId, isNull, reason: invalidId);
+        expect(
+          event.data.containsKey('session_id'),
+          isFalse,
+          reason: invalidId,
+        );
+      }
+
+      final boundaryId = List<String>.filled(256, 'x').join();
+      final boundaryEvent = WsClient.parseGatewayEvent({
+        'type': 'message.delta',
+        'session_id': boundaryId,
+        'turn_id': boundaryId,
+        'seq': 1,
+        'message_id': boundaryId,
+        'payload': const <String, dynamic>{},
+      });
+      expect(boundaryEvent?.sessionId, boundaryId);
+      expect(boundaryEvent?.turnId, boundaryId);
+      expect(boundaryEvent?.messageId, boundaryId);
+    });
+
+    test('accepts only an exact positive integer event sequence', () {
+      for (final invalidSeq in <Object?>[0, -1, 1.0, '1', true, null]) {
+        final event = WsClient.parseGatewayEvent({
+          'type': 'message.delta',
+          'session_id': 'session-123',
+          'seq': invalidSeq,
+          'payload': const <String, dynamic>{},
+        });
+        expect(event?.seq, isNull, reason: '$invalidSeq');
+      }
+
+      expect(
+        WsClient.parseGatewayEvent({
+          'type': 'message.delta',
+          'session_id': 'session-123',
+          'seq': 1,
+          'payload': const <String, dynamic>{},
+        })?.seq,
+        1,
+      );
     });
 
     test('marks a gateway turn error as terminal', () {
