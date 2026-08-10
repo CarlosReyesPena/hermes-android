@@ -13,7 +13,7 @@ void main() {
       ).firstMatch(pubspec);
 
       expect(match, isNotNull);
-      expect(match!.group(1), '1.0.18-hermesapk.18');
+      expect(match!.group(1), '2.0.0');
       expect(int.parse(match.group(2)!), 2130);
       expect(int.parse(match.group(2)!), greaterThan(2129));
       expect(int.parse(match.group(2)!) + 2000, 4130);

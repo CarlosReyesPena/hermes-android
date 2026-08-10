@@ -69,6 +69,9 @@ class _FakeApplicationSession implements GatewayTurnApplicationSession {
   Future<void> close() async => closeCount++;
 
   @override
+  set onTurnSettled(GatewayTurnSettledCallback? callback) {}
+
+  @override
   Future<void> detachAttachments({
     required String localSessionId,
     required Iterable<GatewayTurnAttachmentReceipt> attachments,

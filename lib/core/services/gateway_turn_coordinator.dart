@@ -15,6 +15,9 @@ typedef GatewayTurnIdFactory = String Function();
 typedef GatewayTurnClock = DateTime Function();
 typedef GatewayTurnStateCallback =
     void Function(GatewayTurnRecoveryState state);
+typedef GatewayTurnSettledCallback = void Function(
+  GatewayTurnRecoveryState state,
+);
 
 enum GatewayTurnCoordinatorFailure {
   closed,
@@ -112,6 +115,10 @@ class GatewayTurnCoordinatorRegistry {
   int _generation = 0;
   bool _closed = false;
 
+  /// Set on every newly opened coordinator so the application layer can
+  /// observe turn settlement without reaching into internal state.
+  GatewayTurnSettledCallback? onTurnSettled;
+
   GatewayTurnCoordinatorRegistry({
     required this.connectionId,
     required this.endpointDigest,
@@ -152,7 +159,7 @@ class GatewayTurnCoordinatorRegistry {
           freshSocketFactory: _leaseFreshSocket,
           uuidFactory: uuidFactory,
           clock: clock,
-        ),
+        )..onTurnSettled = onTurnSettled,
       );
       Object? firstError;
       StackTrace? firstStack;
@@ -344,6 +351,10 @@ class GatewayTurnCoordinator {
   GatewayTurnJournalBinding? _durableBinding;
   int _transportGeneration = 0;
   bool _closed = false;
+
+  /// Called exactly once when a turn is settled into the tombstone,
+  /// whether completed successfully or fail-closed.
+  GatewayTurnSettledCallback? onTurnSettled;
 
   GatewayTurnCoordinator({
     required this.connectionId,
@@ -1407,6 +1418,7 @@ class GatewayTurnCoordinator {
     while (_settledTombstones.length > maxSettledTombstones) {
       _settledTombstones.remove(_settledTombstones.keys.first);
     }
+    onTurnSettled?.call(state);
   }
 
   void _discardUnsubmittedState(GatewayTurnRecoveryState state) {

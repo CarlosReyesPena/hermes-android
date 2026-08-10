@@ -21,6 +21,7 @@ import '../services/gateway_turn_application_controller.dart';
 import '../services/gateway_turn_coordinator.dart';
 import '../services/gateway_turn_recovery.dart';
 import '../services/gateway_turn_ui_projection.dart';
+import '../services/turn_notification_service.dart';
 import '../services/voice_composer_adapter.dart';
 import '../services/ws_client.dart';
 import '../models/attachment_draft.dart';
@@ -176,6 +177,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   GatewayTurnApplicationSession? _turnApplicationSession;
   DesktopConnectionState _desktopConnectionState =
       DesktopConnectionState.disconnected;
+  bool _appInBackground = false;
 
   // Chat sending state
   final _textController = TextEditingController();
@@ -228,10 +230,13 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   static const _stableExtentTolerance = 0.5;
   static final Map<String, List<GatewayNotice>> _savedGatewayNotices = {};
 
+    late final TurnNotificationService _turnNotifications;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _turnNotifications = TurnNotificationService();
     _client =
         widget.testApiClient ??
         ApiClient(
@@ -277,6 +282,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
         (_desktopGateway != null
             ? widget.turnApplicationController?.sessionFor(widget.connection)
             : null);
+    _turnApplicationSession?.onTurnSettled = _onTurnSettled;
     unawaited(_initializeChat());
     _loadVerboseMode();
     _initVoice();
@@ -343,7 +349,11 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) {
+    if (state == AppLifecycleState.paused) {
+      _appInBackground = true;
+    } else if (state == AppLifecycleState.resumed) {
+      _appInBackground = false;
+      _turnNotifications.cancelAll();
       if (_desktopGateway != null) unawaited(_ensureDesktopSession());
       if (_turnApplicationSession != null && !_legacyTransportFallback) {
         unawaited(_recoverPendingTurn());
@@ -498,6 +508,18 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
           ),
         );
     }
+  }
+
+  void _onTurnSettled(GatewayTurnRecoveryState state) {
+    if (!_appInBackground) return;
+    final turnId = state.turnId ?? state.clientTurnId;
+    final summary = state.isTerminal && !state.isFailClosed
+        ? 'Response ready'
+        : 'Turn completed';
+    _turnNotifications.showTurnCompleted(
+      turnSummary: '${widget.session.title}: $summary',
+      turnId: turnId,
+    );
   }
 
   void _onScroll() {

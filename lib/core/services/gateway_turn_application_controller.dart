@@ -45,6 +45,8 @@ abstract interface class GatewayTurnApplicationSession {
   });
 
   Future<void> close();
+
+  set onTurnSettled(GatewayTurnSettledCallback? callback);
 }
 
 /// Owns recovery registries above screen and Navigator lifetimes.
@@ -190,6 +192,11 @@ class _CoordinatorGatewayTurnApplicationSession
     } finally {
       _client.close();
     }
+  }
+
+  @override
+  set onTurnSettled(GatewayTurnSettledCallback? callback) {
+    _registry.onTurnSettled = callback;
   }
 }
 
