@@ -237,6 +237,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _turnNotifications = TurnNotificationService();
+    unawaited(_turnNotifications.ensureInitialized());
     _client =
         widget.testApiClient ??
         ApiClient(

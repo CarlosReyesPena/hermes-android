@@ -14,7 +14,7 @@ Android client for [Hermes Agent](https://hermes-agent.nousresearch.com/) — ch
 
 ## Current release
 
-- Version: **2.0.0** (build 2130)
+- Version: **2.0.1** (build 2131)
 - Package: `com.hermesagent.hermes_android`
 - Recommended APK for modern phones: ARM64 release build from the
   [Releases](https://github.com/rusty4444/hermes-android/releases) page.
@@ -39,6 +39,10 @@ Android client for [Hermes Agent](https://hermes-agent.nousresearch.com/) — ch
 - Native approval, sudo/secret, clarification, reasoning, tool activity,
   notifications, background results, reviews, and subagent status.
 - Persistent reconnect/session resume and defensive retry handling.
+- **Background turn notifications** — Android notifications fire when a
+  gateway turn completes while the app is backgrounded, mirroring the
+  Hermes Desktop tray notification behaviour. Notifications are
+  automatically cleared when returning to the app.
 
 See [CHANGELOG.md](CHANGELOG.md) for the complete `.13` change list and
 [docs/HERMESAPK_DEVELOPMENT_LOG.md](docs/HERMESAPK_DEVELOPMENT_LOG.md) for the
@@ -117,7 +121,7 @@ Download the latest APK from this repository's
 For most Android phones, install the ARM64 APK:
 
 ```bash
-adb install Hermes-Android-2.0.0-arm64-release.apk
+adb install Hermes-Android-2.0.1-arm64-release.apk
 ```
 
 If sideloading directly on Android, enable **Install unknown apps** for your browser or file manager, then open the downloaded APK.
@@ -400,8 +404,8 @@ cp build/app/outputs/flutter-apk/app-*-release.apk release-apks/
 
 `pubspec.yaml` declares the base Android `versionCode`. Flutter's
 `--split-per-abi` packaging adds an ABI offset to each split; for arm64-v8a the
-effective APK manifest value is `base + 2000`. For v2.0.0, base `2130`
-therefore produces effective arm64 code `4130`. CI reads the completed APK with
+effective APK manifest value is `base + 2000`. For v2.0.1, base `2131`
+therefore produces effective arm64 code `4131`. CI reads the completed APK with
 `aapt` and fails if that relationship drifts. Release-floor checks continue to
 apply to the base value and must not be weakened to rely on an ABI offset.
 
