@@ -7,8 +7,27 @@ import argparse
 import asyncio
 import base64
 import json
+import tempfile
+from pathlib import Path
 
 from aiohttp import ClientSession, WSMsgType
+
+try:
+    from .turn_recovery_contract import (
+        FAULT_AFTER_ACK_BEFORE_FIRST_DELTA,
+        FAULT_AFTER_COMMIT_BEFORE_ACK,
+        FAULT_AFTER_COMPLETION,
+        FAULT_MIDSTREAM,
+        TurnRecoveryContractLedger,
+    )
+except ImportError:
+    from turn_recovery_contract import (
+        FAULT_AFTER_ACK_BEFORE_FIRST_DELTA,
+        FAULT_AFTER_COMMIT_BEFORE_ACK,
+        FAULT_AFTER_COMPLETION,
+        FAULT_MIDSTREAM,
+        TurnRecoveryContractLedger,
+    )
 
 
 DISCONNECT_CASES = (
@@ -34,6 +53,376 @@ async def rpc(ws, request_id: int, method: str, params: dict) -> dict:
         if payload.get("id") == request_id:
             assert "error" not in payload, payload
             return payload["result"]
+
+
+async def rpc_response(ws, request_id: int, method: str, params: dict) -> dict:
+    await ws.send_json(
+        {
+            "jsonrpc": "2.0",
+            "id": request_id,
+            "method": method,
+            "params": params,
+        }
+    )
+    while True:
+        message = await ws.receive(timeout=5)
+        assert message.type == WSMsgType.TEXT, message
+        payload = json.loads(message.data)
+        if payload.get("id") == request_id:
+            return payload
+
+
+class _MemoryWebSocket:
+    def __init__(self) -> None:
+        self.frames: list[dict] = []
+        self.closed = False
+
+    async def send_str(self, value: str) -> None:
+        self.frames.append(json.loads(value))
+
+    async def close(self, **_kwargs) -> None:
+        self.closed = True
+
+
+async def probe_persistent_recovery_ledger() -> None:
+    mobile_session_id = "11111111-1111-4111-8111-111111111111"
+    client_turn_id = "22222222-2222-4222-8222-222222222222"
+    with tempfile.TemporaryDirectory(prefix="hermes-s12-fake-") as temporary:
+        ledger_path = Path(temporary) / "turn-recovery.json"
+        first = TurnRecoveryContractLedger(ledger_path)
+        first_socket = _MemoryWebSocket()
+        await first.handle(
+            first_socket,
+            {
+                "id": 1,
+                "method": "session.open",
+                "params": {
+                    "mobile_session_id": mobile_session_id,
+                    "profile": "fixture-persistent",
+                },
+            },
+            "connection-first",
+        )
+        first_binding = first_socket.frames[-1]["result"]
+        await first.handle(
+            first_socket,
+            {
+                "id": 2,
+                "method": "prompt.submit",
+                "params": {
+                    "session_id": first_binding["runtime_session_id"],
+                    "version": 2,
+                    "client_turn_id": client_turn_id,
+                    "text": "SENTINEL_PROMPT_MUST_NOT_PERSIST",
+                    "attachments": [],
+                },
+            },
+            "connection-first",
+        )
+        first_ack = next(
+            frame["result"]
+            for frame in first_socket.frames
+            if frame.get("id") == 2
+        )
+
+        second = TurnRecoveryContractLedger(ledger_path)
+        second_socket = _MemoryWebSocket()
+        await second.handle(
+            second_socket,
+            {
+                "id": 3,
+                "method": "session.open",
+                "params": {
+                    "mobile_session_id": mobile_session_id,
+                    "profile": "fixture-persistent",
+                },
+            },
+            "connection-second",
+        )
+        second_binding = second_socket.frames[-1]["result"]
+        assert second_binding["stored_session_id"] == first_binding["stored_session_id"]
+        assert second_binding["runtime_session_id"] != first_binding["runtime_session_id"]
+        await second.handle(
+            second_socket,
+            {
+                "id": 4,
+                "method": "turn.reconcile",
+                "params": {
+                    "session_id": second_binding["runtime_session_id"],
+                    "turn_id": first_ack["turn_id"],
+                    "after_seq": 0,
+                },
+            },
+            "connection-second",
+        )
+        reconcile = second_socket.frames[-1]["result"]
+        assert reconcile["mode"] == "events"
+        assert reconcile["events"][0]["seq"] == 1
+        assert reconcile["has_more"] is True
+        assert second.inspection()["submit_attempt_count"] == 1
+        encoded = ledger_path.read_text(encoding="utf-8")
+        assert "SENTINEL_PROMPT_MUST_NOT_PERSIST" not in encoded
+        assert "automatic_resubmit" not in encoded
+
+
+async def _open_recovery_socket(session: ClientSession, base_url: str):
+    async with session.post(
+        f"{base_url}/api/auth/ws-ticket",
+        headers={"X-Hermes-Session-Token": "fixture-dashboard-token"},
+    ) as response:
+        assert response.status == 200
+        ticket = (await response.json())["ticket"]
+    ws_url = (
+        base_url.replace("http://", "ws://").replace("https://", "wss://")
+        + f"/api/ws?ticket={ticket}"
+    )
+    ws = await session.ws_connect(ws_url, max_msg_size=20 * 1024 * 1024)
+    ready_message = await ws.receive(timeout=5)
+    assert ready_message.type == WSMsgType.TEXT
+    ready = json.loads(ready_message.data)
+    recovery = ready["params"]["payload"]["capabilities"]["turn_recovery"]
+    assert recovery["version"] == 2
+    assert recovery["prompt_submit_version"] == 2
+    assert recovery["shadow_only"] is False
+    assert recovery["automatic_resubmit"] is False
+    assert recovery["methods"] == [
+        "session.open",
+        "turn.reconcile",
+        "turn.interrupt",
+        "attachment.detach@2",
+    ]
+    return ws
+
+
+async def _submit_until_disconnect(
+    ws,
+    request_id: int,
+    runtime_session_id: str,
+    client_turn_id: str,
+) -> tuple[dict | None, list[dict]]:
+    await ws.send_json(
+        {
+            "jsonrpc": "2.0",
+            "id": request_id,
+            "method": "prompt.submit",
+            "params": {
+                "session_id": runtime_session_id,
+                "version": 2,
+                "client_turn_id": client_turn_id,
+                "text": "Synthetic recovery intent.",
+                "attachments": [],
+            },
+        }
+    )
+    ack = None
+    events: list[dict] = []
+    while True:
+        message = await ws.receive(timeout=5)
+        if message.type == WSMsgType.TEXT:
+            frame = json.loads(message.data)
+            if frame.get("id") == request_id:
+                ack = frame["result"]
+            elif frame.get("method") == "event":
+                events.append(frame["params"])
+            continue
+        if message.type in {WSMsgType.CLOSE, WSMsgType.CLOSING, WSMsgType.CLOSED}:
+            break
+        assert message.type != WSMsgType.ERROR, ws.exception()
+    return ack, events
+
+
+async def probe_turn_recovery_v2(session: ClientSession, base_url: str) -> None:
+    mobile_session_id = "33333333-3333-4333-8333-333333333333"
+    faults = (
+        (FAULT_AFTER_COMMIT_BEFORE_ACK, False),
+        (FAULT_AFTER_ACK_BEFORE_FIRST_DELTA, True),
+        (FAULT_MIDSTREAM, True),
+        (FAULT_AFTER_COMPLETION, True),
+    )
+    stable_stored_id = None
+    previous_runtime_id = None
+    last_turn_id = None
+    for index, (fault, expect_ack) in enumerate(faults, start=1):
+        ws = await _open_recovery_socket(session, base_url)
+        binding = await rpc(
+            ws,
+            index * 100,
+            "session.open",
+            {
+                "mobile_session_id": mobile_session_id,
+                "profile": "fixture-recovery-a",
+            },
+        )
+        if stable_stored_id is None:
+            stable_stored_id = binding["stored_session_id"]
+        assert binding["stored_session_id"] == stable_stored_id
+        assert binding["runtime_session_id"] != previous_runtime_id
+        previous_runtime_id = binding["runtime_session_id"]
+        configured = await rpc(
+            ws,
+            index * 100 + 1,
+            "fixture.turn.next_fault",
+            {"session_id": binding["runtime_session_id"], "fault": fault},
+        )
+        assert configured == {"configured": True, "fault": fault}
+        client_turn_id = f"44444444-4444-4444-8444-{index:012d}"
+        ack, live_events = await _submit_until_disconnect(
+            ws,
+            index * 100 + 2,
+            binding["runtime_session_id"],
+            client_turn_id,
+        )
+        assert (ack is not None) is expect_ack
+        assert all(event["turn_id"] for event in live_events)
+        assert all(
+            event["session_id"] == binding["runtime_session_id"]
+            for event in live_events
+        )
+
+        reconnect = await _open_recovery_socket(session, base_url)
+        rebound = await rpc(
+            reconnect,
+            index * 100 + 3,
+            "session.open",
+            {
+                "mobile_session_id": mobile_session_id,
+                "profile": "fixture-recovery-a",
+            },
+        )
+        assert rebound["stored_session_id"] == stable_stored_id
+        assert rebound["runtime_session_id"] != previous_runtime_id
+        previous_runtime_id = rebound["runtime_session_id"]
+        after_seq = 0
+        replay: list[dict] = []
+        while True:
+            page = await rpc(
+                reconnect,
+                index * 100 + 4 + after_seq,
+                "turn.reconcile",
+                {
+                    "session_id": rebound["runtime_session_id"],
+                    "client_turn_id": client_turn_id,
+                    "after_seq": after_seq,
+                },
+            )
+            assert page["mode"] == "events"
+            assert page["automatic_resubmit"] is False
+            assert page["next_after_seq"] >= after_seq
+            replay.extend(page["events"])
+            after_seq = page["next_after_seq"]
+            if not page["has_more"]:
+                last_turn_id = page["turn_id"]
+                assert page["status"] == "completed"
+                assert after_seq == page["last_seq"]
+                break
+        assert [event["seq"] for event in replay] == list(range(1, 9))
+        assert replay[-1]["payload"] == {"status": "completed"}
+        await reconnect.close()
+
+    inspect_socket = await _open_recovery_socket(session, base_url)
+    inspected = await rpc(inspect_socket, 900, "fixture.turn.inspect", {})
+    assert inspected["submit_attempt_count"] == len(faults)
+    assert all(turn["prompt_submit_count"] == 1 for turn in inspected["turns"])
+    binding = await rpc(
+        inspect_socket,
+        901,
+        "session.open",
+        {
+            "mobile_session_id": mobile_session_id,
+            "profile": "fixture-recovery-a",
+        },
+    )
+    pruned = await rpc(
+        inspect_socket,
+        902,
+        "fixture.turn.prune",
+        {"session_id": binding["runtime_session_id"], "turn_id": last_turn_id},
+    )
+    assert pruned["earliest_seq"] == 9
+    snapshot = await rpc(
+        inspect_socket,
+        903,
+        "turn.reconcile",
+        {
+            "session_id": binding["runtime_session_id"],
+            "turn_id": last_turn_id,
+            "after_seq": 0,
+        },
+    )
+    assert snapshot["mode"] == "snapshot"
+    assert snapshot["snapshot"]["assistant"] == {
+        "message_id": snapshot["snapshot"]["assistant"]["message_id"],
+        "text": "Durable recovery completed.",
+        "complete": True,
+    }
+    restarted = await rpc(inspect_socket, 904, "fixture.turn.restart", {})
+    assert restarted["durable_turns"] == len(faults)
+    await inspect_socket.close()
+
+    isolated_socket = await _open_recovery_socket(session, base_url)
+    isolated = await rpc(
+        isolated_socket,
+        905,
+        "session.open",
+        {
+            "mobile_session_id": mobile_session_id,
+            "profile": "fixture-recovery-b",
+        },
+    )
+    assert isolated["stored_session_id"] != stable_stored_id
+    cross_profile = await rpc_response(
+        isolated_socket,
+        906,
+        "turn.reconcile",
+        {
+            "session_id": isolated["runtime_session_id"],
+            "turn_id": last_turn_id,
+            "after_seq": 0,
+        },
+    )
+    assert cross_profile["error"]["data"] == {
+        "reason": "turn_unknown",
+        "safe_to_resubmit": False,
+    }
+    closed_schema = await rpc_response(
+        isolated_socket,
+        907,
+        "prompt.submit",
+        {
+            "session_id": isolated["runtime_session_id"],
+            "version": 2,
+            "client_turn_id": "55555555-5555-4555-8555-555555555555",
+            "text": "No in-band fixture fields.",
+            "attachments": [],
+            "fixture_fault": FAULT_MIDSTREAM,
+        },
+    )
+    assert closed_schema["error"]["data"]["reason"] == "closed_prompt_schema"
+    without_attachments = await rpc(
+        isolated_socket,
+        908,
+        "prompt.submit",
+        {
+            "session_id": isolated["runtime_session_id"],
+            "version": 2,
+            "client_turn_id": "66666666-6666-4666-8666-666666666666",
+            "text": "Missing attachments defaults to an empty manifest.",
+        },
+    )
+    assert without_attachments["accepted"] is True
+    assert without_attachments["created"] is True
+    no_attachment_events: list[dict] = []
+    while len(no_attachment_events) < 7:
+        message = await isolated_socket.receive(timeout=5)
+        assert message.type == WSMsgType.TEXT, message
+        frame = json.loads(message.data)
+        if frame.get("method") == "event":
+            no_attachment_events.append(frame["params"])
+    assert all(
+        event["session_id"] == isolated["runtime_session_id"]
+        for event in no_attachment_events
+    )
+    await isolated_socket.close()
 
 
 async def probe_disconnect_scenario(
@@ -121,6 +510,7 @@ async def probe_disconnect_scenario(
 
 
 async def probe(base_url: str) -> None:
+    await probe_persistent_recovery_ledger()
     dashboard_headers = {
         "X-Hermes-Session-Token": "fixture-dashboard-token"
     }
@@ -130,6 +520,7 @@ async def probe(base_url: str) -> None:
             assert response.status == 200
             assert "json-rpc-websocket" in health["contracts"]
             assert "fail-closed-disconnect-fixtures" in health["contracts"]
+            assert "turn-recovery-v2-fixture" in health["contracts"]
 
         async with session.post(
             f"{base_url}/test/disconnect-ledger/reset"
@@ -849,6 +1240,8 @@ async def probe(base_url: str) -> None:
             for scenario, record in cleared_ledger["scenarios"].items()
         )
 
+        await probe_turn_recovery_v2(session, base_url)
+
     print(
         json.dumps(
             {
@@ -895,6 +1288,7 @@ async def probe(base_url: str) -> None:
                     "disconnect.after_ack_before_first_delta",
                     "disconnect.mid_stream_after_2_deltas",
                     "disconnect-ledger-v1",
+                    "turn-recovery-v2",
                 ],
             }
         )

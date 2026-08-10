@@ -18,6 +18,11 @@ from urllib.parse import unquote
 
 from aiohttp import WSMsgType, web
 
+try:
+    from .turn_recovery_contract import TurnRecoveryContractLedger
+except ImportError:
+    from turn_recovery_contract import TurnRecoveryContractLedger
+
 
 FIXTURE_SESSION_ID = "fixture-copy"
 DASHBOARD_TOKEN = "fixture-dashboard-token"
@@ -64,7 +69,12 @@ MESSAGES = {
 
 
 class GatewayState:
-    def __init__(self, api_key: str, log_path: Path | None) -> None:
+    def __init__(
+        self,
+        api_key: str,
+        log_path: Path | None,
+        turn_recovery_ledger_path: Path | None = None,
+    ) -> None:
         self.api_key = api_key
         self.log_path = log_path
         self.log_lock = threading.Lock()
@@ -81,6 +91,9 @@ class GatewayState:
         self.session_reasoning: dict[str, str] = {}
         self.attachments: dict[str, list[dict[str, object]]] = {}
         self.disconnect_ledger = self._new_disconnect_ledger()
+        self.turn_recovery = TurnRecoveryContractLedger(
+            turn_recovery_ledger_path
+        )
 
     @staticmethod
     def _new_disconnect_ledger() -> dict[str, dict[str, object]]:
@@ -203,6 +216,7 @@ async def health(request: web.Request) -> web.Response:
                 "dashboard",
                 "json-rpc-websocket",
                 "fail-closed-disconnect-fixtures",
+                "turn-recovery-v2-fixture",
             ],
         }
     )
@@ -1347,6 +1361,7 @@ async def websocket_gateway(request: web.Request) -> web.StreamResponse:
 
     ws = web.WebSocketResponse(max_msg_size=20 * 1024 * 1024)
     await ws.prepare(request)
+    recovery_connection_id = f"ws-{id(ws)}"
     state.log(
         {
             "transport": "websocket",
@@ -1361,6 +1376,7 @@ async def websocket_gateway(request: web.Request) -> web.StreamResponse:
         str, tuple[str, str, asyncio.Future[str]]
     ] = {}
     pending_clarifications: dict[str, tuple[str, asyncio.Future[str]]] = {}
+    await ws.send_json(state.turn_recovery.ready_frame())
     async for message in ws:
         if message.type == WSMsgType.TEXT:
             try:
@@ -1370,6 +1386,13 @@ async def websocket_gateway(request: web.Request) -> web.StreamResponse:
                 continue
             if not isinstance(payload, dict):
                 await ws.send_str(rpc_error(None, "Expected JSON object"))
+                continue
+            if state.turn_recovery.handles(payload):
+                await state.turn_recovery.handle(
+                    ws,
+                    payload,
+                    recovery_connection_id,
+                )
                 continue
             await handle_rpc(
                 ws,
@@ -1393,6 +1416,7 @@ async def websocket_gateway(request: web.Request) -> web.StreamResponse:
     for _, prompt in pending_clarifications.values():
         if not prompt.done():
             prompt.cancel()
+    state.turn_recovery.detach(ws, recovery_connection_id)
     state.log(
         {
             "transport": "websocket",
@@ -1436,12 +1460,17 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--port", type=int, default=18642)
     parser.add_argument("--api-key", default="test-key")
     parser.add_argument("--log", type=Path)
+    parser.add_argument("--turn-recovery-ledger", type=Path)
     return parser.parse_args()
 
 
 def main() -> None:
     args = parse_args()
-    state = GatewayState(args.api_key, args.log)
+    state = GatewayState(
+        args.api_key,
+        args.log,
+        args.turn_recovery_ledger,
+    )
     print(
         f"Hermes Android fixture listening on http://{args.host}:{args.port}",
         flush=True,
