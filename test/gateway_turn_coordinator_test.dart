@@ -2079,7 +2079,7 @@ void main() {
               isA<GatewayTurnCoordinatorException>().having(
                 (error) => error.failure,
                 'failure',
-                GatewayTurnCoordinatorFailure.unsupportedCapability,
+                GatewayTurnCoordinatorFailure.invalidResponse,
               ),
             ),
           );
@@ -2091,6 +2091,227 @@ void main() {
         }
       },
     );
+
+    test(
+      'explicit missing ready capability allows fallback before any write',
+      () async {
+        final ready = _readyFrame();
+        final payload =
+            (ready['params'] as Map<String, dynamic>)['payload']
+                as Map<String, dynamic>;
+        (payload['capabilities'] as Map<String, dynamic>).remove(
+          'turn_recovery',
+        );
+        final fixture = await _GatewayFixture.start(
+          readyFrame: ready,
+          handler: (request, _) => throw StateError(
+            'Unsupported ready must not call ${request['method']}',
+          ),
+        );
+        final store = _MemoryJournalStore();
+        final coordinator = _coordinator(
+          fixture: fixture,
+          journal: GatewayTurnJournal(store: store),
+        );
+
+        try {
+          await expectLater(
+            coordinator.recoverPending(),
+            throwsA(
+              isA<GatewayTurnCoordinatorException>().having(
+                (error) => error.failure,
+                'failure',
+                GatewayTurnCoordinatorFailure.unsupportedCapability,
+              ),
+            ),
+          );
+          expect(fixture.requests, isEmpty);
+          expect(store.value, isNull);
+        } finally {
+          await coordinator.close();
+          await fixture.close();
+        }
+      },
+    );
+
+    test(
+      'unsupported ready blocks fallback when previous binding is unsafe',
+      () async {
+        final store = _MemoryJournalStore();
+        final journal = GatewayTurnJournal(store: store);
+        final binding = _binding();
+        await journal.upsertBinding(binding);
+        await journal.upsert(
+          _entry(
+            binding: binding,
+            turnId: 'turn-pending',
+            status: GatewayRecoveryTurnStatus.accepted,
+            ackUncertain: false,
+          ),
+        );
+        final before = store.value;
+        final ready = _readyFrame();
+        final payload =
+            (ready['params'] as Map<String, dynamic>)['payload']
+                as Map<String, dynamic>;
+        (payload['capabilities'] as Map<String, dynamic>).remove(
+          'turn_recovery',
+        );
+        final fixture = await _GatewayFixture.start(
+          readyFrame: ready,
+          handler: (request, _) => throw StateError(
+            'Unsafe fallback must not call ${request['method']}',
+          ),
+        );
+        final coordinator = _coordinator(fixture: fixture, journal: journal);
+
+        try {
+          await expectLater(
+            coordinator.recoverPending(),
+            throwsA(
+              isA<GatewayTurnCoordinatorException>().having(
+                (error) => error.failure,
+                'failure',
+                GatewayTurnCoordinatorFailure
+                    .unsupportedCapabilityWithPendingTurns,
+              ),
+            ),
+          );
+          expect(fixture.requests, isEmpty);
+          expect(store.value, before);
+        } finally {
+          await coordinator.close();
+          await fixture.close();
+        }
+      },
+    );
+
+    test('clean terminal journal still permits explicit fallback', () async {
+      final store = _MemoryJournalStore();
+      final journal = GatewayTurnJournal(store: store);
+      final binding = _binding();
+      await journal.upsertBinding(binding);
+      await journal.upsert(
+        _entry(
+          binding: binding,
+          turnId: 'turn-clean',
+          status: GatewayRecoveryTurnStatus.completed,
+          lastSeq: 1,
+          ackUncertain: false,
+        ),
+      );
+      final before = store.value;
+      final ready = _readyFrame();
+      final payload =
+          (ready['params'] as Map<String, dynamic>)['payload']
+              as Map<String, dynamic>;
+      (payload['capabilities'] as Map<String, dynamic>).remove('turn_recovery');
+      final fixture = await _GatewayFixture.start(readyFrame: ready);
+      final coordinator = _coordinator(fixture: fixture, journal: journal);
+
+      try {
+        await expectLater(
+          coordinator.recoverPending(),
+          throwsA(
+            isA<GatewayTurnCoordinatorException>().having(
+              (error) => error.failure,
+              'failure',
+              GatewayTurnCoordinatorFailure.unsupportedCapability,
+            ),
+          ),
+        );
+        expect(fixture.requests, isEmpty);
+        expect(store.value, before);
+      } finally {
+        await coordinator.close();
+        await fixture.close();
+      }
+    });
+
+    test(
+      'unsafe or malformed ready capability never grants legacy fallback',
+      () async {
+        for (final mutate in <void Function(Map<String, dynamic>)>[
+          (recovery) => recovery['automatic_resubmit'] = true,
+          (recovery) => recovery['max_event_bytes'] = 0,
+        ]) {
+          final recovery = _recoveryCapability();
+          mutate(recovery);
+          final fixture = await _GatewayFixture.start(
+            readyFrame: _readyFrame(recovery: recovery),
+          );
+          final store = _MemoryJournalStore();
+          final coordinator = _coordinator(
+            fixture: fixture,
+            journal: GatewayTurnJournal(store: store),
+          );
+          try {
+            await expectLater(
+              coordinator.recoverPending(),
+              throwsA(
+                isA<GatewayTurnCoordinatorException>().having(
+                  (error) => error.failure,
+                  'failure',
+                  GatewayTurnCoordinatorFailure.invalidResponse,
+                ),
+              ),
+            );
+            expect(fixture.requests, isEmpty);
+            expect(store.value, isNull);
+          } finally {
+            await coordinator.close();
+            await fixture.close();
+          }
+        }
+      },
+    );
+
+    test('wrong-type ready structures never grant legacy fallback', () async {
+      final frames = <Map<String, dynamic>>[];
+      for (var index = 0; index < 4; index += 1) {
+        final frame = _readyFrame();
+        final params = frame['params'] as Map<String, dynamic>;
+        final payload = params['payload'] as Map<String, dynamic>;
+        switch (index) {
+          case 0:
+            params['payload'] = 'malformed';
+          case 1:
+            payload['protocol'] = <Object>[];
+          case 2:
+            payload['capabilities'] = 'malformed';
+          case 3:
+            (payload['capabilities'] as Map<String, dynamic>)['turn_recovery'] =
+                <Object>[];
+        }
+        frames.add(frame);
+      }
+
+      for (final frame in frames) {
+        final fixture = await _GatewayFixture.start(readyFrame: frame);
+        final store = _MemoryJournalStore();
+        final coordinator = _coordinator(
+          fixture: fixture,
+          journal: GatewayTurnJournal(store: store),
+        );
+        try {
+          await expectLater(
+            coordinator.recoverPending(),
+            throwsA(
+              isA<GatewayTurnCoordinatorException>().having(
+                (error) => error.failure,
+                'failure',
+                GatewayTurnCoordinatorFailure.invalidResponse,
+              ),
+            ),
+          );
+          expect(fixture.requests, isEmpty);
+          expect(store.value, isNull);
+        } finally {
+          await coordinator.close();
+          await fixture.close();
+        }
+      }
+    });
 
     test(
       'failed definitive-error seal poisons all reopen and recovery paths',

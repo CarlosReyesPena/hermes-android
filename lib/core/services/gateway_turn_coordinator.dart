@@ -20,6 +20,7 @@ enum GatewayTurnCoordinatorFailure {
   closed,
   transportUnavailable,
   unsupportedCapability,
+  unsupportedCapabilityWithPendingTurns,
   invalidBinding,
   invalidResponse,
   turnUnknown,
@@ -775,13 +776,19 @@ class GatewayTurnCoordinator {
       _requireOperational();
       await client.connect();
       _requireOperational();
+      final readyFrame = await client.waitForGatewayReady();
       final ready = GatewayTurnRecoveryCapability.fromGatewayReadyFrame(
-        await client.waitForGatewayReady(),
+        readyFrame,
       );
       _requireOperational();
       if (!_coordinatorCapabilitySupported(ready)) {
-        throw const GatewayTurnCoordinatorException(
-          GatewayTurnCoordinatorFailure.unsupportedCapability,
+        if (!_readyFailureAllowsLegacy(ready.failure, readyFrame)) {
+          throw const GatewayTurnCoordinatorException(
+            GatewayTurnCoordinatorFailure.invalidResponse,
+          );
+        }
+        throw GatewayTurnCoordinatorException(
+          await _unsupportedReadyFailure(previous),
         );
       }
       final openResponse = await client.send('session.open', <String, dynamic>{
@@ -838,6 +845,24 @@ class GatewayTurnCoordinator {
       }
       Error.throwWithStackTrace(error, stack);
     }
+  }
+
+  /// Legacy transport is safe only when the capability decision precedes all
+  /// v2 writes and the previous durable binding has no unresolved authority.
+  Future<GatewayTurnCoordinatorFailure> _unsupportedReadyFailure(
+    GatewayTurnJournalBinding? previous,
+  ) async {
+    if (previous == null) {
+      return GatewayTurnCoordinatorFailure.unsupportedCapability;
+    }
+    final entries = await journal.loadForBinding(previous);
+    final hasUnsafeEntry = entries.any(
+      (entry) =>
+          !entry.isTerminal || entry.ackUncertain || entry.failure != null,
+    );
+    return hasUnsafeEntry
+        ? GatewayTurnCoordinatorFailure.unsupportedCapabilityWithPendingTurns
+        : GatewayTurnCoordinatorFailure.unsupportedCapability;
   }
 
   Future<List<GatewayTurnRecoveryState>> _recoverJournal({
@@ -1661,6 +1686,45 @@ bool _coordinatorCapabilitySupported(GatewayTurnRecoveryCapability capability) {
       maxTurnBytes != null &&
       terminalReserveBytes != null &&
       terminalReserveBytes <= maxTurnBytes;
+}
+
+bool _readyFailureAllowsLegacy(
+  GatewayTurnCapabilityFailure failure,
+  Map<String, dynamic> frame,
+) {
+  final params = frame['params'];
+  if (params is! Map<String, dynamic> || params['type'] != 'gateway.ready') {
+    return false;
+  }
+  final payload = params['payload'];
+  if (payload is! Map<String, dynamic>) return false;
+  final protocol = payload['protocol'];
+  switch (failure) {
+    case GatewayTurnCapabilityFailure.missingProtocol:
+      return !payload.containsKey('protocol');
+    case GatewayTurnCapabilityFailure.unsupportedProtocol:
+      return protocol is Map<String, dynamic> &&
+          protocol['name'] is String &&
+          protocol['major'] is int;
+    case GatewayTurnCapabilityFailure.missingCapability:
+      if (protocol is! Map<String, dynamic>) return false;
+      if (!payload.containsKey('capabilities')) return true;
+      final capabilities = payload['capabilities'];
+      return capabilities is Map<String, dynamic> &&
+          !capabilities.containsKey('turn_recovery');
+    case GatewayTurnCapabilityFailure.unsupportedCapability:
+      final capabilities = payload['capabilities'];
+      return protocol is Map<String, dynamic> &&
+          capabilities is Map<String, dynamic> &&
+          capabilities['turn_recovery'] is Map<String, dynamic>;
+    case GatewayTurnCapabilityFailure.none:
+    case GatewayTurnCapabilityFailure.notGatewayReady:
+    case GatewayTurnCapabilityFailure.unsafeShadowCapability:
+    case GatewayTurnCapabilityFailure.automaticResubmitNotDisabled:
+    case GatewayTurnCapabilityFailure.invalidRetention:
+    case GatewayTurnCapabilityFailure.invalidLimits:
+      return false;
+  }
 }
 
 int _causalTimestamp(int? durablePrior, int current) =>

@@ -4,7 +4,9 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hermes_android/core/models/gateway_turn_contract.dart';
+import 'package:hermes_android/core/models/attachment_draft.dart';
 import 'package:hermes_android/core/screens/chat_screen.dart';
+import 'package:hermes_android/core/services/attachment_draft_service.dart';
 import 'package:hermes_android/core/services/connection_manager.dart';
 import 'package:hermes_android/core/services/gateway_turn_application_controller.dart';
 import 'package:hermes_android/core/services/gateway_turn_coordinator.dart';
@@ -155,11 +157,158 @@ void main() {
       isNotNull,
     );
   });
+
+  testWidgets(
+    'explicit unsupported recovery enables one visible legacy submit',
+    (tester) async {
+      final session = _FakeTurnSession(
+        const <Object>[],
+        recoverError: const GatewayTurnCoordinatorException(
+          GatewayTurnCoordinatorFailure.unsupportedCapability,
+        ),
+      );
+      var legacySubmitCount = 0;
+      await _pumpChat(
+        tester,
+        turnSession: session,
+        testRemotePromptSubmit:
+            ({required sessionId, required text, required onEvent}) async {
+              legacySubmitCount += 1;
+              expect(sessionId, 'recovery-session');
+              expect(text, 'Legacy once');
+            },
+      );
+
+      expect(
+        find.text('Background recovery unavailable — legacy transport'),
+        findsOneWidget,
+      );
+      await tester.enterText(find.byType(TextField), 'Legacy once');
+      await tester.tap(find.byTooltip('Send'));
+      await tester.pumpAndSettle();
+
+      expect(legacySubmitCount, 1);
+      expect(session.submitCount, 0);
+      expect(session.stageCount, 0);
+      expect(
+        find.text('Background recovery unavailable — legacy transport'),
+        findsOneWidget,
+      );
+    },
+  );
+
+  testWidgets(
+    'network auth malformed and unsafe journal errors never enable legacy',
+    (tester) async {
+      final errors = <Object>[
+        const GatewayTurnCoordinatorException(
+          GatewayTurnCoordinatorFailure.transportUnavailable,
+        ),
+        JsonRpcError('gateway.ready', 'Unauthorized', reason: 'unauthorized'),
+        const GatewayTurnCoordinatorException(
+          GatewayTurnCoordinatorFailure.invalidResponse,
+        ),
+        const GatewayTurnCoordinatorException(
+          GatewayTurnCoordinatorFailure.unsupportedCapabilityWithPendingTurns,
+        ),
+      ];
+      for (final error in errors) {
+        var legacySubmitCount = 0;
+        final session = _FakeTurnSession(const <Object>[], recoverError: error);
+        await _pumpChat(
+          tester,
+          turnSession: session,
+          testRemotePromptSubmit:
+              ({required sessionId, required text, required onEvent}) async {
+                legacySubmitCount += 1;
+              },
+        );
+
+        expect(
+          find.text('Background recovery unavailable — legacy transport'),
+          findsNothing,
+        );
+        expect(
+          tester
+              .widget<IconButton>(find.widgetWithIcon(IconButton, Icons.send))
+              .onPressed,
+          isNull,
+        );
+        expect(legacySubmitCount, 0);
+        expect(session.submitCount, 0);
+        expect(session.stageCount, 0);
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pumpAndSettle();
+      }
+    },
+  );
+
+  testWidgets('fallback uploads mixed attachments and legacy-submits once', (
+    tester,
+  ) async {
+    final session = _FakeTurnSession(
+      const <Object>[],
+      recoverError: const GatewayTurnCoordinatorException(
+        GatewayTurnCoordinatorFailure.unsupportedCapability,
+      ),
+    );
+    final drafts = <AttachmentDraft>[
+      AttachmentDraft(
+        id: 'image-draft',
+        cachedPath: 'synthetic-image',
+        name: 'photo.png',
+        byteLength: 3,
+        mediaType: 'image/png',
+        kind: AttachmentDraftKind.image,
+        sourceImageFormat: AttachmentImageFormat.png,
+        sanitized: true,
+      ),
+      AttachmentDraft(
+        id: 'file-draft',
+        cachedPath: 'synthetic-file',
+        name: 'notes.txt',
+        byteLength: 4,
+        mediaType: 'text/plain',
+        kind: AttachmentDraftKind.genericFile,
+      ),
+    ];
+    var legacySubmitCount = 0;
+    final uploads = <String>[];
+    await _pumpChat(
+      tester,
+      turnSession: session,
+      attachmentDraftService: _MemoryAttachmentDraftService(),
+      initialDrafts: drafts,
+      testRemoteAttachmentUpload: ({required draft, required dataUrl}) async {
+        uploads.add(draft.name);
+        return AttachmentUploadReceipt(refText: '@file:${draft.name}');
+      },
+      testRemotePromptSubmit:
+          ({required sessionId, required text, required onEvent}) async {
+            legacySubmitCount += 1;
+            expect(text, contains('@file:photo.png'));
+            expect(text, contains('@file:notes.txt'));
+          },
+    );
+
+    await tester.enterText(find.byType(TextField), 'Mixed legacy');
+    await tester.tap(find.byTooltip('Send'));
+    await tester.pumpAndSettle();
+
+    expect(uploads, <String>['photo.png', 'notes.txt']);
+    expect(legacySubmitCount, 1);
+    expect(session.stageCount, 0);
+    expect(session.submitCount, 0);
+  });
 }
 
 Future<void> _pumpChat(
   WidgetTester tester, {
   required _FakeTurnSession turnSession,
+  TestRemotePromptSubmit? testRemotePromptSubmit,
+  TestRemoteAttachmentUpload? testRemoteAttachmentUpload,
+  AttachmentDraftService? attachmentDraftService,
+  List<AttachmentDraft> initialDrafts = const [],
 }) async {
   final apiClient = ApiClient(
     baseUrl: 'http://recovery.fixture',
@@ -188,6 +337,10 @@ Future<void> _pumpChat(
         ),
         testApiClient: apiClient,
         testTurnApplicationSession: turnSession,
+        testRemotePromptSubmit: testRemotePromptSubmit,
+        testRemoteAttachmentUpload: testRemoteAttachmentUpload,
+        testAttachmentDraftService: attachmentDraftService,
+        testInitialAttachmentDrafts: initialDrafts,
         testVoiceComposerAdapter: FakeVoiceComposerAdapter(),
       ),
     ),
@@ -240,9 +393,11 @@ class _FakeTurnSession implements GatewayTurnApplicationSession {
   final List<Object> _recoverResults;
   final GatewayTurnRecoveryState? submitResult;
   final Object? submitError;
+  final Object? recoverError;
   final Completer<void>? recoverGate;
   int recoverCount = 0;
   int submitCount = 0;
+  int stageCount = 0;
   int closeCount = 0;
   final List<String> submittedTexts = [];
 
@@ -250,6 +405,7 @@ class _FakeTurnSession implements GatewayTurnApplicationSession {
     this._recoverResults, {
     this.submitResult,
     this.submitError,
+    this.recoverError,
     this.recoverGate,
   });
 
@@ -259,6 +415,7 @@ class _FakeTurnSession implements GatewayTurnApplicationSession {
     GatewayTurnStateCallback? onState,
   }) async {
     await recoverGate?.future;
+    if (recoverError case final error?) throw error;
     final index = recoverCount < _recoverResults.length
         ? recoverCount
         : _recoverResults.length - 1;
@@ -312,7 +469,22 @@ class _FakeTurnSession implements GatewayTurnApplicationSession {
     required int byteLength,
     required String mediaType,
     required GatewayTurnAttachmentKind kind,
-  }) => throw UnimplementedError();
+  }) async {
+    stageCount += 1;
+    throw StateError('Recovery staging must not run in legacy fallback.');
+  }
+}
+
+class _MemoryAttachmentDraftService extends AttachmentDraftService {
+  @override
+  Future<String> readDataUrl(AttachmentDraft draft) async =>
+      'data:${draft.mediaType};base64,AA==';
+
+  @override
+  Future<void> removeAll(Iterable<AttachmentDraft> drafts) async {}
+
+  @override
+  Future<void> removeCachedFile(AttachmentDraft draft) async {}
 }
 
 class _EmptyChatHttpClient extends http.BaseClient {

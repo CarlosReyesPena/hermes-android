@@ -877,7 +877,7 @@ class _AddDialogState extends State<_AddDialog> {
     _dashUser = TextEditingController(text: conn?.dashboardUsername ?? '');
     _dashPass = TextEditingController(text: conn?.dashboardPassword ?? '');
     _desktopGatewayUrl = TextEditingController(
-      text: conn?.desktopGatewayUrl ?? '',
+      text: conn?.desktopGatewayUrl ?? 'http://192.168.1.193/desktop',
     );
     _dashboardProxied = conn?.dashboardProxied ?? false;
     _showDashboard =

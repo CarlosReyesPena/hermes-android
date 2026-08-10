@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   test(
-    'Build UX17 has the exact release identity and an upgrade-safe code',
+    'Build UX18 has the exact release identity and an upgrade-safe code',
     () {
       final pubspec = File('pubspec.yaml').readAsStringSync();
       final match = RegExp(
@@ -13,10 +13,10 @@ void main() {
       ).firstMatch(pubspec);
 
       expect(match, isNotNull);
-      expect(match!.group(1), '1.0.17-hermesapk.17');
-      expect(int.parse(match.group(2)!), 2129);
-      expect(int.parse(match.group(2)!), greaterThan(2128));
-      expect(int.parse(match.group(2)!) + 2000, 4129);
+      expect(match!.group(1), '1.0.18-hermesapk.18');
+      expect(int.parse(match.group(2)!), 2130);
+      expect(int.parse(match.group(2)!), greaterThan(2129));
+      expect(int.parse(match.group(2)!) + 2000, 4130);
     },
   );
 
@@ -35,7 +35,7 @@ void main() {
       contains('check(flutter.versionCode > minimumInstalledVersionCode)'),
     );
     expect(buildWorkflow, contains("MINIMUM_INSTALLED_VERSION_CODE: '2127'"));
-    expect(buildWorkflow, contains("REQUIRED_BASE_VERSION_CODE: '2129'"));
+    expect(buildWorkflow, contains("REQUIRED_BASE_VERSION_CODE: '2130'"));
     expect(buildWorkflow, contains("ARM64_SPLIT_VERSION_CODE_OFFSET: '2000'"));
     expect(buildWorkflow, contains('expected_code = base_code + offset'));
     expect(
@@ -46,6 +46,6 @@ void main() {
     expect(buildWorkflow, contains('Refuse an unsigned tagged release'));
     expect(buildWorkflow, contains("env.HAS_RELEASE_KEYSTORE == 'true'"));
     expect(qualityWorkflow, contains("MINIMUM_INSTALLED_VERSION_CODE: '2127'"));
-    expect(qualityWorkflow, contains("REQUIRED_BASE_VERSION_CODE: '2129'"));
+    expect(qualityWorkflow, contains("REQUIRED_BASE_VERSION_CODE: '2130'"));
   });
 }

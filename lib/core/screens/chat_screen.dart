@@ -81,12 +81,22 @@ class _GatewayReasoningDisplay {
 
 enum _ResponseTransport { none, rest, desktop }
 
+const _legacyTransportNotice =
+    'Background recovery unavailable — legacy transport';
+
 @visibleForTesting
 typedef TestRemotePromptSubmit =
     Future<void> Function({
       required String sessionId,
       required String text,
       required StreamCallback onEvent,
+    });
+
+@visibleForTesting
+typedef TestRemoteAttachmentUpload =
+    Future<AttachmentUploadReceipt> Function({
+      required AttachmentDraft draft,
+      required String dataUrl,
     });
 
 class _PendingSensitivePrompt {
@@ -121,6 +131,9 @@ class ChatScreen extends StatefulWidget {
   final TestRemotePromptSubmit? testRemotePromptSubmit;
 
   @visibleForTesting
+  final TestRemoteAttachmentUpload? testRemoteAttachmentUpload;
+
+  @visibleForTesting
   final List<AttachmentDraft> testInitialAttachmentDrafts;
 
   @visibleForTesting
@@ -134,6 +147,7 @@ class ChatScreen extends StatefulWidget {
     this.testApiClient,
     this.testAttachmentDraftService,
     this.testRemotePromptSubmit,
+    this.testRemoteAttachmentUpload,
     this.testInitialAttachmentDrafts = const [],
     this.testVoiceComposerAdapter,
     super.key,
@@ -179,6 +193,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   _ResponseTransport _activeResponseTransport = _ResponseTransport.none;
   String? _activeClientTurnId;
   bool _recoveringTurn = false;
+  bool _legacyTransportFallback = false;
   int _responseGeneration = 0;
   bool _approvalDialogOpen = false;
   final List<_PendingSensitivePrompt> _sensitivePromptQueue = [];
@@ -330,14 +345,16 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       if (_desktopGateway != null) unawaited(_ensureDesktopSession());
-      if (_turnApplicationSession != null) unawaited(_recoverPendingTurn());
+      if (_turnApplicationSession != null && !_legacyTransportFallback) {
+        unawaited(_recoverPendingTurn());
+      }
     }
   }
 
   Future<void> _initializeChat() async {
     await _fetchMessages();
     if (!mounted) return;
-    await _recoverPendingTurn();
+    await _recoverPendingTurn(allowLegacyFallback: true);
   }
 
   Future<void> _ensureDesktopSession() async {
@@ -642,9 +659,11 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     }
   }
 
-  Future<void> _recoverPendingTurn() async {
+  Future<void> _recoverPendingTurn({bool allowLegacyFallback = false}) async {
     final turnSession = _turnApplicationSession;
-    if (turnSession == null || _recoveringTurn) return;
+    if (turnSession == null || _recoveringTurn || _legacyTransportFallback) {
+      return;
+    }
     _recoveringTurn = true;
     if (mounted && !_streaming) {
       setState(() {
@@ -672,6 +691,19 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
       }
     } catch (error) {
       if (!mounted) return;
+      if (allowLegacyFallback &&
+          error is GatewayTurnCoordinatorException &&
+          error.failure ==
+              GatewayTurnCoordinatorFailure.unsupportedCapability) {
+        setState(() {
+          _legacyTransportFallback = true;
+          _sending = false;
+          _streaming = false;
+          _gatewayTurnStatus = null;
+          _activeResponseTransport = _ResponseTransport.none;
+        });
+        return;
+      }
       setState(() {
         _gatewayTurnStatus = GatewayTurnStatus(
           kind: 'recovery',
@@ -1362,7 +1394,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
 
     // A remote-gateway profile uses one transport for every prompt. Images and
     // arbitrary files are both attached with the official `file.attach` RPC.
-    if (_turnApplicationSession != null) {
+    if (_turnApplicationSession != null && !_legacyTransportFallback) {
       await _sendRecoverableGatewayMessage(
         text: text,
         attachments: attachments,
@@ -1560,7 +1592,11 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
         drafts: attachments,
         upload: ({required draft, required dataUrl}) async {
           if (desktopGateway == null) {
-            throw StateError('Test remote transport does not upload files');
+            final testUpload = widget.testRemoteAttachmentUpload;
+            if (testUpload == null) {
+              throw StateError('Test remote transport does not upload files');
+            }
+            return testUpload(draft: draft, dataUrl: dataUrl);
           }
           return _uploadAttachmentDraft(desktopGateway, draft, dataUrl);
         },
@@ -2517,6 +2553,24 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
             children: [
               for (final notification in _gatewayNotifications.values)
                 _buildGatewayNotification(notification),
+              if (_legacyTransportFallback)
+                Container(
+                  key: const ValueKey('legacy-transport-notice'),
+                  width: double.infinity,
+                  color: Theme.of(context).colorScheme.tertiaryContainer,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 10,
+                  ),
+                  child: Text(
+                    _legacyTransportNotice,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.onTertiaryContainer,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
               Expanded(
                 child: Stack(
                   children: [
