@@ -4,6 +4,29 @@ All notable changes to this project are documented here. This project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html). Release notes for
 versions prior to 1.0.7 are in the **What's new** sections of the [README](README.md).
 
+## [1.0.14-hermesapk.14] - 2026-07-30
+
+### Added
+
+- Remote Gateway attachments now identify the mobile source channel and active
+  ATLAS profile so the server can register them in the canonical document inbox.
+- The attachment response carries the document-intake status without exposing
+  credentials or raw user/session identifiers.
+
+### Changed
+
+- Chat upload remains available if document catalog registration is temporarily
+  unavailable and shows a non-blocking pending notice to the operator.
+
+### Validation
+
+- Static analysis passes with `--fatal-infos`.
+- 113 Flutter tests pass.
+- The synthetic Desktop Gateway contract suite passes with the extended
+  `atlas_intake` response.
+- An ARM64 debug APK builds successfully. It remains a private test artifact
+  signed with the Android debug certificate.
+
 ## [1.0.13-hermesapk.13] - 2026-07-30
 
 Community Remote Gateway edition based on Hermes Android 1.0.13.

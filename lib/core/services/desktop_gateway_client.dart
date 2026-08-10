@@ -1,4 +1,11 @@
+import 'dart:async';
+import 'dart:convert';
+
+import 'package:crypto/crypto.dart';
+
 import 'connection_manager.dart';
+import 'gateway_turn_coordinator.dart';
+import 'gateway_turn_journal.dart';
 import 'ws_client.dart';
 
 typedef DesktopAsyncEventCallback =
@@ -19,12 +26,15 @@ enum DesktopConnectionState {
 /// profiles. When a connection supplies [SavedConnection.desktopGatewayUrl],
 /// chat writes and interactive events use this one Desktop session transport.
 class DesktopGatewayClient {
+  final String _connectionId;
   final String _baseUrl;
   final DashboardClient _dashboard;
+  final String _documentProfile;
   WsClient? _ws;
   final Map<String, String> _gatewaySessionIds = {};
   DesktopAsyncEventCallback? _asyncEventListener;
   DesktopConnectionCallback? _connectionListener;
+  GatewayTurnCoordinatorRegistry? _turnCoordinatorRegistry;
 
   static const _asyncEventTypes = {
     'background.complete',
@@ -39,7 +49,12 @@ class DesktopGatewayClient {
     'subagent.complete',
   };
 
-  DesktopGatewayClient._({required this._baseUrl, required this._dashboard});
+  DesktopGatewayClient._({
+    required this._connectionId,
+    required this._baseUrl,
+    required this._dashboard,
+    required this._documentProfile,
+  });
 
   factory DesktopGatewayClient.fromConnection(SavedConnection connection) {
     final raw = connection.desktopGatewayUrl?.trim() ?? '';
@@ -65,6 +80,7 @@ class DesktopGatewayClient {
       pathPrefix,
     );
     return DesktopGatewayClient._(
+      connectionId: connection.id,
       baseUrl: baseUrl,
       dashboard: DashboardClient(
         host: baseUri.host,
@@ -74,6 +90,7 @@ class DesktopGatewayClient {
         username: connection.dashboardUsername,
         password: connection.dashboardPassword,
       ),
+      documentProfile: documentIntakeProfileForConnection(connection),
     );
   }
 
@@ -143,6 +160,22 @@ class DesktopGatewayClient {
     await _connect(sessionId);
   }
 
+  /// Creates the source-only recovery-v2 registry without changing any legacy
+  /// session, submit, interrupt, or event route in this client.
+  GatewayTurnCoordinatorRegistry enableTurnRecoveryCoordinator({
+    GatewayTurnJournal? journal,
+  }) {
+    return _turnCoordinatorRegistry ??= GatewayTurnCoordinatorRegistry(
+      connectionId: _connectionId,
+      endpointDigest: sha256.convert(utf8.encode(_baseUrl)).toString(),
+      journal: journal ?? GatewayTurnJournal(),
+      freshSocketFactory: () async {
+        final ticket = await _dashboard.mintWebSocketTicket();
+        return WsClient(_baseUrl, ticket: ticket);
+      },
+    );
+  }
+
   void setConnectionListener(DesktopConnectionCallback? listener) {
     _connectionListener = listener;
   }
@@ -157,6 +190,8 @@ class DesktopGatewayClient {
       sessionId: gateway.sessionId,
       name: name,
       dataUrl: dataUrl,
+      sourceChannel: 'hermes_mobile',
+      sourceProfile: _documentProfile,
     );
   }
 
@@ -316,8 +351,30 @@ class DesktopGatewayClient {
     _ws?.close();
     _ws = null;
     _gatewaySessionIds.clear();
+    final turnCoordinatorRegistry = _turnCoordinatorRegistry;
+    _turnCoordinatorRegistry = null;
+    if (turnCoordinatorRegistry != null) {
+      final closing = turnCoordinatorRegistry.closeAll();
+      unawaited(closing.then<void>((_) {}, onError: (_, _) {}));
+    }
     _dashboard.close();
   }
+}
+
+String documentIntakeProfileForConnection(SavedConnection connection) {
+  final candidates = <String>[
+    connection.gatewayPrefix ?? '',
+    Uri.tryParse(connection.desktopGatewayUrl ?? '')?.path ?? '',
+  ];
+  final segments = candidates
+      .expand((value) => value.toLowerCase().split('/'))
+      .where((value) => value.isNotEmpty)
+      .toSet();
+  if (segments.contains('personal')) return 'personal';
+  if (segments.contains('pro') || segments.contains('professional')) {
+    return 'pro';
+  }
+  return 'organizator';
 }
 
 class _DesktopGatewaySession {

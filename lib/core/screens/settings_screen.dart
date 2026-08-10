@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/connection_manager.dart';
+import '../widgets/text_size_settings_card.dart';
 import '../../main.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
@@ -317,6 +318,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
         // ---- Section: Theme ----
         _buildSectionHeader('Appearance'),
         _ThemeToggle(),
+        const SizedBox(height: 8),
+        TextSizeSettingsCard(
+          preferences: context
+              .findAncestorStateOfType<HermesAppState>()!
+              .widget
+              .connManager
+              .prefs,
+          onChanged: (preference) => context
+              .findAncestorStateOfType<HermesAppState>()!
+              .setTextSizePreference(preference),
+        ),
         const SizedBox(height: 8),
         _VerboseToggle(),
         const SizedBox(height: 16),

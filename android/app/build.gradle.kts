@@ -8,6 +8,7 @@ plugins {
 
 val keystoreProperties = Properties()
 val keystorePath = rootProject.projectDir.parentFile.resolve("key.properties")
+val minimumInstalledVersionCode = 2127
 if (keystorePath.exists()) {
    keystoreProperties.load(FileInputStream(keystorePath))
 }
@@ -23,6 +24,10 @@ android {
    }
 
    defaultConfig {
+       check(flutter.versionCode > minimumInstalledVersionCode) {
+           "versionCode ${flutter.versionCode} must be greater than " +
+               "$minimumInstalledVersionCode to upgrade the accepted Hermes APK"
+       }
        applicationId = "com.hermesagent.hermes_android"
        minSdk = 24
        targetSdk = 36
@@ -44,6 +49,8 @@ android {
 
    buildTypes {
        debug {
+           // The guarded Flutter versionCode is the base. `--split-per-abi`
+           // adds 2000 to the packaged arm64 code; CI verifies both values.
            applicationIdSuffix = ".dev"
            versionNameSuffix = "-dev"
            manifestPlaceholders["appLabel"] = "Hermes Agent Dev"

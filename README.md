@@ -24,7 +24,12 @@ official Hermes Agent or Nous Research release.
 
 - One Desktop Gateway JSON-RPC session for text, images, and files.
 - Copy/select text, Read aloud, Stop, Edit and resend, Regenerate, and export.
-- Up to 10 attachments per message, including arbitrary file types.
+- Up to 10 Remote Gateway attachments per draft, capped at 64 MiB total;
+  generic files retain the 16 MiB per-file limit.
+- File-backed app cache, metadata-sanitized JPEG/PNG/WebP images, ordered
+  sequential upload, accessible reordering, remove, and individual retry.
+  Sanitized JPEG inputs remain JPEG; PNG and WebP inputs are emitted as PNG.
+- Legacy REST remains fail-closed to one image and does not expose multi-select.
 - Per-chat model and thinking effort without changing the profile default.
 - Search, Rename, Branch, and Delete for remote conversations.
 - Native approval, sudo/secret, clarification, reasoning, tool activity,
@@ -390,6 +395,13 @@ mkdir -p release-apks
 cp build/app/outputs/flutter-apk/app-*-release.apk release-apks/
 ```
 
+`pubspec.yaml` declares the base Android `versionCode`. Flutter's
+`--split-per-abi` packaging adds an ABI offset to each split; for arm64-v8a the
+effective APK manifest value is `base + 2000`. For Build N1, base `2127`
+therefore produces effective arm64 code `4127`. CI reads the completed APK with
+`aapt` and fails if that relationship drifts. Release-floor checks continue to
+apply to the base value and must not be weakened to rely on an ABI offset.
+
 Output files:
 
 ```text
@@ -473,8 +485,9 @@ lib/
 ├── main.dart                          # App shell, saved connections, navigation drawer
 ├── core/
 │   ├── models/
-│   │   ├── connection.dart            # SavedConnection model and host normalization
-│   │   └── session.dart               # Session model
+│   │   ├── attachment_draft.dart       # File-backed image/file composer model
+│   │   ├── connection.dart             # SavedConnection model and host normalization
+│   │   └── session.dart                # Session model
 │   ├── screens/
 │   │   ├── session_list_screen.dart   # Session browser
 │   │   ├── chat_screen.dart           # Chat with SSE streaming
@@ -483,6 +496,7 @@ lib/
 │   │   ├── skills_screen.dart         # Skills browser
 │   │   └── cron_screen.dart           # Cron job manager
 │   ├── services/
+│   │   ├── attachment_draft_service.dart # Cache, sanitization, limits, upload order
 │   │   ├── connection_manager.dart    # Saved connections, Gateway API, Dashboard API
 │   │   └── ws_client.dart             # JSON-RPC WebSocket client for future dashboard/TUI use
 │   └── utils/

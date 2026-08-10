@@ -1,14 +1,18 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'core/services/connection_manager.dart';
+import 'core/services/gateway_turn_application_controller.dart';
+import 'core/services/text_size_preference.dart';
 import 'core/screens/session_list_screen.dart';
 import 'core/utils/responsive.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final prefs = await SharedPreferences.getInstance();
-  final connManager = ConnectionManager(prefs);
+  final connManager = await ConnectionManager.create(prefs);
   runApp(HermesApp(connManager: connManager));
 }
 
@@ -42,9 +46,26 @@ class HermesApp extends StatefulWidget {
         : 'system';
     await prefs.setString('theme_mode', value);
   }
+
+  static TextSizePreference getTextSizePreference(SharedPreferences prefs) {
+    return TextSizePreferenceStore(prefs).read();
+  }
 }
 
 class HermesAppState extends State<HermesApp> {
+  late final GatewayTurnApplicationController _turnApplicationController;
+
+  @override
+  void initState() {
+    super.initState();
+    _turnApplicationController = GatewayTurnApplicationController();
+  }
+
+  Future<void> setTextSizePreference(TextSizePreference preference) async {
+    await TextSizePreferenceStore(widget.connManager.prefs).save(preference);
+    if (mounted) setState(() {});
+  }
+
   @override
   Widget build(BuildContext context) {
     const gold = Color(0xFFD4AF37);
@@ -98,8 +119,29 @@ class HermesAppState extends State<HermesApp> {
           foregroundColor: Colors.black,
         ),
       ),
-      home: HomeScreen(connManager: widget.connManager),
+      builder: (context, child) {
+        final systemMediaQuery = MediaQuery.of(context);
+        final preference = HermesApp.getTextSizePreference(
+          widget.connManager.prefs,
+        );
+        return MediaQuery(
+          data: systemMediaQuery.copyWith(
+            textScaler: preference.applyTo(systemMediaQuery.textScaler),
+          ),
+          child: child!,
+        );
+      },
+      home: HomeScreen(
+        connManager: widget.connManager,
+        turnApplicationController: _turnApplicationController,
+      ),
     );
+  }
+
+  @override
+  void dispose() {
+    unawaited(_turnApplicationController.close());
+    super.dispose();
   }
 }
 
@@ -151,7 +193,13 @@ class HermesHeader extends StatelessWidget {
 
 class HomeScreen extends StatefulWidget {
   final ConnectionManager connManager;
-  const HomeScreen({required this.connManager, super.key});
+  final GatewayTurnApplicationController turnApplicationController;
+
+  const HomeScreen({
+    required this.connManager,
+    required this.turnApplicationController,
+    super.key,
+  });
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -208,7 +256,12 @@ class _HomeScreenState extends State<HomeScreen> {
     widget.connManager.prefs.setString(_lastConnectionKey, conn.id);
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => SessionListScreen(connection: conn)),
+      MaterialPageRoute(
+        builder: (_) => SessionListScreen(
+          connection: conn,
+          turnApplicationController: widget.turnApplicationController,
+        ),
+      ),
     );
   }
 
@@ -236,9 +289,9 @@ class _HomeScreenState extends State<HomeScreen> {
               dashboardPort,
               dashboardUsername,
               dashboardPassword,
-            }) {
+            }) async {
               if (existing == null) {
-                widget.connManager.saveConnection(
+                await widget.connManager.saveConnection(
                   label,
                   host,
                   port,
@@ -252,7 +305,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   dashboardPassword: dashboardPassword,
                 );
               } else {
-                widget.connManager.updateConnection(
+                await widget.connManager.updateConnection(
                   existing.id,
                   label,
                   host,
@@ -359,7 +412,8 @@ class _HomeScreenState extends State<HomeScreen> {
                         if (!ctx.mounted) return;
 
                         if (ok) {
-                          widget.connManager.updateApiKey(conn.id, key);
+                          await widget.connManager.updateApiKey(conn.id, key);
+                          if (!ctx.mounted) return;
                           await _closeDialogAndRefresh(ctx);
                         } else {
                           setDialogState(() {
@@ -367,7 +421,13 @@ class _HomeScreenState extends State<HomeScreen> {
                             validating = false;
                           });
                         }
-                      } catch (e) {
+                      } on CredentialStorageException {
+                        if (!ctx.mounted) return;
+                        setDialogState(() {
+                          error = 'The API key could not be stored securely.';
+                          validating = false;
+                        });
+                      } catch (_) {
                         if (!ctx.mounted) return;
                         setDialogState(() {
                           error = 'Cannot reach ${conn.host}:${conn.port}.';
@@ -581,7 +641,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         await client.getModelInfo();
                         client.close();
                         if (!ctx.mounted) return;
-                        widget.connManager.updateDashboardAuth(
+                        await widget.connManager.updateDashboardAuth(
                           conn.id,
                           dashboardPort: port,
                           username: user,
@@ -590,8 +650,17 @@ class _HomeScreenState extends State<HomeScreen> {
                           dashboardPrefix: dashboardPrefix,
                           dashboardProxied: proxied,
                         );
+                        if (!ctx.mounted) return;
                         await _closeDialogAndRefresh(ctx);
-                      } catch (e) {
+                      } on CredentialStorageException {
+                        client.close();
+                        if (!ctx.mounted) return;
+                        setDialogState(() {
+                          error =
+                              'The dashboard credentials could not be stored securely.';
+                          validating = false;
+                        });
+                      } catch (_) {
                         client.close();
                         if (!ctx.mounted) return;
                         setDialogState(() {
@@ -638,10 +707,21 @@ class _HomeScreenState extends State<HomeScreen> {
           style: TextStyle(color: Colors.grey[600]),
         ),
         trailing: PopupMenuButton<String>(
-          onSelected: (v) {
+          onSelected: (v) async {
             if (v == 'delete') {
-              widget.connManager.deleteConnection(conn.id);
-              _refresh();
+              try {
+                await widget.connManager.deleteConnection(conn.id);
+                if (mounted) _refresh();
+              } on CredentialStorageException {
+                if (!mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text(
+                      'The connection could not be deleted safely.',
+                    ),
+                  ),
+                );
+              }
             } else if (v == 'edit') {
               _showEditConnectionDialog(conn);
             } else if (v == 'apikey') {
@@ -737,7 +817,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
 class _AddDialog extends StatefulWidget {
   final SavedConnection? initialConnection;
-  final void Function(
+  final Future<void> Function(
     String label,
     String host,
     int port,
@@ -797,7 +877,7 @@ class _AddDialogState extends State<_AddDialog> {
     _dashUser = TextEditingController(text: conn?.dashboardUsername ?? '');
     _dashPass = TextEditingController(text: conn?.dashboardPassword ?? '');
     _desktopGatewayUrl = TextEditingController(
-      text: conn?.desktopGatewayUrl ?? '',
+      text: conn?.desktopGatewayUrl ?? 'http://192.168.1.193/desktop',
     );
     _dashboardProxied = conn?.dashboardProxied ?? false;
     _showDashboard =
@@ -904,7 +984,7 @@ class _AddDialogState extends State<_AddDialog> {
         if (!mounted) return;
       }
 
-      widget.onSave(
+      await widget.onSave(
         label,
         host,
         port,
@@ -917,8 +997,14 @@ class _AddDialogState extends State<_AddDialog> {
         dashboardUsername: dashUser.isEmpty ? null : dashUser,
         dashboardPassword: dashPass.isEmpty ? null : dashPass,
       );
-      Navigator.pop(context);
-    } catch (e) {
+      if (mounted) Navigator.pop(context);
+    } on CredentialStorageException {
+      if (!mounted) return;
+      setState(() {
+        _error = 'The connection could not be stored securely.';
+        _validating = false;
+      });
+    } catch (_) {
       if (!mounted) return;
       setState(() {
         _error = 'Cannot reach $host:$port. Check the host and port.';

@@ -12,16 +12,31 @@ import json
 import threading
 import time
 from datetime import datetime, timezone
+from ipaddress import ip_address
 from pathlib import Path
 from urllib.parse import unquote
 
 from aiohttp import WSMsgType, web
+
+try:
+    from .turn_recovery_contract import TurnRecoveryContractLedger
+except ImportError:
+    from turn_recovery_contract import TurnRecoveryContractLedger
 
 
 FIXTURE_SESSION_ID = "fixture-copy"
 DASHBOARD_TOKEN = "fixture-dashboard-token"
 DASHBOARD_COOKIE = "fixture-dashboard-cookie"
 MAX_ATTACHMENT_BYTES = 16 * 1024 * 1024
+DISCONNECT_BEFORE_ACK = "before_ack"
+DISCONNECT_AFTER_ACK = "after_ack_before_first_delta"
+DISCONNECT_MID_STREAM = "mid_stream_after_2_deltas"
+DISCONNECT_SCENARIOS = (
+    DISCONNECT_BEFORE_ACK,
+    DISCONNECT_AFTER_ACK,
+    DISCONNECT_MID_STREAM,
+)
+MID_STREAM_DISCONNECT_DELTA_COUNT = 2
 SESSIONS = [
     {
         "id": FIXTURE_SESSION_ID,
@@ -54,7 +69,12 @@ MESSAGES = {
 
 
 class GatewayState:
-    def __init__(self, api_key: str, log_path: Path | None) -> None:
+    def __init__(
+        self,
+        api_key: str,
+        log_path: Path | None,
+        turn_recovery_ledger_path: Path | None = None,
+    ) -> None:
         self.api_key = api_key
         self.log_path = log_path
         self.log_lock = threading.Lock()
@@ -70,6 +90,48 @@ class GatewayState:
         self.session_models: dict[str, dict[str, str]] = {}
         self.session_reasoning: dict[str, str] = {}
         self.attachments: dict[str, list[dict[str, object]]] = {}
+        self.disconnect_ledger = self._new_disconnect_ledger()
+        self.turn_recovery = TurnRecoveryContractLedger(
+            turn_recovery_ledger_path
+        )
+
+    @staticmethod
+    def _new_disconnect_ledger() -> dict[str, dict[str, object]]:
+        return {
+            scenario: {
+                "prompt_submit_count": 0,
+                "disconnect_point": scenario,
+                "ack_seen": False,
+                "delta_count": 0,
+                "turn_end_count": 0,
+                "resubmit_count": 0,
+            }
+            for scenario in DISCONNECT_SCENARIOS
+        }
+
+    def reset_disconnect_ledger(self) -> None:
+        self.disconnect_ledger = self._new_disconnect_ledger()
+
+    def disconnect_ledger_snapshot(self) -> dict[str, object]:
+        return {
+            "schema": "hermes.fake_gateway.disconnect_ledger.v1",
+            "scenarios": json.loads(json.dumps(self.disconnect_ledger)),
+        }
+
+    def begin_disconnect_scenario(self, scenario: str) -> None:
+        record = self.disconnect_ledger[scenario]
+        record["prompt_submit_count"] = int(record["prompt_submit_count"]) + 1
+        record["resubmit_count"] = max(
+            0,
+            int(record["prompt_submit_count"]) - 1,
+        )
+
+    def mark_disconnect_ack(self, scenario: str) -> None:
+        self.disconnect_ledger[scenario]["ack_seen"] = True
+
+    def mark_disconnect_delta(self, scenario: str) -> None:
+        record = self.disconnect_ledger[scenario]
+        record["delta_count"] = int(record["delta_count"]) + 1
 
     def log(self, event: dict[str, object]) -> None:
         if self.log_path is None:
@@ -115,6 +177,13 @@ def dashboard_authorized(request: web.Request) -> bool:
     return request.cookies.get("hermes_session_at") == DASHBOARD_COOKIE
 
 
+def request_is_loopback(request: web.Request) -> bool:
+    try:
+        return ip_address(request.remote or "").is_loopback
+    except ValueError:
+        return False
+
+
 def unauthorized(state: GatewayState, request: web.Request) -> web.Response:
     state.log(
         {
@@ -142,9 +211,29 @@ async def health(request: web.Request) -> web.Response:
             "status": "ok",
             "service": "hermes-android-fixture",
             "environment": "local-emulator-only",
-            "contracts": ["mobile-rest", "dashboard", "json-rpc-websocket"],
+            "contracts": [
+                "mobile-rest",
+                "dashboard",
+                "json-rpc-websocket",
+                "fail-closed-disconnect-fixtures",
+                "turn-recovery-v2-fixture",
+            ],
         }
     )
+
+
+async def disconnect_ledger(request: web.Request) -> web.Response:
+    if not request_is_loopback(request):
+        return web.json_response({"error": "local-only fixture endpoint"}, status=403)
+    return web.json_response(state_from(request).disconnect_ledger_snapshot())
+
+
+async def reset_disconnect_ledger(request: web.Request) -> web.Response:
+    if not request_is_loopback(request):
+        return web.json_response({"error": "local-only fixture endpoint"}, status=403)
+    state = state_from(request)
+    state.reset_disconnect_ledger()
+    return web.json_response(state.disconnect_ledger_snapshot())
 
 
 async def dashboard_home(request: web.Request) -> web.Response:
@@ -667,6 +756,8 @@ async def handle_rpc(
             "ref_text": ref_text,
             "bytes": len(attachment_bytes),
             "sha256": digest,
+            "source_channel": str(params.get("source_channel") or ""),
+            "source_profile": str(params.get("source_profile") or ""),
         }
         state.attachments.setdefault(session_id, []).append(metadata)
         state.log({**log_record, **metadata, "accepted": True})
@@ -679,6 +770,14 @@ async def handle_rpc(
                     "name": name,
                     "path": remote_path,
                     "ref_text": ref_text,
+                    "atlas_intake": {
+                        "accepted": True,
+                        "status": "accepted",
+                        "relative_path": (
+                            "00_Inbox/Hermes-Mobile/"
+                            f"fixture/{metadata['source_profile']}/{name}"
+                        ),
+                    },
                 },
             )
         )
@@ -686,6 +785,60 @@ async def handle_rpc(
 
     if method == "prompt.submit":
         text = str(params.get("text") or "")
+        disconnect_scenario = params.get("fixture_disconnect_scenario")
+        if disconnect_scenario is not None:
+            disconnect_scenario = str(disconnect_scenario)
+            if disconnect_scenario not in DISCONNECT_SCENARIOS:
+                state.log(
+                    {
+                        **log_record,
+                        "fixture_disconnect_scenario": "invalid",
+                        "accepted": False,
+                    }
+                )
+                await ws.send_str(
+                    rpc_error(request_id, "Unknown fixture disconnect scenario")
+                )
+                return
+
+            state.begin_disconnect_scenario(disconnect_scenario)
+            state.log(
+                {
+                    **log_record,
+                    "fixture_disconnect_scenario": disconnect_scenario,
+                }
+            )
+            if disconnect_scenario == DISCONNECT_BEFORE_ACK:
+                await ws.close(
+                    code=1001,
+                    message=b"fixture disconnect before ack",
+                )
+                return
+
+            await ws.send_str(rpc_result(request_id, {"accepted": True}))
+            state.mark_disconnect_ack(disconnect_scenario)
+            if disconnect_scenario == DISCONNECT_AFTER_ACK:
+                await ws.close(
+                    code=1001,
+                    message=b"fixture disconnect after ack",
+                )
+                return
+
+            for index in range(MID_STREAM_DISCONNECT_DELTA_COUNT):
+                await ws.send_str(
+                    gateway_event(
+                        "message.delta",
+                        session_id,
+                        {"text": f"fixture-delta-{index + 1}"},
+                    )
+                )
+                state.mark_disconnect_delta(disconnect_scenario)
+            await ws.close(
+                code=1001,
+                message=b"fixture disconnect mid-stream",
+            )
+            return
+
         selected = state.session_models.get(session_id)
         includes_file_ref = "@file:" in text
         log_record.update(
@@ -1208,6 +1361,7 @@ async def websocket_gateway(request: web.Request) -> web.StreamResponse:
 
     ws = web.WebSocketResponse(max_msg_size=20 * 1024 * 1024)
     await ws.prepare(request)
+    recovery_connection_id = f"ws-{id(ws)}"
     state.log(
         {
             "transport": "websocket",
@@ -1222,6 +1376,7 @@ async def websocket_gateway(request: web.Request) -> web.StreamResponse:
         str, tuple[str, str, asyncio.Future[str]]
     ] = {}
     pending_clarifications: dict[str, tuple[str, asyncio.Future[str]]] = {}
+    await ws.send_json(state.turn_recovery.ready_frame())
     async for message in ws:
         if message.type == WSMsgType.TEXT:
             try:
@@ -1231,6 +1386,13 @@ async def websocket_gateway(request: web.Request) -> web.StreamResponse:
                 continue
             if not isinstance(payload, dict):
                 await ws.send_str(rpc_error(None, "Expected JSON object"))
+                continue
+            if state.turn_recovery.handles(payload):
+                await state.turn_recovery.handle(
+                    ws,
+                    payload,
+                    recovery_connection_id,
+                )
                 continue
             await handle_rpc(
                 ws,
@@ -1254,6 +1416,7 @@ async def websocket_gateway(request: web.Request) -> web.StreamResponse:
     for _, prompt in pending_clarifications.values():
         if not prompt.done():
             prompt.cancel()
+    state.turn_recovery.detach(ws, recovery_connection_id)
     state.log(
         {
             "transport": "websocket",
@@ -1268,6 +1431,11 @@ def create_app(state: GatewayState) -> web.Application:
     app = web.Application(client_max_size=20 * 1024 * 1024)
     app["state"] = state
     app.router.add_get("/health", health)
+    app.router.add_get("/test/disconnect-ledger", disconnect_ledger)
+    app.router.add_post(
+        "/test/disconnect-ledger/reset",
+        reset_disconnect_ledger,
+    )
     app.router.add_get("/", dashboard_home)
     app.router.add_post("/auth/password-login", password_login)
     app.router.add_post("/api/auth/ws-ticket", ws_ticket)
@@ -1292,12 +1460,17 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--port", type=int, default=18642)
     parser.add_argument("--api-key", default="test-key")
     parser.add_argument("--log", type=Path)
+    parser.add_argument("--turn-recovery-ledger", type=Path)
     return parser.parse_args()
 
 
 def main() -> None:
     args = parse_args()
-    state = GatewayState(args.api_key, args.log)
+    state = GatewayState(
+        args.api_key,
+        args.log,
+        args.turn_recovery_ledger,
+    )
     print(
         f"Hermes Android fixture listening on http://{args.host}:{args.port}",
         flush=True,
