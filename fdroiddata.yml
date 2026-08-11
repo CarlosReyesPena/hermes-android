@@ -6,19 +6,6 @@ AuthorWebSite: https://samrusselltech.net
 SourceCode: https://github.com/rusty4444/hermes-android
 IssueTracker: https://github.com/rusty4444/hermes-android/issues
 Changelog: https://github.com/rusty4444/hermes-android/blob/main/CHANGELOG.md
-Translation: https://github.com/rusty4444/hermes-android
-
-AutoName: Hermes Android
-Summary: Chat with your Hermes AI agent from your phone
-Description: |
-  Hermes Android connects to a Hermes Agent Gateway API Server
-  over LAN, Wi-Fi, or a private Tailscale network. It provides a
-  full chat experience with streaming responses, session browsing,
-  per-chat model selection, voice dictation, and multi-attachment
-  uploads.
-
-  Requires a running Hermes Agent gateway accessible from the
-  device. No cloud account needed — you own the server.
 
 RepoType: git
 Repo: https://github.com/rusty4444/hermes-android
