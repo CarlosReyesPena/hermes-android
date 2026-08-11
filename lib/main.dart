@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'core/services/connection_manager.dart';
 import 'core/services/gateway_turn_application_controller.dart';
@@ -167,7 +166,7 @@ class HermesHeader extends StatelessWidget {
         children: [
           Text(
             'HERMES',
-            style: GoogleFonts.cinzel(
+            style: TextStyle(fontFamily: 'Cinzel', 
               fontSize: 28,
               fontWeight: FontWeight.w700,
               color: const Color(0xFFD4AF37),
@@ -754,7 +753,7 @@ class _HomeScreenState extends State<HomeScreen> {
       appBar: AppBar(
         title: Text(
           'HERMES',
-          style: GoogleFonts.cinzel(
+          style: TextStyle(fontFamily: 'Cinzel', 
             fontWeight: FontWeight.w700,
             letterSpacing: 6,
             fontSize: 22,

@@ -13,7 +13,6 @@ dependencies:
   # UI
   cupertino_icons: ^1.0.8
   flutter_markdown: ^0.7.6
-  google_fonts: ^6.2.1
 
   # State management
   flutter_riverpod: ^2.6.1
@@ -60,5 +59,9 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  fonts:
+    - family: Cinzel
+      fonts:
+        - asset: assets/fonts/Cinzel-Variable.ttf
   assets:
     - assets/

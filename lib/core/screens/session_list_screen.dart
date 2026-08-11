@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/connection_manager.dart';
 import '../services/desktop_gateway_client.dart';
@@ -388,7 +387,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
       appBar: AppBar(
         title: Text(
           'HERMES',
-          style: GoogleFonts.cinzel(
+          style: TextStyle(fontFamily: 'Cinzel', 
             fontWeight: FontWeight.w700,
             letterSpacing: 6,
             fontSize: 22,
@@ -434,7 +433,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
                 children: [
                   Text(
                     'HERMES',
-                    style: GoogleFonts.cinzel(
+                    style: TextStyle(fontFamily: 'Cinzel', 
                       fontSize: 22,
                       fontWeight: FontWeight.w700,
                       color: const Color(0xFFD4AF37),
