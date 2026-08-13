@@ -1,4 +1,4 @@
-name: Build APK / Release Gate
+name: Release
 
 on:
   push:
@@ -15,9 +15,9 @@ jobs:
     runs-on: ubuntu-latest
     env:
       HAS_RELEASE_KEYSTORE: ${{ secrets.KEYSTORE_BASE64 != '' }}
-      # Flutter adds this ABI offset to the packaged arm64 versionCode when
-      # --split-per-abi is used. The pubspec value remains the guarded base.
-      ARM64_SPLIT_VERSION_CODE_OFFSET: '2000'
+      # F-Droid ABI split: the Gradle versionCodeOverride derives per-ABI codes
+      # as base * 10 + ABI code (arm64-v8a = 2). The pubspec value is the base.
+      ARM64_ABI_CODE: '2'
 
     steps:
       - uses: actions/checkout@v4
@@ -66,7 +66,7 @@ jobs:
           version_code = int(version_code_text)
           minimum = int(os.environ["MINIMUM_INSTALLED_VERSION_CODE"])
           required_base = int(os.environ["REQUIRED_BASE_VERSION_CODE"])
-          arm64_offset = int(os.environ["ARM64_SPLIT_VERSION_CODE_OFFSET"])
+          arm64_code = int(os.environ["ARM64_ABI_CODE"])
           if version_code <= minimum:
               raise SystemExit(
                   f"versionCode {version_code} must be greater than {minimum}"
@@ -88,7 +88,7 @@ jobs:
           print(
               f"Verified base {version_name}+{version_code}; "
               f"arm64 split effective versionCode is "
-              f"{version_code + arm64_offset}; upgrade floor is {minimum}; "
+              f"{version_code * 10 + arm64_code}; upgrade floor is {minimum}; "
               f"required base is {required_base}"
           )
           PY
@@ -163,17 +163,17 @@ jobs:
               raise SystemExit("arm64 APK versionCode was not readable")
 
           base_code = int(version_match.group(2))
-          offset = int(os.environ["ARM64_SPLIT_VERSION_CODE_OFFSET"])
+          abi_code = int(os.environ["ARM64_ABI_CODE"])
           packaged_code = int(packaged_match.group(1))
-          expected_code = base_code + offset
+          expected_code = base_code * 10 + abi_code
           if packaged_code != expected_code:
               raise SystemExit(
                   f"arm64 packaged versionCode {packaged_code} != "
-                  f"base {base_code} + ABI offset {offset}"
+                  f"base {base_code} * 10 + ABI code {abi_code}"
               )
           print(
               f"Verified arm64 packaged versionCode {packaged_code} "
-              f"from base {base_code} + ABI offset {offset}"
+              f"from base {base_code} * 10 + ABI code {abi_code}"
           )
           PY
 

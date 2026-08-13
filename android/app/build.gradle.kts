@@ -1,3 +1,4 @@
+import com.android.build.gradle.internal.api.ApkVariantOutputImpl
 import java.io.FileInputStream
 import java.util.Properties
 
@@ -49,8 +50,9 @@ android {
 
    buildTypes {
        debug {
-           // The guarded Flutter versionCode is the base. `--split-per-abi`
-           // adds 2000 to the packaged arm64 code; CI verifies both values.
+           // The guarded Flutter versionCode is the base. The F-Droid ABI-split
+           // block below derives per-ABI codes as base * 10 + ABI code; CI
+           // verifies the packaged arm64 code against that scheme.
            applicationIdSuffix = ".dev"
            versionNameSuffix = "-dev"
            manifestPlaceholders["appLabel"] = "Hermes Agent Dev"
@@ -75,6 +77,21 @@ kotlin {
 
 flutter {
    source = "../.."
+}
+
+// F-Droid ABI split: version codes are derived per ABI as base * 10 + abiCode,
+// with armeabi-v7a < arm64-v8a < x86_64 as required by fdroiddata.
+val abiCodes = mapOf("armeabi-v7a" to 1, "arm64-v8a" to 2, "x86_64" to 3)
+android.applicationVariants.configureEach {
+    val variant = this
+    variant.outputs.forEach { output ->
+        val abiVersionCode =
+            abiCodes[output.filters.find { it.filterType == "ABI" }?.identifier]
+        if (abiVersionCode != null) {
+            (output as ApkVariantOutputImpl).versionCodeOverride =
+                variant.versionCode * 10 + abiVersionCode
+        }
+    }
 }
 
 dependencies {

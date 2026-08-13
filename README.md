@@ -437,12 +437,14 @@ mkdir -p release-apks
 cp build/app/outputs/flutter-apk/app-*-release.apk release-apks/
 ```
 
-`pubspec.yaml` declares the base Android `versionCode`. Flutter's
-`--split-per-abi` packaging adds an ABI offset to each split; for arm64-v8a the
-effective APK manifest value is `base + 2000`. For v2.0.1, base `2131`
-therefore produces effective arm64 code `4131`. CI reads the completed APK with
-`aapt` and fails if that relationship drifts. Release-floor checks continue to
-apply to the base value and must not be weakened to rely on an ABI offset.
+`pubspec.yaml` declares the base Android `versionCode`. The F-Droid ABI-split
+block in `android/app/build.gradle.kts` derives per-ABI codes as
+`base * 10 + ABI code` (armeabi-v7a = 1, arm64-v8a = 2, x86_64 = 3), so the
+codes stay ordered armeabi-v7a < arm64-v8a < x86_64 as fdroiddata requires.
+For v2.0.1, base `2131` therefore produces codes `21311`/`21312`/`21313`.
+CI reads the completed arm64 APK with `aapt` and fails if that relationship
+drifts. Release-floor checks continue to apply to the base value and must not
+be weakened to rely on the ABI code.
 
 Output files:
 
