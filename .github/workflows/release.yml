@@ -52,8 +52,9 @@ jobs:
           # GNU build-ids hash machine-local DWARF; drop them so the F-Droid
           # rebuild of libdartjni.so is bit-identical.
           python3 - <<'PY'
+          import os
           from pathlib import Path
-          p = Path("$PUB_CACHE") / "hosted/pub.dev/jni-1.0.0/src/CMakeLists.txt"
+          p = Path(os.environ["PUB_CACHE"]) / "hosted/pub.dev/jni-1.0.0/src/CMakeLists.txt"
           t = p.read_text()
           append = '\nif (ANDROID)\n\ttarget_link_options(jni PRIVATE "-Wl,--build-id=none")\nendif()\n'
           if '--build-id=none' not in t:
