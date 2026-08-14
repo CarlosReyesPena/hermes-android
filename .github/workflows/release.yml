@@ -121,7 +121,9 @@ jobs:
 
       - name: Build APK (signed release)
         if: env.HAS_RELEASE_KEYSTORE == 'true'
-        run: flutter build apk --release --split-per-abi
+        env:
+          PUB_CACHE: ${{ github.workspace }}/.pub-cache
+        run: flutter build apk --release --split-per-abi --split-debug-info=symbols
 
       - name: Build APK (debug validation artifact only)
         if: env.HAS_RELEASE_KEYSTORE != 'true'
