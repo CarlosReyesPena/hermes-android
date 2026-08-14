@@ -18,6 +18,9 @@ jobs:
       # F-Droid ABI split: the Gradle versionCodeOverride derives per-ABI codes
       # as base * 10 + ABI code (arm64-v8a = 2). The pubspec value is the base.
       ARM64_ABI_CODE: '2'
+      # Fixed workspace-relative pub cache so builds are reproducible against
+      # the F-Droid build server, which builds at this same absolute path.
+      PUB_CACHE: ${{ github.workspace }}/.pub-cache
 
     steps:
       - uses: actions/checkout@v4
@@ -37,12 +40,26 @@ jobs:
       - name: Cache Flutter dependencies
         uses: actions/cache@v4
         with:
-          path: ~/.pub-cache
+          path: ${{ github.workspace }}/.pub-cache
           key: flutter-${{ runner.os }}-${{ hashFiles('pubspec.lock') }}
           restore-keys: flutter-${{ runner.os }}-
 
       - name: Install dependencies
         run: flutter pub get
+
+      - name: Make jni native build reproducible (deterministic build-id)
+        run: |
+          # GNU build-ids hash machine-local DWARF; drop them so the F-Droid
+          # rebuild of libdartjni.so is bit-identical.
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path("$PUB_CACHE") / "hosted/pub.dev/jni-1.0.0/src/CMakeLists.txt"
+          t = p.read_text()
+          append = '\nif (ANDROID)\n\ttarget_link_options(jni PRIVATE "-Wl,--build-id=none")\nendif()\n'
+          if '--build-id=none' not in t:
+              p.write_text(t + append)
+          print('patched', p)
+          PY
 
       - name: Verify release identity and upgrade versionCode
         env:
@@ -121,8 +138,6 @@ jobs:
 
       - name: Build APK (signed release)
         if: env.HAS_RELEASE_KEYSTORE == 'true'
-        env:
-          PUB_CACHE: ${{ github.workspace }}/.pub-cache
         run: flutter build apk --release --split-per-abi --split-debug-info=symbols
 
       - name: Build APK (debug validation artifact only)
