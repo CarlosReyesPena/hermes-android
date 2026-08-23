@@ -1040,6 +1040,14 @@ class DashboardClient {
     };
   }
 
+  /// Resolves the dashboard auth headers for a caller that issues its own
+  /// requests against [baseUrl].
+  ///
+  /// Exposed so collaborators such as the session search client can reuse this
+  /// client's cached cookie/token and its single-flight login, instead of
+  /// re-implementing the auth ladder and triggering a second password login.
+  Future<Map<String, String>> authHeaders() => _authHeaders();
+
   /// Mints the short-lived, single-use WebSocket ticket required by a secured
   /// Hermes Desktop gateway. The HTTP API cookie stays in this client; only the
   /// ticket is passed to the WebSocket URL.
