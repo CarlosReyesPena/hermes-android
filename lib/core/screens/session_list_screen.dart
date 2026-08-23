@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/session_search_hit.dart';
+import '../services/ai_search_query_rewriter.dart';
 import '../services/connection_manager.dart';
 import '../services/desktop_gateway_client.dart';
 import '../services/gateway_turn_application_controller.dart';
@@ -80,9 +81,14 @@ class _SessionListScreenState extends State<SessionListScreen> {
 
   SessionSearchPreferences? _searchPreferences;
   SessionSearchMode _searchMode = SessionSearchMode.local;
+  AiSearchModel? _aiSearchModel;
+  AiSearchQueryRewriter? _aiRewriter;
+  String? _aiRewrittenQuery;
+  bool _loadingAiModels = false;
   DashboardClient? _searchDashboard;
   SessionSearchClient? _searchClient;
   Timer? _searchDebounceTimer;
+  int _searchRequestGeneration = 0;
 
   /// Query currently reflected by [_serverResults]; guards against an earlier
   /// slow response overwriting the results of a newer query.
@@ -126,6 +132,9 @@ class _SessionListScreenState extends State<SessionListScreen> {
         _searchMode = preferences.readMode(
           connectionIdentity: _searchConnectionIdentity,
         );
+        _aiSearchModel = preferences.readAiModel(
+          connectionIdentity: _searchConnectionIdentity,
+        );
       });
     } catch (_) {
       // Keep SessionSearchMode.local.
@@ -141,8 +150,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
 
   /// Server search reaches the dashboard, which the gateway connection alone
   /// does not guarantee is reachable.
-  bool get _serverSearchAvailable =>
-      widget.connection.host.trim().isNotEmpty;
+  bool get _serverSearchAvailable => widget.connection.host.trim().isNotEmpty;
 
   SessionSearchClient _ensureSearchClient() {
     final existing = _searchClient;
@@ -168,17 +176,23 @@ class _SessionListScreenState extends State<SessionListScreen> {
 
   Future<void> _setSearchMode(SessionSearchMode mode) async {
     if (mode == _searchMode) return;
+    if (mode == SessionSearchMode.ai && _aiSearchModel == null) {
+      final selected = await _showAiModelSelector();
+      if (selected == null) return;
+    }
     setState(() {
+      _searchRequestGeneration++;
       _searchMode = mode;
       _serverResults = null;
       _searchError = null;
       _serverQuery = '';
+      _aiRewrittenQuery = null;
     });
     await _searchPreferences?.saveMode(
       connectionIdentity: _searchConnectionIdentity,
       mode: mode,
     );
-    if (mode == SessionSearchMode.server) {
+    if (mode != SessionSearchMode.local) {
       _onSearchChanged(_searchController.text);
     }
   }
@@ -189,47 +203,190 @@ class _SessionListScreenState extends State<SessionListScreen> {
   /// issues one request instead of one per character.
   void _onSearchChanged(String raw) {
     setState(() {});
-    if (_searchMode != SessionSearchMode.server) return;
+    if (_searchMode == SessionSearchMode.local) return;
 
     _searchDebounceTimer?.cancel();
     final query = raw.trim();
     if (query.isEmpty) {
       setState(() {
+        _searchRequestGeneration++;
         _serverResults = null;
         _searchError = null;
         _searching = false;
         _serverQuery = '';
+        _aiRewrittenQuery = null;
       });
       return;
     }
-    _searchDebounceTimer = Timer(_searchDebounce, () => _runServerSearch(query));
+    _searchDebounceTimer = Timer(
+      _searchDebounce,
+      () => _runServerSearch(query),
+    );
+  }
+
+  AiSearchQueryRewriter _ensureAiRewriter() {
+    final existing = _aiRewriter;
+    if (existing != null) return existing;
+    final created = AiSearchQueryRewriter(
+      baseUrl: widget.connection.baseUrl,
+      pathPrefix: widget.connection.gatewayPrefix ?? '',
+      apiKey: widget.connection.apiKey,
+    );
+    _aiRewriter = created;
+    return created;
+  }
+
+  Future<AiSearchModel?> _showAiModelSelector() async {
+    if (_loadingAiModels) return null;
+    setState(() => _loadingAiModels = true);
+    try {
+      final options = await _client.getModelOptions();
+      final choices = AiSearchModel.configuredFromOptions(options);
+      if (choices.isEmpty) {
+        throw StateError('Hermes returned no configured selectable models.');
+      }
+
+      if (!mounted) return null;
+      final selection = await showModalBottomSheet<AiSearchModel>(
+        context: context,
+        showDragHandle: true,
+        isScrollControlled: true,
+        builder: (sheetContext) => SafeArea(
+          child: SizedBox(
+            height: MediaQuery.sizeOf(sheetContext).height * 0.75,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'AI search model',
+                        style: Theme.of(sheetContext).textTheme.titleLarge,
+                      ),
+                      const SizedBox(height: 4),
+                      const Text(
+                        'The model only rewrites your question into a short '
+                        'full-text query. Hermes uses the provider credentials '
+                        'already configured on the host.',
+                      ),
+                    ],
+                  ),
+                ),
+                const Divider(height: 1),
+                Expanded(
+                  child: ListView.builder(
+                    itemCount: choices.length,
+                    itemBuilder: (_, index) {
+                      final choice = choices[index];
+                      final isSelected =
+                          _aiSearchModel?.provider == choice.provider &&
+                          _aiSearchModel?.model == choice.model;
+                      return ListTile(
+                        leading: Icon(
+                          choice.isRecommended
+                              ? Icons.savings_outlined
+                              : Icons.smart_toy_outlined,
+                        ),
+                        title: Text(choice.model),
+                        subtitle: Text(
+                          choice.isRecommended
+                              ? '${choice.provider} • Recommended: small and inexpensive'
+                              : choice.provider,
+                        ),
+                        trailing: isSelected
+                            ? const Icon(Icons.check_circle)
+                            : null,
+                        onTap: () => Navigator.pop(sheetContext, choice),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+      if (selection == null || !mounted) return null;
+      setState(() => _aiSearchModel = selection);
+      await _searchPreferences?.saveAiModel(
+        connectionIdentity: _searchConnectionIdentity,
+        selection: selection,
+      );
+      if (_searchMode == SessionSearchMode.ai &&
+          _searchController.text.trim().isNotEmpty) {
+        unawaited(_runServerSearch(_searchController.text.trim()));
+      }
+      return selection;
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not load AI search models: $error')),
+        );
+      }
+      return null;
+    } finally {
+      if (mounted) setState(() => _loadingAiModels = false);
+    }
   }
 
   Future<void> _runServerSearch(String query) async {
     if (!mounted || query.isEmpty) return;
+    final requestGeneration = ++_searchRequestGeneration;
+    final requestMode = _searchMode;
     setState(() {
       _searching = true;
       _searchError = null;
     });
 
+    bool requestIsCurrent() =>
+        mounted &&
+        requestGeneration == _searchRequestGeneration &&
+        _searchController.text.trim() == query;
+
     try {
-      final hits = await _ensureSearchClient().search(query);
-      // A slower earlier request must not overwrite newer results.
-      if (!mounted || _searchController.text.trim() != query) return;
+      var effectiveQuery = query;
+      if (requestMode == SessionSearchMode.ai) {
+        final selected = _aiSearchModel;
+        if (selected == null) {
+          throw const AiSearchRewriteException(
+            'Choose an AI search model before using AI search.',
+          );
+        }
+        effectiveQuery = await _ensureAiRewriter().rewrite(
+          query: query,
+          provider: selected.provider,
+          model: selected.model,
+        );
+      }
+      final hits = await _ensureSearchClient().search(effectiveQuery);
+      if (!requestIsCurrent()) return;
       setState(() {
         _serverResults = hits;
         _serverQuery = query;
+        _aiRewrittenQuery = requestMode == SessionSearchMode.ai
+            ? effectiveQuery
+            : null;
+        _searching = false;
+      });
+    } on AiSearchRewriteException catch (error) {
+      if (!requestIsCurrent()) return;
+      setState(() {
+        _searchError = error.message;
+        _serverResults = null;
         _searching = false;
       });
     } on SessionSearchException catch (error) {
-      if (!mounted || _searchController.text.trim() != query) return;
+      if (!requestIsCurrent()) return;
       setState(() {
         _searchError = error.message;
         _serverResults = null;
         _searching = false;
       });
     } catch (error) {
-      if (!mounted || _searchController.text.trim() != query) return;
+      if (!requestIsCurrent()) return;
       setState(() {
         _searchError = 'Session search failed: $error';
         _serverResults = null;
@@ -307,6 +464,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
     _searchDebounceTimer?.cancel();
     _searchClient?.close();
     _searchDashboard?.close();
+    _aiRewriter?.close();
     _searchController.dispose();
     _desktopGateway?.close();
     _client.close();
@@ -538,7 +696,8 @@ class _SessionListScreenState extends State<SessionListScreen> {
       appBar: AppBar(
         title: Text(
           'HERMES',
-          style: TextStyle(fontFamily: 'Cinzel', 
+          style: TextStyle(
+            fontFamily: 'Cinzel',
             fontWeight: FontWeight.w700,
             letterSpacing: 6,
             fontSize: 22,
@@ -584,7 +743,8 @@ class _SessionListScreenState extends State<SessionListScreen> {
                 children: [
                   Text(
                     'HERMES',
-                    style: TextStyle(fontFamily: 'Cinzel', 
+                    style: TextStyle(
+                      fontFamily: 'Cinzel',
                       fontSize: 22,
                       fontWeight: FontWeight.w700,
                       color: const Color(0xFFD4AF37),
@@ -715,9 +875,11 @@ class _SessionListScreenState extends State<SessionListScreen> {
 
     final rawQuery = _searchController.text.trim();
     final localQuery = rawQuery.toLowerCase();
-    final serverMode = _searchMode == SessionSearchMode.server;
-    final serverHitsCurrent =
-        serverMode && _serverQuery == rawQuery ? _serverResults : null;
+    final aiMode = _searchMode == SessionSearchMode.ai;
+    final serverMode = _searchMode != SessionSearchMode.local;
+    final serverHitsCurrent = serverMode && _serverQuery == rawQuery
+        ? _serverResults
+        : null;
     final visibleSessions = rawQuery.isEmpty
         ? _sessions
         : serverMode
@@ -760,7 +922,9 @@ class _SessionListScreenState extends State<SessionListScreen> {
                             ),
                           )
                         : const Icon(Icons.search),
-                    hintText: serverMode
+                    hintText: aiMode
+                        ? 'Ask AI to find a conversation'
+                        : serverMode
                         ? 'Search all message content'
                         : 'Search loaded chats',
                     trailing: [
@@ -772,17 +936,38 @@ class _SessionListScreenState extends State<SessionListScreen> {
                             _searchDebounceTimer?.cancel();
                             _searchController.clear();
                             setState(() {
+                              _searchRequestGeneration++;
                               _serverResults = null;
                               _searchError = null;
                               _serverQuery = '';
+                              _aiRewrittenQuery = null;
                               _searching = false;
                             });
                           },
                         ),
+                      if (aiMode)
+                        IconButton(
+                          tooltip: 'Change AI search model',
+                          icon: _loadingAiModels
+                              ? const SizedBox.square(
+                                  dimension: 18,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : const Icon(Icons.tune),
+                          onPressed: _loadingAiModels
+                              ? null
+                              : _showAiModelSelector,
+                        ),
                       PopupMenuButton<SessionSearchMode>(
                         tooltip: 'Search mode',
                         icon: Icon(
-                          serverMode ? Icons.manage_search : Icons.phone_android,
+                          aiMode
+                              ? Icons.auto_awesome
+                              : serverMode
+                              ? Icons.manage_search
+                              : Icons.phone_android,
                         ),
                         onSelected: _setSearchMode,
                         itemBuilder: (_) => [
@@ -799,12 +984,27 @@ class _SessionListScreenState extends State<SessionListScreen> {
                           CheckedPopupMenuItem(
                             value: SessionSearchMode.server,
                             enabled: _serverSearchAvailable,
-                            checked: serverMode,
+                            checked: _searchMode == SessionSearchMode.server,
                             child: const ListTile(
                               contentPadding: EdgeInsets.zero,
                               leading: Icon(Icons.manage_search),
                               title: Text('Full-text'),
                               subtitle: Text('All stored message content'),
+                            ),
+                          ),
+                          CheckedPopupMenuItem(
+                            value: SessionSearchMode.ai,
+                            enabled: _serverSearchAvailable,
+                            checked: aiMode,
+                            child: ListTile(
+                              contentPadding: EdgeInsets.zero,
+                              leading: const Icon(Icons.auto_awesome),
+                              title: const Text('AI + full-text'),
+                              subtitle: Text(
+                                _aiSearchModel == null
+                                    ? 'Choose a small model to rewrite queries'
+                                    : '${_aiSearchModel!.provider} • ${_aiSearchModel!.model}',
+                              ),
                             ),
                           ),
                         ],
@@ -818,6 +1018,23 @@ class _SessionListScreenState extends State<SessionListScreen> {
                       }
                     },
                   ),
+                  if (aiMode && _aiRewrittenQuery != null) ...[
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        const Icon(Icons.auto_awesome, size: 16),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            'AI searched for: $_aiRewrittenQuery',
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                   if (_searchError != null) ...[
                     const SizedBox(height: 8),
                     Material(
@@ -846,9 +1063,8 @@ class _SessionListScreenState extends State<SessionListScreen> {
                               ),
                             ),
                             TextButton(
-                              onPressed: () => _setSearchMode(
-                                SessionSearchMode.local,
-                              ),
+                              onPressed: () =>
+                                  _setSearchMode(SessionSearchMode.local),
                               child: const Text('Use on-device'),
                             ),
                           ],
@@ -950,7 +1166,8 @@ class _SessionListScreenState extends State<SessionListScreen> {
                 ],
               ),
               isThreeLine:
-                  searchHit?.snippet.isNotEmpty == true || session.preview.isNotEmpty,
+                  searchHit?.snippet.isNotEmpty == true ||
+                  session.preview.isNotEmpty,
               onLongPress: isDeleting ? null : () => _renameSession(session),
               onTap: isDeleting
                   ? null
