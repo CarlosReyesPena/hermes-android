@@ -6,6 +6,7 @@ import 'core/services/connection_manager.dart';
 import 'core/services/gateway_turn_application_controller.dart';
 import 'core/services/text_size_preference.dart';
 import 'core/screens/session_list_screen.dart';
+import 'core/theme/hermes_theme.dart';
 import 'core/utils/responsive.dart';
 
 void main() async {
@@ -67,57 +68,11 @@ class HermesAppState extends State<HermesApp> {
 
   @override
   Widget build(BuildContext context) {
-    const gold = Color(0xFFD4AF37);
-
     return MaterialApp(
       title: 'Hermes Agent',
       themeMode: HermesApp.getThemeMode(widget.connManager.prefs),
-      theme: ThemeData(
-        colorSchemeSeed: gold,
-        brightness: Brightness.light,
-        useMaterial3: true,
-        scaffoldBackgroundColor: const Color(0xFFFAFAFA),
-        appBarTheme: const AppBarTheme(
-          backgroundColor: Colors.white,
-          elevation: 0,
-          centerTitle: true,
-        ),
-        cardTheme: CardThemeData(
-          color: Colors.white,
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-            side: BorderSide(color: Colors.grey.withValues(alpha: 0.15)),
-          ),
-        ),
-        floatingActionButtonTheme: const FloatingActionButtonThemeData(
-          backgroundColor: gold,
-          foregroundColor: Colors.white,
-        ),
-      ),
-      darkTheme: ThemeData(
-        colorSchemeSeed: gold,
-        brightness: Brightness.dark,
-        useMaterial3: true,
-        scaffoldBackgroundColor: Colors.black,
-        appBarTheme: const AppBarTheme(
-          backgroundColor: Colors.black,
-          elevation: 0,
-          centerTitle: true,
-        ),
-        cardTheme: CardThemeData(
-          color: const Color(0xFF1A1A1A),
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-            side: BorderSide(color: Colors.white.withValues(alpha: 0.05)),
-          ),
-        ),
-        floatingActionButtonTheme: const FloatingActionButtonThemeData(
-          backgroundColor: gold,
-          foregroundColor: Colors.black,
-        ),
-      ),
+      theme: hermesTheme(Brightness.light),
+      darkTheme: hermesTheme(Brightness.dark),
       builder: (context, child) {
         final systemMediaQuery = MediaQuery.of(context);
         final preference = HermesApp.getTextSizePreference(
@@ -166,7 +121,8 @@ class HermesHeader extends StatelessWidget {
         children: [
           Text(
             'HERMES',
-            style: TextStyle(fontFamily: 'Cinzel', 
+            style: TextStyle(
+              fontFamily: 'Cinzel',
               fontSize: 28,
               fontWeight: FontWeight.w700,
               color: const Color(0xFFD4AF37),
@@ -753,7 +709,8 @@ class _HomeScreenState extends State<HomeScreen> {
       appBar: AppBar(
         title: Text(
           'HERMES',
-          style: TextStyle(fontFamily: 'Cinzel', 
+          style: TextStyle(
+            fontFamily: 'Cinzel',
             fontWeight: FontWeight.w700,
             letterSpacing: 6,
             fontSize: 22,

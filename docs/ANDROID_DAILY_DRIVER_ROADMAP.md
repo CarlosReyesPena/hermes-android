@@ -260,6 +260,96 @@ Chat itself remains full-screen and reachable from every relevant card or notifi
 
 ---
 
+## Interface overhaul
+
+The current app is functional but reads as a utility list: flat sessions, drawer-driven navigation, dense uniform rows, and screens that each invent their own layout. Reaching daily-driver quality requires a deliberate interface rebuild, not incremental cosmetic tweaks. This work is a first-class deliverable, not polish deferred to the end.
+
+### Problems to fix
+
+- No shared design system: spacing, radius, elevation, and typography are decided per screen.
+- Navigation hidden in a drawer, so most capabilities are invisible until searched for.
+- Session rows carry no status, no project, and no urgency signal.
+- Chat lacks visual hierarchy between prose, reasoning, tool activity, and results.
+- Long-running and blocked work looks identical to finished work.
+- No empty, loading, offline, or error states designed as real states.
+- Touch targets, one-handed reach, and keyboard/IME behavior are inconsistent.
+- Dark theme is the only well-tuned theme; light theme is an afterthought.
+
+### Design system foundation
+
+Introduce one typed theme layer that every screen consumes:
+
+- **Tokens** — spacing scale, corner radii, elevation, motion durations/curves, and semantic colors (surface, raised, accent, success, warning, danger, running, blocked).
+- **Typography ramp** — display, title, section, body, label, mono; the mono style owns code, paths, and terminal output.
+- **Brand** — keep the Hermes gold accent, but as a semantic accent token rather than a hardcoded hex per widget.
+- **Full Material 3 adoption** — dynamic color optional, contrast verified in both themes.
+- **Component kit** — `HermesCard`, `HermesListTile`, `StatusChip`, `SectionHeader`, `EmptyState`, `ErrorState`, `LoadingSkeleton`, `MetricRow`, `ActionSheet`.
+
+No feature screen may hardcode a color, radius, or spacing value once the token layer exists.
+
+### Home
+
+- Attention-first cards with clear rank: **Needs you** > **Running** > **Suggestions** > **Continue** > **Completed**.
+- Each card shows what happened, where, and one primary action.
+- Live progress for running turns; elapsed time for blocked work.
+- Skeleton loaders instead of spinners.
+- A calm, explicitly designed “nothing needs you” state — not an empty list.
+
+### Projects
+
+- Rich project cards: name, icon/color, current focus, counts for running/blocked/recent, last activity.
+- Optional grid or list density.
+- Project detail as tabs (Overview, Chats, Files, Assets, Activity) with a collapsing header.
+- Pin, reorder, archive, and color/icon assignment.
+- Inline creation flow with a preview of what the project will contain.
+
+### Chat
+
+Chat is where Carlos spends most of his time, so it gets the deepest rework:
+
+- Clear separation between user prose, assistant prose, reasoning, tool activity, and results.
+- Collapsible tool cards with icon, title, duration, and status — expandable to full output.
+- Streaming presentation that does not jump the scroll position.
+- Sticky context header: project, model, reasoning effort, connection state.
+- Composer redesign: multiline growth, attachment strip, voice, model/effort switcher, send/stop as one adaptive control.
+- Distinct visual treatment for approvals, clarifications, secrets, and errors — they must never read as ordinary messages.
+- Code and diff blocks with syntax highlighting, horizontal scroll, copy, and wrap toggle.
+- Message actions via long-press sheet rather than crowded inline icons.
+- Jump-to-latest, jump-to-unread, and preserved scroll on reopen.
+
+### Activity
+
+- Timeline grouped by state, with color-coded status chips.
+- Blocked items always sort first and stay visually urgent.
+- Inline resolve actions where safe.
+
+### Motion and feedback
+
+- Shared-element transitions between cards and detail screens.
+- Meaningful, short animations only (150–250 ms); no decorative motion.
+- Haptics for approval, completion, failure, and destructive confirmation.
+- Pull-to-refresh and optimistic updates with visible rollback on failure.
+
+### States, accessibility, and form factors
+
+- Every screen defines loading, empty, offline, permission-denied, unsupported-gateway, and error states explicitly.
+- Minimum 48 dp touch targets; primary actions within thumb reach.
+- Full text scaling without clipping; screen-reader labels on every actionable element.
+- Verified contrast in dark and light themes.
+- Tablet and foldable two-pane layouts (list + detail).
+- Landscape support for chat and file preview.
+
+### Verification
+
+Interface work is only accepted with evidence:
+
+- widget tests for each new component and each state;
+- golden tests for the component kit in both themes;
+- text-scale and small-width regression tests;
+- a real device screenshot for every reworked screen.
+
+---
+
 ## Native Android notifications
 
 Local “turn complete” notifications are only the first step. The final notification model needs event types, priority channels, deep links, and killed-app delivery.
@@ -410,11 +500,17 @@ Deliverables:
 - embedded Dashboard fallback entry;
 - characterization tests for current chat/recovery/notification behavior.
 
+Phase 0 also lands the **design system foundation** described in the Interface
+overhaul section: the token layer, typography ramp, and the first component kit
+widgets with tests. The navigation shell must be built on those tokens rather
+than on per-screen styling, so no later phase inherits ad-hoc visuals.
+
 Acceptance:
 
 - no Project assignment depends exclusively on SharedPreferences;
 - existing local Spaces can be previewed and migrated without losing assignments;
 - older Gateways remain usable with a clearly labeled compatibility mode.
+- every new widget consumes theme tokens; no hardcoded color, radius, or spacing.
 
 ### Phase 1 — Organization-first daily home
 
@@ -435,6 +531,30 @@ Acceptance:
 - new Project chats inherit Project context/cwd;
 - Quick Chats never pollute durable Project lists;
 - all manual organization changes synchronize across clients.
+- Home, Projects, and Activity ship with designed loading, empty, offline, and
+  error states, not raw spinners or blank lists.
+
+### Phase 1.5 — Chat interface rework
+
+**Goal:** make the surface Carlos uses most both readable and fast.
+
+Deliverables:
+
+- message hierarchy separating prose, reasoning, tool activity, and results;
+- collapsible tool cards with duration and status;
+- distinct treatment for approvals, clarifications, secrets, and errors;
+- code and diff rendering with highlighting, copy, and wrap toggle;
+- composer redesign with adaptive send/stop, attachments, and voice;
+- sticky context header (project, model, effort, connection);
+- long-press action sheet, jump-to-latest, preserved scroll;
+- haptics and non-jumping streaming.
+
+Acceptance:
+
+- a long tool-heavy turn stays readable without manual scrolling gymnastics;
+- a blocked approval is impossible to mistake for an ordinary message;
+- scroll position survives reopen, rotation, and process recreation;
+- widget and golden tests cover each message type in both themes.
 
 ### Phase 2 — Cheap AI organizer
 
