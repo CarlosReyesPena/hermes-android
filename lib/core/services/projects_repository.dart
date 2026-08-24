@@ -1,0 +1,435 @@
+/// Offline-aware access to the server-owned Hermes Projects.
+///
+/// Sits between the UI and [ProjectsGatewayClient]:
+///
+/// - the gateway stays the source of truth;
+/// - the last good listing is cached per connection so the app opens with
+///   content instead of a spinner, clearly marked as stale;
+/// - mutations apply optimistically and roll back on failure;
+/// - an older gateway degrades to a labelled compatibility mode rather than
+///   an error screen;
+/// - local Spaces can be *previewed* against server Projects without writing
+///   anything, which is the safe first half of the migration.
+library;
+
+import 'dart:async';
+import 'dart:convert';
+
+import 'package:shared_preferences/shared_preferences.dart';
+
+import '../models/hermes_project.dart';
+import 'chat_space_store.dart';
+import 'projects_gateway_client.dart';
+
+/// Whether this gateway offers the native `projects.*` family.
+enum ProjectsSupport {
+  /// Not probed yet.
+  unknown,
+
+  /// The gateway answers `projects.*`.
+  native,
+
+  /// The gateway predates Projects; local grouping remains the only option.
+  unsupported,
+}
+
+/// An immutable snapshot the UI can render directly.
+class ProjectsView {
+  final List<HermesProject> projects;
+  final List<HermesProject> archived;
+  final String? activeId;
+  final ProjectsSupport support;
+
+  /// True when these projects came from the cache rather than a live read.
+  final bool isStale;
+
+  /// The failure that forced the fallback to cache, if any.
+  final Object? error;
+
+  const ProjectsView({
+    this.projects = const [],
+    this.archived = const [],
+    this.activeId,
+    this.support = ProjectsSupport.unknown,
+    this.isStale = false,
+    this.error,
+  });
+
+  static const empty = ProjectsView();
+
+  bool get isEmpty => projects.isEmpty && archived.isEmpty;
+
+  HermesProject? get activeProject {
+    for (final project in projects) {
+      if (project.id == activeId) return project;
+    }
+    return null;
+  }
+
+  ProjectsView copyWith({
+    List<HermesProject>? projects,
+    List<HermesProject>? archived,
+    String? activeId,
+    bool clearActiveId = false,
+    ProjectsSupport? support,
+    bool? isStale,
+    Object? error,
+    bool clearError = false,
+  }) {
+    return ProjectsView(
+      projects: projects ?? this.projects,
+      archived: archived ?? this.archived,
+      activeId: clearActiveId ? null : (activeId ?? this.activeId),
+      support: support ?? this.support,
+      isStale: isStale ?? this.isStale,
+      error: clearError ? null : (error ?? this.error),
+    );
+  }
+}
+
+/// One local Space matched (or not) against the server Projects.
+class SpaceMigrationEntry {
+  final ChatSpace space;
+
+  /// The server Project this Space maps onto, or null when it must be created.
+  final HermesProject? matchedProject;
+
+  /// How many local chats are assigned to this Space.
+  final int sessionCount;
+
+  const SpaceMigrationEntry({
+    required this.space,
+    required this.matchedProject,
+    required this.sessionCount,
+  });
+
+  bool get needsCreation => matchedProject == null;
+}
+
+/// A read-only description of what a Spaces migration *would* do.
+class SpaceMigrationPlan {
+  final List<SpaceMigrationEntry> entries;
+
+  const SpaceMigrationPlan(this.entries);
+
+  bool get isEmpty => entries.isEmpty;
+
+  int get projectsToCreate =>
+      entries.where((entry) => entry.needsCreation).length;
+
+  int get sessionsToLink =>
+      entries.fold(0, (total, entry) => total + entry.sessionCount);
+}
+
+/// Repository over the gateway Projects family.
+class ProjectsRepository {
+  final ProjectsGatewayClient client;
+  final SharedPreferences preferences;
+  final String connectionId;
+
+  final _controller = StreamController<ProjectsView>.broadcast();
+  ProjectsView _current = ProjectsView.empty;
+
+  ProjectsRepository({
+    required this.client,
+    required this.preferences,
+    required this.connectionId,
+  });
+
+  /// Emits after every state change, including optimistic ones.
+  Stream<ProjectsView> get changes => _controller.stream;
+
+  ProjectsView get current => _current;
+
+  String get _cacheKey => 'projects_cache_v1_$connectionId';
+
+  /// Reads the cached listing without touching the network.
+  ///
+  /// Always marked stale: the app may show it instantly, but must not present
+  /// it as confirmed server state.
+  Future<ProjectsView> loadCached() async {
+    final cached = _readCache();
+    _emit(cached);
+    return cached;
+  }
+
+  /// Refreshes from the gateway, falling back to cache on transport failure.
+  Future<ProjectsView> refresh() async {
+    try {
+      final snapshot = await client.list();
+      final view = ProjectsView(
+        projects: snapshot.active,
+        archived: snapshot.archived,
+        activeId: snapshot.activeId,
+        support: ProjectsSupport.native,
+      );
+      await _writeCache(view);
+      return _emit(view);
+    } on ProjectsUnsupportedException {
+      // Not a failure: this gateway simply has no Projects. Keep the surface
+      // calm and let the caller offer local grouping instead.
+      return _emit(const ProjectsView(support: ProjectsSupport.unsupported));
+    } catch (error) {
+      final cached = _readCache();
+      return _emit(
+        cached.copyWith(
+          support: _current.support == ProjectsSupport.unknown
+              ? cached.support
+              : _current.support,
+          isStale: true,
+          error: error,
+        ),
+      );
+    }
+  }
+
+  Future<HermesProject> create(String name, {bool select = false}) async {
+    _requireSupported();
+    final trimmed = name.trim();
+    final previous = _current;
+    final placeholder = HermesProject(
+      id: 'pending:${DateTime.now().microsecondsSinceEpoch}',
+      slug: trimmed.toLowerCase().replaceAll(RegExp(r'\s+'), '-'),
+      name: trimmed,
+    );
+    _emit(
+      previous.copyWith(
+        projects: [...previous.projects, placeholder],
+        clearError: true,
+      ),
+    );
+
+    try {
+      final created = await client.create(name: trimmed, use: select);
+      final view = previous.copyWith(
+        projects: [...previous.projects, created],
+        activeId: select ? created.id : null,
+        clearError: true,
+      );
+      await _writeCache(view);
+      _emit(view);
+      return created;
+    } catch (_) {
+      _emit(previous);
+      rethrow;
+    }
+  }
+
+  Future<HermesProject> rename(String id, String name) async {
+    _requireSupported();
+    final previous = _current;
+    _emit(previous.copyWith(projects: _renamed(previous.projects, id, name)));
+
+    try {
+      final updated = await client.rename(id: id, name: name);
+      final view = previous.copyWith(
+        projects: [
+          for (final project in previous.projects)
+            if (project.id == id) updated else project,
+        ],
+        clearError: true,
+      );
+      await _writeCache(view);
+      _emit(view);
+      return updated;
+    } catch (_) {
+      _emit(previous);
+      rethrow;
+    }
+  }
+
+  /// Archives a project (reversible), or restores it when [restore] is true.
+  Future<void> archive(String id, {bool restore = false}) async {
+    _requireSupported();
+    final previous = _current;
+    _emit(_locallyArchived(previous, id, restore: restore));
+
+    try {
+      final snapshot = await client.archive(id, restore: restore);
+      final view = previous.copyWith(
+        projects: snapshot.active,
+        archived: snapshot.archived,
+        activeId: snapshot.activeId,
+        clearActiveId: snapshot.activeId == null,
+        clearError: true,
+      );
+      await _writeCache(view);
+      _emit(view);
+    } catch (_) {
+      _emit(previous);
+      rethrow;
+    }
+  }
+
+  Future<void> setActive(String? id) async {
+    _requireSupported();
+    final previous = _current;
+    _emit(previous.copyWith(activeId: id, clearActiveId: id == null));
+
+    try {
+      final activeId = await client.setActive(id);
+      final view = previous.copyWith(
+        activeId: activeId,
+        clearActiveId: activeId == null,
+        clearError: true,
+      );
+      await _writeCache(view);
+      _emit(view);
+    } catch (_) {
+      _emit(previous);
+      rethrow;
+    }
+  }
+
+  /// Describes how local Spaces map onto server Projects.
+  ///
+  /// Purely read-only: nothing is created, linked, or deleted. The user sees
+  /// this plan before any migration runs, and the local store stays intact
+  /// until the server read-back confirms every assignment.
+  SpaceMigrationPlan planMigration(ChatSpaceState state) {
+    String normalize(String value) =>
+        value.trim().toLowerCase().replaceAll(RegExp(r'\s+'), ' ');
+
+    final byName = <String, HermesProject>{
+      for (final project in [..._current.projects, ..._current.archived])
+        normalize(project.name): project,
+    };
+
+    final counts = <String, int>{};
+    for (final spaceId in state.assignments.values) {
+      counts[spaceId] = (counts[spaceId] ?? 0) + 1;
+    }
+
+    return SpaceMigrationPlan([
+      for (final space in state.spaces)
+        SpaceMigrationEntry(
+          space: space,
+          matchedProject: byName[normalize(space.name)],
+          sessionCount: counts[space.id] ?? 0,
+        ),
+    ]);
+  }
+
+  Future<void> close() async {
+    await _controller.close();
+  }
+
+  void _requireSupported() {
+    if (_current.support == ProjectsSupport.unsupported) {
+      throw const ProjectsUnsupportedException(
+        'projects',
+        'This Hermes gateway does not support server-side projects',
+      );
+    }
+  }
+
+  static List<HermesProject> _renamed(
+    List<HermesProject> projects,
+    String id,
+    String name,
+  ) {
+    return [
+      for (final project in projects)
+        if (project.id == id)
+          HermesProject(
+            id: project.id,
+            slug: project.slug,
+            name: name.trim(),
+            description: project.description,
+            icon: project.icon,
+            color: project.color,
+            boardSlug: project.boardSlug,
+            primaryPath: project.primaryPath,
+            archived: project.archived,
+            createdAt: project.createdAt,
+            folders: project.folders,
+          )
+        else
+          project,
+    ];
+  }
+
+  static ProjectsView _locallyArchived(
+    ProjectsView view,
+    String id, {
+    required bool restore,
+  }) {
+    if (restore) {
+      final restored = view.archived.where((p) => p.id == id).toList();
+      return view.copyWith(
+        projects: [...view.projects, ...restored],
+        archived: view.archived.where((p) => p.id != id).toList(),
+      );
+    }
+    final removed = view.projects.where((p) => p.id == id).toList();
+    return view.copyWith(
+      projects: view.projects.where((p) => p.id != id).toList(),
+      archived: [...view.archived, ...removed],
+    );
+  }
+
+  ProjectsView _emit(ProjectsView view) {
+    _current = view;
+    if (!_controller.isClosed) _controller.add(view);
+    return view;
+  }
+
+  ProjectsView _readCache() {
+    final raw = preferences.getString(_cacheKey);
+    if (raw == null || raw.isEmpty) {
+      return const ProjectsView(isStale: true);
+    }
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is! Map) return const ProjectsView(isStale: true);
+      final map = Map<String, dynamic>.from(decoded);
+      final snapshot = ProjectsSnapshot.fromJson({
+        'projects': map['projects'],
+        'active_id': map['active_id'],
+      });
+      return ProjectsView(
+        projects: snapshot.active,
+        archived: snapshot.archived,
+        activeId: snapshot.activeId,
+        support: ProjectsSupport.native,
+        isStale: true,
+      );
+    } catch (_) {
+      // A corrupt cache must never block the app; drop it silently.
+      return const ProjectsView(isStale: true);
+    }
+  }
+
+  Future<void> _writeCache(ProjectsView view) async {
+    final payload = jsonEncode({
+      'projects': [
+        for (final project in [...view.projects, ...view.archived])
+          _projectToJson(project),
+      ],
+      'active_id': view.activeId,
+    });
+    await preferences.setString(_cacheKey, payload);
+  }
+
+  static Map<String, dynamic> _projectToJson(HermesProject project) => {
+    'id': project.id,
+    'slug': project.slug,
+    'name': project.name,
+    'description': project.description,
+    'icon': project.icon,
+    'color': project.color,
+    'board_slug': project.boardSlug,
+    'primary_path': project.primaryPath,
+    'archived': project.archived,
+    'created_at': project.createdAt,
+    'folders': [
+      for (final folder in project.folders)
+        {
+          'path': folder.path,
+          'label': folder.label,
+          'is_primary': folder.isPrimary,
+          'added_at': folder.addedAt,
+        },
+    ],
+  };
+}
