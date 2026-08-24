@@ -1,8 +1,8 @@
-# Android Spaces — validated UI specification
+# Android Spaces — validated prototype specification
 
-Status: `[x] described and validated`
+Status: `[superseded as target architecture; retained as prototype record]`
 
-Validated by Carlos on 2026-08-24 after requesting Android-only organization comparable to Discord channels.
+Validated by Carlos on 2026-08-24 after requesting Android-only organization comparable to Discord channels. On 2026-08-25, Carlos expanded the goal to an AI-organized Android daily driver with native Projects, smart views, files, assets, settings parity, and actionable notifications. The new draft source of truth is [`ANDROID_DAILY_DRIVER_ROADMAP.md`](ANDROID_DAILY_DRIVER_ROADMAP.md).
 
 ## Goal
 

@@ -1,0 +1,605 @@
+# Hermes Android Daily Driver — product architecture and roadmap
+
+Status: `[product direction validated; Phase 0 implementation not started]`
+
+Date: 2026-08-25
+
+## Product goal
+
+Turn Hermes Android into the comfortable, complete mobile control center for a remote Hermes instance:
+
+- conversations organized without constant manual filing;
+- durable project context shared with Hermes Desktop and other clients;
+- native attention management for running work, approvals, clarifications, failures, and completions;
+- direct access to miniserver files and generated artifacts;
+- practical access to Hermes configuration, profiles, skills, cron, memory, MCP, plugins, and diagnostics;
+- resilient mobile behavior across backgrounding, process death, reconnects, and intermittent networks.
+
+The target is **not** a phone-sized clone of Desktop and not merely a chat list with folders. It is a mobile mission control surface that preserves access to every capability while presenting each workflow in a phone-appropriate form.
+
+---
+
+## Executive decision: keep Flutter, replace the product architecture
+
+Our current Flutter fork is the best available Android base, but its current information architecture is not the final one.
+
+### Why Flutter remains the base
+
+The current fork already has verified Android-native foundations that the alternatives do not combine:
+
+- authenticated Dashboard REST plus Desktop Gateway JSON-RPC;
+- durable turn recovery and reconnect handling;
+- secure Android credential storage;
+- native file/image picking and multi-attachment uploads;
+- approvals, sudo, secrets, clarification, tools, reviews, subagents, and background events;
+- speech input, TTS, native lifecycle handling, and local notifications;
+- a large automated Flutter test suite and a verified Android APK pipeline.
+
+These are the difficult mobile foundations. Rewriting them in Kotlin or React Native would delay the product without improving the organization model.
+
+### Why not pivot to the Expo/WebView mobile PR
+
+NousResearch/hermes-agent PR #52673 reuses the Desktop renderer inside a React Native WebView. It provides rapid visual parity for Settings, Cron, Profiles, Messaging, Skills, and Artifacts, and contains useful phone interaction work. It is not the right production base for this Android goal because:
+
+- physical-device validation is iPhone-focused; Android is configured but not verified;
+- credentials are currently stored in WebView `localStorage` rather than native secure storage;
+- the terminal is explicitly stubbed out;
+- native filesystem bridge methods are incomplete and unknown methods silently resolve to `undefined`;
+- the copied Desktop renderer creates a large synchronization burden;
+- the PR history shows repeated WebKit gesture, keyboard, safe-area, and layout regressions;
+- native background execution, actionable Android notifications, deep links, and killed-app delivery still need a real native architecture.
+
+Use it as a **design and parity reference**, not as our base.
+
+### Why not use `goldenduo/hermes-agent-for-android`
+
+The public repository contains marketing copy and screenshots but no application source and no declared license. It cannot be audited, extended, or trusted as a development base.
+
+### Selective community reuse
+
+Do not merge another fork wholesale. Port small, tested slices:
+
+- **CristianGCiocoi:** native Projects UI concepts, Activity Center, capability-gated interaction modes;
+- **grunjol:** consolidated tool cards, scroll restoration, voice locale selection;
+- **danlil240:** foreground-service concepts, Active Runs, cached sessions/background sync, diagnostics UX, feature-based package layout;
+- **official Desktop:** server-authoritative Projects, project trees, Files, Artifacts, schema-driven Settings, plugin/capability patterns;
+- **official mobile PR:** touch target, drawer, master/detail, safe-area, keyboard, and long-press lessons only.
+
+Every imported behavior must enter through a failing test and a small reviewed commit.
+
+---
+
+## Replace “Spaces” with a layered organization model
+
+A single folder hierarchy cannot represent everything a Hermes user needs. The recommended model has five distinct layers.
+
+### 1. Profile / connection
+
+The hard isolation boundary: which Hermes instance and profile owns the data.
+
+Examples: `default`, `research`, `work`, or another saved Gateway.
+
+### 2. Project
+
+A durable workspace with a real goal and optional folders/repos. It is server-owned and shared across Android, Desktop, and future clients.
+
+A Project may contain:
+
+- description and project brief;
+- one or more miniserver folders/repos;
+- conversations;
+- files and generated artifacts;
+- activity, approvals, and scheduled jobs;
+- project-specific memory or pinned context in a later phase.
+
+Projects should be few and stable: `Hermes Android`, `ScriptHive`, `C-MAY`, not one project per question.
+
+### 3. Conversation
+
+A durable Hermes session inside a Project or in the Inbox. It can have multiple AI/manual topics and a lifecycle state.
+
+### 4. Topics / labels
+
+Multi-value classifications such as `notifications`, `search`, `deployment`, `bug`, or `research`. These are mainly AI-assigned and allow one conversation to appear in several relevant views without duplicating it.
+
+### 5. Smart Views
+
+Derived views, not manually maintained folders:
+
+- **Needs you** — approval, clarification, secret, sudo, failed action;
+- **Running** — active turn, cron run, subagent, background process;
+- **Inbox** — unclassified or low-confidence organization suggestions;
+- **Continue** — recently active durable conversations;
+- **Completed recently**;
+- **Quick chats** — ephemeral sessions;
+- **Pinned**;
+- **Archived**;
+- optional user-saved filters later.
+
+This combination gives stable Projects, flexible Topics, and automatic operational views.
+
+---
+
+## Ephemeral conversations: “Quick chat”
+
+Quick Chat is a separate creation mode, not another Project.
+
+Default behavior:
+
+- starts without a Project;
+- is clearly marked `Quick`;
+- does not clutter Project lists;
+- uses normal Hermes/Hindsight memory behavior, so durable facts can still be retained;
+- auto-archives after 72 hours, never silently deletes;
+- remains searchable in Archived;
+- can be promoted into a normal Project conversation at any time;
+- after completion, one cheap classifier may suggest promotion when the work appears durable.
+
+The retention interval remains configurable. Quick Chat is ephemeral only as an
+organization/lifecycle state: it must not suppress normal memory extraction.
+
+---
+
+## AI organization policy
+
+The organizer belongs on the Hermes server, not inside Android. That keeps organization consistent across clients and allows it to run while the phone app is closed.
+
+### Decision ladder
+
+Use the cheapest reliable signal first:
+
+1. **Deterministic, no LLM:** existing `project_id`, session cwd, repo/worktree path, active Project, explicit user choice.
+2. **Rules, no LLM:** source, branch, recurring exact labels, pinned routing rules.
+3. **Cheap structured classification:** only for sessions still ambiguous.
+4. **Periodic clustering:** detect recurring themes that may deserve a new Project.
+
+The AI never receives an entire transcript just to file a chat. Input should normally be:
+
+- current title;
+- first user request;
+- latest compact session summary;
+- cwd/repo/branch/source;
+- existing Project names and descriptions;
+- current Topics;
+- content hash and previous classification.
+
+### Suggested schedule
+
+- after the first completed turn: classify once;
+- after later turns: rerun only when the compact input hash materially changes;
+- every 15 minutes: batch pending classifications server-side, up to roughly 20 sessions per request;
+- nightly: reconcile stale Inbox items and identify repeated clusters;
+- on explicit **Organize now**: run immediately.
+
+No phone polling is required.
+
+### Cost controls
+
+- use Hermes’ configurable light/cheap model tier, never the active chat model by default;
+- require strict structured JSON output;
+- cache by normalized input hash;
+- batch several sessions in one model call;
+- cap input and output tokens;
+- do not reclassify unchanged sessions;
+- expose monthly call/token estimates and a hard budget;
+- degrade to deterministic organization when the model is unavailable.
+
+### Confidence and automatic actions
+
+Recommended defaults:
+
+- confidence `>= 0.90`: automatically assign to an existing Project and apply Topics;
+- confidence `0.65–0.89`: show a one-tap suggestion in Inbox;
+- confidence `< 0.65`: leave unclassified without inventing a destination.
+
+Automatic creation of Projects is intentionally stricter:
+
+- the theme appears in at least three related conversations;
+- activity spans at least two different days;
+- no existing Project is a close match;
+- the cluster has high confidence and a concise stable goal.
+
+Default mode should create a visible proposal. An opt-in **Autonomous organization** mode may auto-create qualifying Projects, with an undo log. AI must never silently move pinned conversations or override a recent manual correction.
+
+### Corrections teach the organizer
+
+Every Move, Merge, Rename, Reject, and “Always route like this” action becomes an explicit routing rule. Recent manual decisions outrank model output.
+
+---
+
+## Recommended Android navigation
+
+Use a stable bottom navigation shell rather than a growing drawer.
+
+### Home
+
+The attention-first dashboard:
+
+1. Needs you;
+2. Running now;
+3. AI organization suggestions;
+4. Continue working;
+5. Recently completed.
+
+A global New button offers **Project chat** and **Quick chat**.
+
+### Projects
+
+Project cards with status counts, not only chat counts. Opening a Project shows:
+
+- **Overview** — brief, current work, pinned items;
+- **Chats** — grouped by active/recent/archived;
+- **Files** — the Project’s miniserver folders;
+- **Assets** — generated artifacts, attachments, media, and outputs;
+- **Activity** — running/completed/failed work for that Project.
+
+### Activity
+
+Global operational timeline and action center:
+
+- running turns and subagents;
+- pending approvals/clarifications/secrets;
+- completed tasks;
+- failures and reconnect problems;
+- filters by Project/profile.
+
+### More
+
+- Global Files;
+- Global Assets;
+- Search;
+- Cron;
+- Skills and Tools;
+- Memory;
+- Profiles;
+- MCP and Plugins;
+- Diagnostics and logs;
+- Settings.
+
+Chat itself remains full-screen and reachable from every relevant card or notification.
+
+---
+
+## Native Android notifications
+
+Local “turn complete” notifications are only the first step. The final notification model needs event types, priority channels, deep links, and killed-app delivery.
+
+### Notification channels
+
+1. **Action required — high priority**
+   - approval, clarification, sudo, secret, blocked workflow;
+   - heads-up notification and configurable strong vibration pattern;
+   - persistent until handled;
+   - optional reminder at +2 and +10 minutes;
+   - tap opens the exact action card;
+   - safe actions such as Approve/Deny may be offered directly, with device authentication when appropriate.
+
+2. **Failures — high priority**
+   - failed task, disconnected critical run, cron failure;
+   - distinct vibration and direct retry/open action.
+
+3. **Completed — default priority**
+   - grouped by Project;
+   - tap opens the exact conversation/activity item.
+
+4. **Running — low priority ongoing**
+   - foreground-service indicator only while Android must keep a live operation/socket alive.
+
+Do not abuse Android full-screen/call-style notifications. They are policy-restricted and too intrusive for normal completions. Strong repeated vibration should be an explicit opt-in for **Action required**, not the default for every answer.
+
+### Delivery architecture
+
+- Phase 1: improve local notifications while the process is alive/backgrounded.
+- Phase 2: foreground service for user-started long turns where appropriate.
+- Phase 3: Gateway-to-device push registration for reliable delivery after Android kills the app. FCM is the pragmatic first transport; a self-hosted UnifiedPush/ntfy-compatible transport can follow.
+- Every event must be idempotent and deep-link by profile, Project, session, turn, and request ID.
+
+---
+
+## Files and Assets
+
+### Files
+
+The Hermes Dashboard already exposes authenticated remote operations used by Desktop:
+
+- `/api/fs/list`;
+- `/api/fs/read-text`;
+- `/api/fs/write-text`;
+- `/api/fs/read-data-url`;
+- `/api/fs/download`;
+- `/api/fs/default-cwd` and `/api/fs/git-root`;
+- authenticated managed-file upload/create/delete routes;
+- remote Git status, diff, stage, commit, push, worktree, branch, and PR routes.
+
+Build a native Android Files surface on these contracts:
+
+- default to Project roots;
+- optional explicit **Browse server** mode;
+- breadcrumbs, search, sort, favorites, recent files;
+- text/code preview and safe spot editing;
+- image/PDF/media preview;
+- upload from Android, download to Android, share to another app;
+- add a file reference to the active chat;
+- Git status/diff as progressive enhancement;
+- sensitive-file rules and destructive confirmations inherited from the server.
+
+### Assets
+
+“Assets” should be a user-facing umbrella with four filters:
+
+- **Artifacts** — generated HTML, SVG, code, documents, and versions;
+- **Files changed/generated** by Hermes;
+- **Attachments** uploaded by the user;
+- **Media and downloads**.
+
+Desktop Artifacts are currently reconstructed from transcripts and held in renderer memory. True cross-device parity therefore requires a small server-authoritative artifact index/RPC rather than a second Android-only registry. Android can initially render artifact cards from a session transcript, then move to the shared index.
+
+---
+
+## Hermes Settings parity
+
+Do not hand-code every Hermes option in Flutter. The Desktop already consumes a configuration schema and a profile-scoped config record.
+
+Recommended structure:
+
+- **Native Settings renderer** generated from the Dashboard config schema;
+- mobile-specific section for notification channels, vibration, background behavior, cache, biometrics, downloads, and text/voice preferences;
+- safe confirmations for destructive changes;
+- provider keys shown as configured/missing, never echoed;
+- profile scope clearly visible;
+- advanced JSON editor only as a fallback;
+- embedded authenticated Dashboard view for not-yet-native features, so capability access is never blocked while native UX catches up.
+
+The native menu should use capability discovery. Missing server support should disable an item with a precise explanation rather than hide it or crash.
+
+---
+
+## Architecture changes required in the Flutter app
+
+### Server authority
+
+- Replace `ChatSpaceStore` as the source of truth with a `ProjectsRepository` over `projects.*` RPC.
+- Use SharedPreferences/SQLite only as an offline cache and migration source.
+- Cache keys must remain scoped by connection/profile.
+- Use optimistic updates with rollback and authoritative refresh.
+
+### Generic Gateway capability layer
+
+- Expose a typed generic JSON-RPC request method from the existing `WsClient`/`DesktopGatewayClient`.
+- Build a `CapabilityRegistry` from `gateway.ready`, Dashboard probes, and missing-method responses.
+- Keep compatibility fallbacks narrow and explicit.
+
+### Feature modules
+
+Incrementally move from `core/screens/*` into feature-owned modules:
+
+- `features/home/`;
+- `features/projects/`;
+- `features/activity/`;
+- `features/files/`;
+- `features/assets/`;
+- `features/settings/`;
+- `features/chat/`;
+- `features/search/`.
+
+Do not perform a single massive directory rewrite. Move one tested feature at a time.
+
+### Offline and lifecycle
+
+- local SQLite cache for Projects, sessions, activity, and file metadata;
+- explicit stale/offline indicators;
+- queued safe mutations with idempotency keys;
+- never automatically replay a prompt after ambiguous transport failure;
+- deep-link restoration after notification taps or process recreation.
+
+---
+
+## Delivery roadmap
+
+### Phase 0 — Contracts and shell foundation
+
+**Goal:** make future features server-authoritative and capability-aware.
+
+Deliverables:
+
+- generic typed Gateway RPC adapter;
+- capability registry;
+- `ProjectsRepository` wrapping native `projects.list/create/update/archive/delete/set_active/tree/project_sessions` contracts;
+- migration adapter from local Spaces to native Projects;
+- bottom navigation shell with placeholder destinations;
+- embedded Dashboard fallback entry;
+- characterization tests for current chat/recovery/notification behavior.
+
+Acceptance:
+
+- no Project assignment depends exclusively on SharedPreferences;
+- existing local Spaces can be previewed and migrated without losing assignments;
+- older Gateways remain usable with a clearly labeled compatibility mode.
+
+### Phase 1 — Organization-first daily home
+
+**Goal:** replace the flat session list with Projects, Smart Views, and Quick Chat.
+
+Deliverables:
+
+- Home attention dashboard;
+- Projects list and Project detail with Chats/Overview;
+- Inbox, Running, Needs you, Continue, Pinned, Archived;
+- Quick Chat lifecycle and Promote action;
+- native global and per-Project search;
+- move, pin, archive, batch-select, and undo actions.
+
+Acceptance:
+
+- a normal day can be navigated without opening “All chats”;
+- new Project chats inherit Project context/cwd;
+- Quick Chats never pollute durable Project lists;
+- all manual organization changes synchronize across clients.
+
+### Phase 2 — Cheap AI organizer
+
+**Goal:** make organization mostly automatic without Project proliferation or uncontrolled cost.
+
+Server deliverables:
+
+- organization metadata store and RPC/event contract;
+- deterministic routing engine;
+- batched low-cost structured classifier;
+- content-hash cache, budget cap, confidence thresholds;
+- recurring-theme Project proposals;
+- correction/routing-rule store and audit/undo history.
+
+Android deliverables:
+
+- organization suggestions in Inbox;
+- explain/accept/reject/move controls;
+- bulk review;
+- organizer settings: Off, Suggest, Auto-file, Autonomous Projects;
+- cost/activity readout and **Organize now**.
+
+Acceptance:
+
+- existing-project assignments at high confidence are automatic;
+- uncertain cases remain visible and reversible;
+- unchanged sessions produce no repeated model calls;
+- one switch disables every AI organization call without disabling manual Projects.
+
+### Phase 3 — Attention Center and reliable notifications
+
+**Goal:** ensure Carlos notices when Hermes needs him and can act immediately.
+
+Deliverables:
+
+- unified Activity repository and screen;
+- four notification channels and configurable vibration/reminders;
+- deep links to exact session/request;
+- notification actions for safe approvals/denials;
+- foreground-service integration for active user-started work;
+- push-token registration and Gateway notification delivery;
+- grouping/deduplication/idempotency tests.
+
+Acceptance:
+
+- approval, clarification, failure, and completion each produce the correct priority;
+- tapping works after process death;
+- duplicate Gateway events never produce duplicate alerts;
+- battery use remains bounded when no work is active.
+
+### Phase 4 — Project Files and Assets
+
+**Goal:** work with miniserver outputs without leaving Android.
+
+Deliverables:
+
+- Project Files browser over existing Dashboard APIs;
+- previews, safe text editing, upload, download, share, add-to-chat;
+- file change refresh and basic Git status/diff;
+- Project and global Assets galleries;
+- artifact preview/version UI;
+- server-side artifact index contract for cross-device parity.
+
+Acceptance:
+
+- a generated report can be found, previewed, downloaded, shared, and reattached from the phone;
+- a Project source file can be inspected and safely edited;
+- secrets and sensitive paths remain blocked by server policy.
+
+### Phase 5 — Settings and control-plane parity
+
+**Goal:** remove the need to reach for a PC for normal Hermes administration.
+
+Deliverables:
+
+- schema-driven profile-scoped Settings;
+- Profiles management;
+- complete Skills/Tools configuration;
+- MCP and Plugins management;
+- Cron parity;
+- Memory/Hindsight viewer and controls;
+- Gateway platforms, diagnostics, logs, processes, updates;
+- embedded Dashboard fallback for any remaining surface.
+
+Acceptance:
+
+- every Dashboard capability is either native or reachable through the in-app fallback;
+- dangerous changes are explicit and reversible where possible;
+- secrets are never displayed or stored outside secure storage.
+
+### Phase 6 — Mobile polish and parity closure
+
+**Goal:** make the app genuinely pleasant as Carlos’s primary Hermes surface.
+
+Deliverables:
+
+- offline cache and conflict handling;
+- share-target integration (“Send to Hermes”);
+- home-screen shortcuts and widgets;
+- biometric app lock and approval confirmation;
+- tablet/foldable layouts;
+- accessibility, selectable content, polished tool cards, scroll restoration;
+- battery/network telemetry and automatic recovery;
+- feature-parity checklist against current Desktop releases.
+
+Acceptance:
+
+- normal mobile workflows survive network loss, backgrounding, process death, and updates;
+- the parity checklist has no unexplained missing capability;
+- phone UX remains task-focused rather than becoming a cramped Desktop clone.
+
+---
+
+## Migration of the current Spaces prototype
+
+The current local Spaces implementation was useful to validate filtering and navigation, but its storage decision is now obsolete because native Projects are available.
+
+Migration strategy:
+
+1. read local Spaces and assignments once;
+2. match by normalized name against native Projects;
+3. create missing Projects only after showing the migration preview;
+4. associate sessions using native Project/session contracts or cwd/project metadata;
+5. retain the local snapshot until server read-back verifies every migrated assignment;
+6. rename the UI from Spaces to Projects;
+7. remove local authority only after rollback tests pass.
+
+The existing `docs/ANDROID_SPACES_SPEC.md` remains a record of the prototype, not the target architecture.
+
+---
+
+## First implementation slice after validation
+
+Implement **Phase 0 only**, in this order:
+
+1. add tests for generic Gateway RPC request/response/error handling;
+2. add the minimal generic request API;
+3. add contract tests for native `projects.list` and capability fallback;
+4. implement `ProjectsRepository` read-only list/tree support;
+5. replace the Spaces home data source with native Projects in read-only mode;
+6. add a migration preview for local Spaces without executing it yet;
+7. run focused tests, full Flutter tests, analysis, APK build, and real Gateway smoke test;
+8. update Graphify and commit one clean feature slice.
+
+Do not implement AI organization, Files, or notification escalation until the new Project information architecture is visually validated on Android.
+
+---
+
+## Validated product decisions
+
+1. **Primary navigation:** Home / Projects / Activity / More.
+2. **Quick Chat default:** auto-archive after 72 hours, remain searchable, and use normal Hermes/Hindsight memory so interesting durable information is retained.
+3. **AI default:** automatically file into existing Projects at high confidence, but only propose new Projects; autonomous Project creation remains an opt-in.
+
+Validated by Carlos on 2026-08-25. Phase 0 can begin without further product ambiguity.
+
+---
+
+## Evidence reviewed
+
+- current Flutter fork and tests in `CarlosReyesPena/hermes-android`;
+- upstream `rusty4444/hermes-android` and 44-fork ecosystem;
+- CristianGCiocoi, grunjol, and danlil240 fork diffs;
+- official Hermes Desktop Projects, Files, Artifacts, Settings, and remote filesystem implementation;
+- Hermes Gateway `projects.*` RPC implementation and tests;
+- Hermes Dashboard `/api/fs/*`, managed files, and Git routes;
+- NousResearch/hermes-agent PR #52673 mobile shell source and history;
+- `goldenduo/hermes-agent-for-android` public repository contents.
