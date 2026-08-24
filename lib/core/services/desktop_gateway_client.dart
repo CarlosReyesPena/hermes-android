@@ -6,6 +6,7 @@ import 'package:crypto/crypto.dart';
 import 'connection_manager.dart';
 import 'gateway_turn_coordinator.dart';
 import 'gateway_turn_journal.dart';
+import 'projects_gateway_client.dart';
 import 'ws_client.dart';
 
 typedef DesktopAsyncEventCallback =
@@ -35,6 +36,7 @@ class DesktopGatewayClient {
   DesktopAsyncEventCallback? _asyncEventListener;
   DesktopConnectionCallback? _connectionListener;
   GatewayTurnCoordinatorRegistry? _turnCoordinatorRegistry;
+  ProjectsGatewayClient? _projects;
 
   static const _asyncEventTypes = {
     'background.complete',
@@ -158,6 +160,54 @@ class DesktopGatewayClient {
 
   Future<void> ensureSession(String sessionId) async {
     await _connect(sessionId);
+  }
+
+  /// Server-owned Hermes Projects for this gateway.
+  ///
+  /// Projects are connection-scoped, not session-scoped, so this opens the
+  /// shared socket without resuming or creating any chat session. An older
+  /// gateway without `projects.*` surfaces a [ProjectsUnsupportedException]
+  /// instead of an error state, so callers can fall back to local grouping.
+  ProjectsGatewayClient get projects {
+    return _projects ??= ProjectsGatewayClient((method, params) async {
+      final client = await _connectControl();
+      return client.send(method, params);
+    });
+  }
+
+  /// Opens (or reuses) the gateway socket without binding it to a session.
+  Future<WsClient> _connectControl() async {
+    final existing = _ws;
+    if (existing != null && existing.isConnected) return existing;
+
+    _connectionListener?.call(
+      existing == null
+          ? DesktopConnectionState.connecting
+          : DesktopConnectionState.reconnecting,
+    );
+    existing?.close();
+    _gatewaySessionIds.clear();
+    final ticket = await _dashboard.mintWebSocketTicket();
+    final client = WsClient(_baseUrl, ticket: ticket);
+    _installAsyncEventBridge(client);
+    client.onConnectionChanged = (connected) {
+      if (connected) {
+        _connectionListener?.call(DesktopConnectionState.connected);
+      } else if (identical(_ws, client)) {
+        _gatewaySessionIds.clear();
+        _connectionListener?.call(DesktopConnectionState.disconnected);
+      }
+    };
+    try {
+      await client.connect();
+      _ws = client;
+      return client;
+    } catch (_) {
+      client.close();
+      if (identical(_ws, client)) _ws = null;
+      _connectionListener?.call(DesktopConnectionState.disconnected);
+      rethrow;
+    }
   }
 
   /// Creates the source-only recovery-v2 registry without changing any legacy
@@ -348,6 +398,7 @@ class DesktopGatewayClient {
   void close() {
     _asyncEventListener = null;
     _connectionListener = null;
+    _projects = null;
     _ws?.close();
     _ws = null;
     _gatewaySessionIds.clear();
