@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/session_search_hit.dart';
 import '../services/ai_search_query_rewriter.dart';
+import '../services/chat_space_store.dart';
 import '../services/connection_manager.dart';
 import '../services/desktop_gateway_client.dart';
 import '../services/gateway_turn_application_controller.dart';
@@ -13,6 +14,7 @@ import '../services/ws_client.dart';
 import 'chat_screen.dart';
 import 'settings_screen.dart';
 import 'memory_screen.dart';
+import 'spaces_screen.dart';
 import 'cron_screen.dart';
 import 'skills_screen.dart';
 
@@ -73,6 +75,12 @@ class _SessionListScreenState extends State<SessionListScreen> {
   final _searchController = TextEditingController();
   List<SavedConnection> _profiles = const [];
   List<Session> _sessions = [];
+  ChatSpaceStore? _spaceStore;
+  ChatSpaceState _spaceState = const ChatSpaceState(
+    spaces: [],
+    assignments: {},
+  );
+  ChatSpaceScope _spaceScope = const ChatSpaceScope.all();
   bool _loading = true;
   String? _error;
   bool _healthOk = false;
@@ -115,6 +123,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
       }
     }
     _loadProfiles();
+    _loadChatSpaces();
     _loadSearchPreferences();
     _checkHealth();
   }
@@ -401,6 +410,17 @@ class _SessionListScreenState extends State<SessionListScreen> {
     setState(() => _profiles = ConnectionManager(prefs).getConnections());
   }
 
+  Future<void> _loadChatSpaces() async {
+    final prefs = await SharedPreferences.getInstance();
+    final store = ChatSpaceStore(prefs, connectionId: widget.connection.id);
+    final state = await store.load();
+    if (!mounted) return;
+    setState(() {
+      _spaceStore = store;
+      _spaceState = state;
+    });
+  }
+
   Future<void> _switchProfile(String profileId) async {
     if (profileId == widget.connection.id) return;
     final profile = _profiles.where((item) => item.id == profileId).firstOrNull;
@@ -560,6 +580,8 @@ class _SessionListScreenState extends State<SessionListScreen> {
     await Future<void>.delayed(kThemeAnimationDuration);
     if (!mounted) return;
     switch (action) {
+      case 'move':
+        await _moveSession(session);
       case 'rename':
         await _renameSession(session);
       case 'branch':
@@ -567,6 +589,45 @@ class _SessionListScreenState extends State<SessionListScreen> {
       case 'delete':
         await _confirmDeleteSession(session);
     }
+  }
+
+  Future<void> _moveSession(Session session) async {
+    final store = _spaceStore;
+    if (store == null) return;
+    final selected = await showModalBottomSheet<String?>(
+      context: context,
+      showDragHandle: true,
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const ListTile(
+              title: Text('Move chat'),
+              subtitle: Text('Choose its destination space'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.inbox_outlined),
+              title: const Text('Unassigned'),
+              onTap: () => Navigator.pop(sheetContext, ''),
+            ),
+            for (final space in _spaceState.spaces)
+              ListTile(
+                leading: const Icon(Icons.folder_outlined),
+                title: Text(space.name),
+                trailing: _spaceState.spaceIdForSession(session.id) == space.id
+                    ? const Icon(Icons.check)
+                    : null,
+                onTap: () => Navigator.pop(sheetContext, space.id),
+              ),
+          ],
+        ),
+      ),
+    );
+    if (selected == null || !mounted) return;
+    await store.assignSession(session.id, selected.isEmpty ? null : selected);
+    final state = await store.load();
+    if (!mounted) return;
+    setState(() => _spaceState = state);
   }
 
   Future<void> _fetchSessions() async {
@@ -583,8 +644,17 @@ class _SessionListScreenState extends State<SessionListScreen> {
       final filtered = sessions
           .where((s) => !excluded.contains(s.source))
           .toList();
+      final store =
+          _spaceStore ??
+          ChatSpaceStore(prefs, connectionId: widget.connection.id);
+      await store.pruneAssignments(
+        sessions.map((session) => session.id).toSet(),
+      );
+      final spaceState = await store.load();
       if (!mounted) return;
       setState(() {
+        _spaceStore = store;
+        _spaceState = spaceState;
         _sessions = filtered;
         _loading = false;
       });
@@ -635,6 +705,10 @@ class _SessionListScreenState extends State<SessionListScreen> {
 
     try {
       await _client.deleteSession(session.id);
+      await _spaceStore?.assignSession(session.id, null);
+      if (_spaceStore != null) {
+        _spaceState = await _spaceStore!.load();
+      }
       if (!mounted) return;
       setState(() {
         _sessions.removeWhere((item) => item.id == session.id);
@@ -652,7 +726,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
     }
   }
 
-  void _createNewSession() {
+  Future<void> _createNewSession() async {
     final sessionId = GatewayChatClient.generateSessionId();
     final session = Session(
       id: sessionId,
@@ -664,6 +738,11 @@ class _SessionListScreenState extends State<SessionListScreen> {
       preview: '',
       startedAt: DateTime.now().millisecondsSinceEpoch.toDouble() / 1000,
     );
+    if (_spaceScope.kind == ChatSpaceScopeKind.space && _spaceStore != null) {
+      await _spaceStore!.assignSession(sessionId, _spaceScope.spaceId);
+      _spaceState = await _spaceStore!.load();
+      if (!mounted) return;
+    }
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -688,6 +767,38 @@ class _SessionListScreenState extends State<SessionListScreen> {
   void _openScreen(Widget screen) {
     Navigator.pop(context); // close drawer
     Navigator.push(context, MaterialPageRoute(builder: (_) => screen));
+  }
+
+  String get _spaceScopeLabel {
+    return switch (_spaceScope.kind) {
+      ChatSpaceScopeKind.all => 'All chats',
+      ChatSpaceScopeKind.unassigned => 'Unassigned',
+      ChatSpaceScopeKind.space =>
+        _spaceState.spaces
+                .where((space) => space.id == _spaceScope.spaceId)
+                .map((space) => space.name)
+                .firstOrNull ??
+            'Space',
+    };
+  }
+
+  void _openSpaces({bool closeDrawer = false}) {
+    final store = _spaceStore;
+    if (store == null) return;
+    if (closeDrawer) Navigator.pop(context);
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (spaceContext) => SpacesScreen(
+          store: store,
+          sessions: _sessions,
+          onScopeSelected: (scope) {
+            setState(() => _spaceScope = scope);
+            Navigator.pop(spaceContext);
+          },
+        ),
+      ),
+    );
   }
 
   @override
@@ -759,6 +870,15 @@ class _SessionListScreenState extends State<SessionListScreen> {
                 ],
               ),
             ),
+            ListTile(
+              key: const Key('open-spaces'),
+              leading: const Icon(Icons.folder_copy_outlined),
+              title: const Text('Spaces'),
+              subtitle: Text(_spaceScopeLabel),
+              enabled: _spaceStore != null,
+              onTap: () => _openSpaces(closeDrawer: true),
+            ),
+            const Divider(),
             ListTile(
               leading: const Icon(Icons.memory),
               title: const Text('Memory'),
@@ -875,16 +995,20 @@ class _SessionListScreenState extends State<SessionListScreen> {
 
     final rawQuery = _searchController.text.trim();
     final localQuery = rawQuery.toLowerCase();
+    final scopedSessions = _spaceState.sessionsFor(_sessions, _spaceScope);
     final aiMode = _searchMode == SessionSearchMode.ai;
     final serverMode = _searchMode != SessionSearchMode.local;
     final serverHitsCurrent = serverMode && _serverQuery == rawQuery
         ? _serverResults
         : null;
     final visibleSessions = rawQuery.isEmpty
-        ? _sessions
+        ? scopedSessions
         : serverMode
-        ? (serverHitsCurrent?.map((hit) => hit.session).toList() ?? const [])
-        : _sessions
+        ? _spaceState.sessionsFor(
+            serverHitsCurrent?.map((hit) => hit.session).toList() ?? const [],
+            _spaceScope,
+          )
+        : scopedSessions
               .where(
                 (session) =>
                     session.title.toLowerCase().contains(localQuery) ||
@@ -911,6 +1035,16 @@ class _SessionListScreenState extends State<SessionListScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: ActionChip(
+                      key: const Key('active-space'),
+                      avatar: const Icon(Icons.folder_outlined, size: 18),
+                      label: Text(_spaceScopeLabel),
+                      onPressed: _spaceStore == null ? null : _openSpaces,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
                   SearchBar(
                     controller: _searchController,
                     leading: _searching
@@ -1072,6 +1206,17 @@ class _SessionListScreenState extends State<SessionListScreen> {
                       ),
                     ),
                   ],
+                  if (rawQuery.isEmpty && scopedSessions.isEmpty) ...[
+                    const SizedBox(height: 32),
+                    Center(
+                      child: Text(
+                        _spaceScope.kind == ChatSpaceScopeKind.space
+                            ? 'No chats in this space yet. Tap + to start one.'
+                            : 'No unassigned chats.',
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ],
                   if (serverMode &&
                       rawQuery.isNotEmpty &&
                       !_searching &&
@@ -1108,6 +1253,13 @@ class _SessionListScreenState extends State<SessionListScreen> {
                       onSelected: (action) =>
                           _handleSessionAction(action, session),
                       itemBuilder: (_) => [
+                        const PopupMenuItem(
+                          value: 'move',
+                          child: ListTile(
+                            leading: Icon(Icons.drive_file_move_outline),
+                            title: Text('Move to space'),
+                          ),
+                        ),
                         if (_desktopGateway != null)
                           const PopupMenuItem(
                             value: 'rename',
