@@ -17,6 +17,7 @@ import 'memory_screen.dart';
 import 'spaces_screen.dart';
 import 'cron_screen.dart';
 import 'skills_screen.dart';
+import 'workspace_screen.dart';
 
 Future<String?> showSessionNameDialog({
   required BuildContext context,
@@ -877,6 +878,16 @@ class _SessionListScreenState extends State<SessionListScreen> {
               subtitle: Text(_spaceScopeLabel),
               enabled: _spaceStore != null,
               onTap: () => _openSpaces(closeDrawer: true),
+            ),
+            ListTile(
+              key: const Key('open-workspace'),
+              leading: const Icon(Icons.dashboard_outlined),
+              title: const Text('Workspace'),
+              subtitle: const Text('Projects, Activity — new navigation'),
+              onTap: () {
+                Navigator.pop(context);
+                _openScreen(WorkspaceScreen(connection: widget.connection));
+              },
             ),
             const Divider(),
             ListTile(
