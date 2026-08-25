@@ -2,12 +2,14 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hermes_android/core/services/chat_space_store.dart';
 import 'package:hermes_android/core/services/projects_gateway_client.dart';
 import 'package:hermes_android/core/services/projects_repository.dart';
 import 'package:hermes_android/core/services/ws_client.dart';
 import 'package:hermes_android/core/theme/hermes_theme.dart';
 import 'package:hermes_android/core/widgets/hermes_components.dart';
 import 'package:hermes_android/core/widgets/projects_pane.dart';
+import 'package:hermes_android/core/widgets/space_migration_preview.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 Map<String, dynamic> _projectJson({
@@ -88,6 +90,7 @@ Future<void> _pumpPane(
   WidgetTester tester,
   ProjectsRepository repository, {
   ValueChanged<String>? onProjectSelected,
+  ChatSpaceStore? spaceStore,
   Brightness brightness = Brightness.dark,
   double textScale = 1.0,
 }) async {
@@ -106,6 +109,7 @@ Future<void> _pumpPane(
           child: ProjectsPane(
             repository: repository,
             onProjectSelected: onProjectSelected,
+            spaceStore: spaceStore,
           ),
         ),
       ),
@@ -315,6 +319,48 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(gateway.listCalls, greaterThan(before));
+  });
+
+  testWidgets('offers to review local spaces when some still exist', (
+    tester,
+  ) async {
+    final preferences = await SharedPreferences.getInstance();
+    final store = ChatSpaceStore(preferences, connectionId: 'gateway-a');
+    await store.createSpace('Hermes Android');
+
+    final repository = await _repo(
+      _FakeGateway(
+        projects: [_projectJson(id: 'p1', name: 'Hermes Android')],
+      ),
+    );
+
+    await _pumpPane(tester, repository, spaceStore: store);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Review local spaces'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(SpaceMigrationPreview), findsOneWidget);
+    // The one local space matches the server project of the same name.
+    expect(find.textContaining('Matches Hermes Android'), findsOneWidget);
+  });
+
+  testWidgets('stays quiet when there are no local spaces to migrate', (
+    tester,
+  ) async {
+    final preferences = await SharedPreferences.getInstance();
+    final store = ChatSpaceStore(preferences, connectionId: 'gateway-a');
+
+    final repository = await _repo(
+      _FakeGateway(
+        projects: [_projectJson(id: 'p1', name: 'Hermes Android')],
+      ),
+    );
+
+    await _pumpPane(tester, repository, spaceStore: store);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Review local spaces'), findsNothing);
   });
 
   testWidgets('renders in the light theme at a large text scale', (

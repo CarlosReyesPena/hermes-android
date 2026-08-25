@@ -14,6 +14,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/connection.dart';
+import '../services/chat_space_store.dart';
 import '../services/desktop_gateway_client.dart';
 import '../services/projects_repository.dart';
 import '../theme/hermes_theme.dart';
@@ -49,6 +50,7 @@ class WorkspaceScreen extends StatefulWidget {
 class _WorkspaceScreenState extends State<WorkspaceScreen> {
   ProjectsRepository? _repository;
   DesktopGatewayClient? _ownedGateway;
+  ChatSpaceStore? _spaceStore;
   bool _ownsRepository = false;
   bool _initialized = false;
 
@@ -71,11 +73,21 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
 
   Future<void> _initialize() async {
     final factory = widget.repositoryFactory;
+    // The legacy local Spaces store is read-only here: it exists so the
+    // migration preview can show what still lives on the phone.
+    final preferences = await SharedPreferences.getInstance();
+    if (!mounted) return;
+    final spaceStore = ChatSpaceStore(
+      preferences,
+      connectionId: widget.connection.id,
+    );
+
     if (factory != null) {
       final repository = factory(widget.connection);
       if (!mounted) return;
       setState(() {
         _repository = repository;
+        _spaceStore = spaceStore;
         _ownsRepository = false;
         _initialized = true;
       });
@@ -92,7 +104,6 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
 
     try {
       final gateway = DesktopGatewayClient.fromConnection(widget.connection);
-      final preferences = await SharedPreferences.getInstance();
       if (!mounted) {
         gateway.close();
         return;
@@ -104,6 +115,7 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
           preferences: preferences,
           connectionId: widget.connection.id,
         );
+        _spaceStore = spaceStore;
         _ownsRepository = true;
         _initialized = true;
       });
@@ -136,6 +148,7 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
         return ProjectsPane(
           repository: repository,
           onProjectSelected: widget.onOpenProject,
+          spaceStore: _spaceStore,
         );
       case HermesDestination.home:
         return const EmptyState(

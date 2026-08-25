@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hermes_android/core/models/connection.dart';
 import 'package:hermes_android/core/screens/workspace_screen.dart';
+import 'package:hermes_android/core/services/chat_space_store.dart';
 import 'package:hermes_android/core/services/projects_gateway_client.dart';
 import 'package:hermes_android/core/services/projects_repository.dart';
 import 'package:hermes_android/core/theme/hermes_theme.dart';
@@ -75,6 +76,30 @@ Future<void> _pump(
 
 void main() {
   setUp(() => SharedPreferences.setMockInitialValues({}));
+
+  testWidgets('surfaces the local spaces still waiting to be migrated', (
+    tester,
+  ) async {
+    final preferences = await SharedPreferences.getInstance();
+    await ChatSpaceStore(
+      preferences,
+      connectionId: 'conn-1',
+    ).createSpace('Hermes Android');
+
+    await _pump(
+      tester,
+      connection: _connection(desktopGatewayUrl: 'https://host:8642'),
+      repository: await _repository([
+        _projectJson(id: 'p1', name: 'Hermes Android'),
+      ]),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text(HermesDestination.projects.label).last);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Review local spaces'), findsOneWidget);
+  });
 
   testWidgets('opens on Home inside the four-destination shell', (
     tester,

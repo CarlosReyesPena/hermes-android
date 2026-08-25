@@ -1,6 +1,6 @@
 # Hermes Android Daily Driver — product architecture and roadmap
 
-Status: `[product direction validated; Phase 0 implementation not started]`
+Status: `[product direction validated; Phase 0 in progress]`
 
 Date: 2026-08-25
 
@@ -700,6 +700,24 @@ Implement **Phase 0 only**, in this order:
 8. update Graphify and commit one clean feature slice.
 
 Do not implement AI organization, Files, or notification escalation until the new Project information architecture is visually validated on Android.
+
+### Verified progress
+
+Steps 1–6 of the slice above are implemented and covered by passing tests:
+
+1. generic Gateway RPC request/response/error handling — `test/projects_gateway_client_test.dart`;
+2. `ProjectsRepository` with offline cache, optimistic mutations, and an
+   `unsupported` compatibility mode — `test/projects_repository_test.dart`;
+3. the Home/Projects/Activity/More shell — `test/hermes_shell_test.dart`;
+4. the token layer and component kit — `test/hermes_theme_test.dart`,
+   `test/hermes_components_test.dart`;
+5. the Projects pane on server-owned Projects — `test/projects_pane_test.dart`;
+6. the **read-only** Spaces migration preview, reachable from the Projects pane
+   and executing nothing — `test/space_migration_preview_test.dart`.
+
+Still open in Phase 0: the capability registry, and step 7 (real Gateway smoke
+test on a device). The migration *write* path stays unimplemented on purpose
+until the preview has been validated against a real gateway.
 
 ---
 

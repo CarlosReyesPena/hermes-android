@@ -12,17 +12,26 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../models/hermes_project.dart';
+import '../services/chat_space_store.dart';
 import '../services/projects_repository.dart';
 import '../theme/hermes_theme.dart';
 import 'hermes_components.dart';
+import 'space_migration_preview.dart';
 
 class ProjectsPane extends StatefulWidget {
   final ProjectsRepository repository;
   final ValueChanged<String>? onProjectSelected;
 
+  /// The legacy local Spaces store, when this connection still has one.
+  ///
+  /// Supplying it surfaces the read-only migration preview; it is never
+  /// written to from here.
+  final ChatSpaceStore? spaceStore;
+
   const ProjectsPane({
     required this.repository,
     this.onProjectSelected,
+    this.spaceStore,
     super.key,
   });
 
@@ -33,6 +42,7 @@ class ProjectsPane extends StatefulWidget {
 class _ProjectsPaneState extends State<ProjectsPane> {
   StreamSubscription<ProjectsView>? _subscription;
   ProjectsView? _view;
+  ChatSpaceState? _spaces;
 
   @override
   void initState() {
@@ -57,9 +67,47 @@ class _ProjectsPaneState extends State<ProjectsPane> {
       if (mounted) setState(() => _view = null);
     }
     await widget.repository.refresh();
+    await _loadSpaces();
+  }
+
+  /// Reads the legacy local Spaces so the migration preview can be offered.
+  /// Read-only: a failure here must never block the Projects list.
+  Future<void> _loadSpaces() async {
+    final store = widget.spaceStore;
+    if (store == null) return;
+    try {
+      final spaces = await store.load();
+      if (mounted) setState(() => _spaces = spaces);
+    } catch (_) {
+      // A corrupt local store is not a reason to hide server projects.
+    }
+  }
+
+  Future<void> _showMigrationPreview() async {
+    final spaces = _spaces;
+    if (spaces == null) return;
+    final plan = widget.repository.planMigration(spaces);
+    if (!mounted) return;
+
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (sheetContext) => SafeArea(
+        child: FractionallySizedBox(
+          heightFactor: 0.7,
+          child: SpaceMigrationPreview(
+            plan: plan,
+            onDismiss: () => Navigator.pop(sheetContext),
+          ),
+        ),
+      ),
+    );
   }
 
   Future<void> _refresh() => widget.repository.refresh();
+
+  /// Only offer the migration when there is something real to migrate.
+  bool get _hasLocalSpaces => _spaces?.spaces.isNotEmpty ?? false;
 
   Future<void> _createProject() async {
     final name = await showDialog<String>(
@@ -141,7 +189,12 @@ class _ProjectsPaneState extends State<ProjectsPane> {
           padding: const EdgeInsets.only(bottom: 96),
           children: [
             if (view.isStale) _OfflineBanner(error: view.error),
-            SectionHeader(title: 'Projects', count: view.projects.length),
+            SectionHeader(
+              title: 'Projects',
+              count: view.projects.length,
+              actionLabel: _hasLocalSpaces ? 'Review local spaces' : null,
+              onAction: _hasLocalSpaces ? _showMigrationPreview : null,
+            ),
             for (final project in view.projects)
               Padding(
                 padding: const EdgeInsets.fromLTRB(
