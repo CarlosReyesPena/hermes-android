@@ -139,12 +139,7 @@ class _ProjectsPaneState extends State<ProjectsPane> {
     }
 
     if (view.support == ProjectsSupport.unsupported) {
-      return const ErrorState.unsupported(
-        title: 'Projects unavailable',
-        message:
-            'This Hermes gateway does not support server-side projects yet. '
-            'Update Hermes to organize chats across your devices.',
-      );
+      return _CompatibilityMode(spaces: _spaces, onRetry: _refresh);
     }
 
     if (view.projects.isEmpty && view.error != null) {
@@ -211,6 +206,155 @@ class _ProjectsPaneState extends State<ProjectsPane> {
               ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// What the Projects pane becomes on a gateway that predates `projects.*`.
+///
+/// The roadmap requires an older gateway to stay *usable* under a clearly
+/// labelled compatibility mode rather than hitting a dead-end error screen.
+/// So this keeps the local Spaces grouping visible and read-only: nothing here
+/// can create a server project, because the server has none to create.
+class _CompatibilityMode extends StatelessWidget {
+  final ChatSpaceState? spaces;
+  final Future<void> Function() onRetry;
+
+  const _CompatibilityMode({required this.spaces, required this.onRetry});
+
+  static const _explanation =
+      'This Hermes gateway is older than server-side projects, so chats stay '
+      'grouped on this device only. Update Hermes to share the same projects '
+      'across your devices.';
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = HermesTokens.of(context);
+    final state = spaces;
+    final localSpaces = state?.spaces ?? const <ChatSpace>[];
+
+    final counts = <String, int>{};
+    for (final spaceId in state?.assignments.values ?? const <String>[]) {
+      counts[spaceId] = (counts[spaceId] ?? 0) + 1;
+    }
+
+    return RefreshIndicator(
+      onRefresh: onRetry,
+      child: ListView(
+        padding: const EdgeInsets.only(bottom: HermesSpacing.xl),
+        children: [
+          const SectionHeader(title: 'Compatibility mode'),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              HermesSpacing.lg,
+              0,
+              HermesSpacing.lg,
+              HermesSpacing.md,
+            ),
+            child: HermesCard(
+              status: HermesStatus.idle,
+              padding: const EdgeInsets.all(HermesSpacing.md),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.info_outline, size: 18, color: tokens.muted),
+                  const SizedBox(width: HermesSpacing.sm),
+                  Expanded(
+                    child: Text(
+                      _explanation,
+                      style: tokens.typography.body.copyWith(
+                        color: tokens.muted,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          if (localSpaces.isEmpty)
+            const EmptyState(
+              icon: Icons.folder_outlined,
+              title: 'No spaces on this device',
+              message:
+                  'Chats from this gateway are not grouped yet. Grouping '
+                  'stays on this phone until the gateway can host projects.',
+            )
+          else ...[
+            SectionHeader(
+              title: 'On this device',
+              count: localSpaces.length,
+            ),
+            for (final space in localSpaces)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  HermesSpacing.lg,
+                  0,
+                  HermesSpacing.lg,
+                  HermesSpacing.md,
+                ),
+                child: _LocalSpaceCard(
+                  space: space,
+                  sessionCount: counts[space.id] ?? 0,
+                ),
+              ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _LocalSpaceCard extends StatelessWidget {
+  final ChatSpace space;
+  final int sessionCount;
+
+  const _LocalSpaceCard({required this.space, required this.sessionCount});
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = HermesTokens.of(context);
+    final chats = sessionCount == 1 ? '1 chat' : '$sessionCount chats';
+
+    return HermesCard(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: tokens.muted.withValues(alpha: 0.14),
+              borderRadius: BorderRadius.circular(HermesRadius.sm),
+            ),
+            child: Icon(
+              Icons.phone_android_rounded,
+              size: 20,
+              color: tokens.muted,
+            ),
+          ),
+          const SizedBox(width: HermesSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  space.name,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: tokens.typography.section.copyWith(
+                    color: tokens.onSurface,
+                  ),
+                ),
+                const SizedBox(height: HermesSpacing.xs),
+                Text(
+                  '$chats · on this device only',
+                  style: tokens.typography.body.copyWith(color: tokens.muted),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

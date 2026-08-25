@@ -720,6 +720,13 @@ Steps 1–6 of the slice above are implemented and covered by passing tests:
    `unsupported`, so older gateways are still tried instead of being locked
    out. `ProjectsGatewayClient` reports every outcome into it and skips a
    method already proven missing.
+8. the **compatibility mode** for gateways without `projects.*` —
+   `test/projects_pane_test.dart`. Instead of a dead-end error screen, the
+   Projects pane stays usable: it is labelled `Compatibility mode`, explains
+   why organization is device-local, lists the local Spaces with their chat
+   counts read-only, and never offers to create a server project the gateway
+   cannot host. Pull-to-refresh still re-probes, so a gateway upgrade is
+   picked up without reinstalling.
 
 Still open in Phase 0: step 7 of the slice above (real Gateway smoke test on a
 device). The migration *write* path stays unimplemented on purpose until the

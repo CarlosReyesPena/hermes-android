@@ -249,7 +249,55 @@ void main() {
     expect(gateway.projects, isEmpty);
   });
 
-  testWidgets('an old gateway shows a calm compatibility notice', (
+  testWidgets('an old gateway keeps the pane usable in compatibility mode', (
+    tester,
+  ) async {
+    final preferences = await SharedPreferences.getInstance();
+    final store = ChatSpaceStore(preferences, connectionId: 'gateway-a');
+    final space = await store.createSpace('Hermes Android');
+    await store.assignSession('s1', space.id);
+
+    final gateway = _FakeGateway()
+      ..failNext = const ProjectsUnsupportedException(
+        'projects.list',
+        'unknown method',
+      );
+    final repository = await _repo(gateway);
+
+    await _pumpPane(tester, repository, spaceStore: store);
+    await tester.pumpAndSettle();
+
+    // Labelled, not a dead end: the local grouping is still listed.
+    expect(find.text('Compatibility mode'), findsOneWidget);
+    expect(find.byType(ErrorState), findsNothing);
+    expect(find.text('Retry'), findsNothing);
+    expect(find.text('Hermes Android'), findsOneWidget);
+    expect(find.textContaining('1 chat'), findsOneWidget);
+  });
+
+  testWidgets('compatibility mode never offers to create a server project', (
+    tester,
+  ) async {
+    final preferences = await SharedPreferences.getInstance();
+    final store = ChatSpaceStore(preferences, connectionId: 'gateway-a');
+    await store.createSpace('Hermes Android');
+
+    final gateway = _FakeGateway()
+      ..failNext = const ProjectsUnsupportedException(
+        'projects.list',
+        'unknown method',
+      );
+    final repository = await _repo(gateway);
+
+    await _pumpPane(tester, repository, spaceStore: store);
+    await tester.pumpAndSettle();
+
+    expect(find.byType(FloatingActionButton), findsNothing);
+    expect(find.text('Create a project'), findsNothing);
+    expect(gateway.projects, isEmpty);
+  });
+
+  testWidgets('compatibility mode explains an empty device grouping', (
     tester,
   ) async {
     final gateway = _FakeGateway()
@@ -262,9 +310,9 @@ void main() {
     await _pumpPane(tester, repository);
     await tester.pumpAndSettle();
 
-    expect(find.byType(ErrorState), findsOneWidget);
-    expect(find.textContaining('does not support'), findsOneWidget);
-    expect(find.text('Retry'), findsNothing);
+    expect(find.text('Compatibility mode'), findsOneWidget);
+    expect(find.byType(EmptyState), findsOneWidget);
+    expect(find.textContaining('Update Hermes'), findsOneWidget);
   });
 
   testWidgets('a transport failure with no cache offers a retry', (
