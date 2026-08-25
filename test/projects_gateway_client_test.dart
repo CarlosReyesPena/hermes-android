@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hermes_android/core/models/hermes_project.dart';
+import 'package:hermes_android/core/services/capability_registry.dart';
 import 'package:hermes_android/core/services/projects_gateway_client.dart';
 import 'package:hermes_android/core/services/ws_client.dart';
 
@@ -289,6 +290,89 @@ void main() {
 
       expect(await client.isSupported(), isTrue);
       expect(rpc.calls, hasLength(1));
+    });
+  });
+
+  group('ProjectsGatewayClient capability reporting', () {
+    test('a successful call teaches the shared registry', () async {
+      final registry = CapabilityRegistry();
+      final rpc = _RecordingRpc([
+        _ok({'projects': const [], 'active_id': null}),
+      ]);
+      final client = ProjectsGatewayClient(rpc.call, capabilities: registry);
+
+      await client.list();
+
+      expect(registry.supportFor('projects.list'), CapabilitySupport.supported);
+    });
+
+    test('an unknown-method error is reported to the registry', () async {
+      final registry = CapabilityRegistry();
+      final rpc = _RecordingRpc([
+        _error(-32601, 'unknown method: projects.list'),
+      ]);
+      final client = ProjectsGatewayClient(rpc.call, capabilities: registry);
+
+      await expectLater(
+        client.list(),
+        throwsA(isA<ProjectsUnsupportedException>()),
+      );
+
+      expect(
+        registry.supportFor('projects.list'),
+        CapabilitySupport.unsupported,
+      );
+    });
+
+    test('a transport failure teaches the registry nothing', () async {
+      final registry = CapabilityRegistry();
+      final client = ProjectsGatewayClient((method, params) async {
+        throw JsonRpcError(
+          method,
+          'Desktop gateway connection closed',
+          reason: 'connection_closed',
+        );
+      }, capabilities: registry);
+
+      await expectLater(client.list(), throwsA(isA<JsonRpcError>()));
+
+      expect(registry.supportFor('projects.list'), CapabilitySupport.unknown);
+    });
+
+    test('a domain error still proves the method exists', () async {
+      final registry = CapabilityRegistry();
+      final rpc = _RecordingRpc([_error(5062, 'no such project')]);
+      final client = ProjectsGatewayClient(rpc.call, capabilities: registry);
+
+      await expectLater(client.get('p9'), throwsA(isA<JsonRpcError>()));
+
+      expect(registry.supportFor('projects.get'), CapabilitySupport.supported);
+    });
+
+    test('an already-unsupported registry short-circuits the call', () async {
+      final registry = CapabilityRegistry()
+        ..recordFailure(
+          'projects.list',
+          JsonRpcError('projects.list', 'unknown method', code: -32601),
+        );
+      final rpc = _RecordingRpc([]);
+      final client = ProjectsGatewayClient(rpc.call, capabilities: registry);
+
+      await expectLater(
+        client.list(),
+        throwsA(isA<ProjectsUnsupportedException>()),
+      );
+      // An old gateway must not be re-probed on every screen build.
+      expect(rpc.calls, isEmpty);
+    });
+
+    test('works without a registry', () async {
+      final rpc = _RecordingRpc([
+        _ok({'projects': const [], 'active_id': null}),
+      ]);
+      final client = ProjectsGatewayClient(rpc.call);
+
+      await expectLater(client.list(), completes);
     });
   });
 }

@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:crypto/crypto.dart';
 
+import 'capability_registry.dart';
 import 'connection_manager.dart';
 import 'gateway_turn_coordinator.dart';
 import 'gateway_turn_journal.dart';
@@ -37,6 +38,7 @@ class DesktopGatewayClient {
   DesktopConnectionCallback? _connectionListener;
   GatewayTurnCoordinatorRegistry? _turnCoordinatorRegistry;
   ProjectsGatewayClient? _projects;
+  final CapabilityRegistry _capabilities = CapabilityRegistry();
 
   static const _asyncEventTypes = {
     'background.complete',
@@ -172,8 +174,15 @@ class DesktopGatewayClient {
     return _projects ??= ProjectsGatewayClient((method, params) async {
       final client = await _connectControl();
       return client.send(method, params);
-    });
+    }, capabilities: _capabilities);
   }
+
+  /// What this gateway advertises or has been proven to support.
+  ///
+  /// Populated from `gateway.ready` on every connect and refined by the
+  /// outcome of real calls, so a feature can degrade politely on an older
+  /// gateway instead of failing.
+  CapabilityRegistry get capabilities => _capabilities;
 
   /// Opens (or reuses) the gateway socket without binding it to a session.
   Future<WsClient> _connectControl() async {
@@ -266,6 +275,9 @@ class DesktopGatewayClient {
   }
 
   void _installAsyncEventBridge(WsClient client) {
+    // Every socket greets us with gateway.ready; that greeting is where the
+    // capability registry learns what this Hermes instance offers.
+    _capabilities.bindTo(client);
     client.onStreamEvent = (event) {
       if (!_asyncEventTypes.contains(event.type)) return;
       final gatewaySessionId = event.data['session_id']?.toString();

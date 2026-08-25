@@ -1,4 +1,5 @@
 import '../models/hermes_project.dart';
+import 'capability_registry.dart';
 import 'ws_client.dart';
 
 /// Sends one JSON-RPC method call and returns the raw envelope.
@@ -36,9 +37,15 @@ class ProjectsGatewayClient {
   static const _unknownMethodCode = -32601;
 
   final GatewayRpcCall _call;
+
+  /// Optional shared registry, so one probe here informs the whole app.
+  ///
+  /// Public because it is plain collaborator state: callers pass the gateway's
+  /// registry in, and reading it back is useful for diagnostics.
+  final CapabilityRegistry? capabilities;
   bool? _supported;
 
-  ProjectsGatewayClient(this._call);
+  ProjectsGatewayClient(this._call, {this.capabilities});
 
   /// Whether the gateway exposes `projects.*`.
   ///
@@ -141,7 +148,22 @@ class ProjectsGatewayClient {
     String method,
     Map<String, dynamic> params,
   ) async {
-    final response = await _call(method, params);
+    final capabilities = this.capabilities;
+    // A gateway already proven to lack this method is not probed again.
+    if (capabilities != null && capabilities.isUnsupported(method)) {
+      _supported = false;
+      throw ProjectsUnsupportedException(
+        method,
+        'This gateway does not support $method',
+      );
+    }
+    final Map<String, dynamic> response;
+    try {
+      response = await _call(method, params);
+    } catch (error) {
+      capabilities?.recordFailure(method, error);
+      rethrow;
+    }
     final error = response['error'];
     if (error != null) {
       final rpcError = error is Map
@@ -151,6 +173,7 @@ class ProjectsGatewayClient {
               fallbackMessage: 'Gateway projects call failed',
             )
           : JsonRpcError(method, 'Gateway projects call failed');
+      capabilities?.recordFailure(method, rpcError);
       if (_isUnknownMethod(rpcError)) {
         _supported = false;
         throw ProjectsUnsupportedException(method, rpcError.message);
@@ -160,6 +183,7 @@ class ProjectsGatewayClient {
       throw rpcError;
     }
     _supported = true;
+    capabilities?.recordSuccess(method);
     final result = response['result'];
     return result is Map
         ? Map<String, dynamic>.from(result)

@@ -713,11 +713,17 @@ Steps 1–6 of the slice above are implemented and covered by passing tests:
    `test/hermes_components_test.dart`;
 5. the Projects pane on server-owned Projects — `test/projects_pane_test.dart`;
 6. the **read-only** Spaces migration preview, reachable from the Projects pane
-   and executing nothing — `test/space_migration_preview_test.dart`.
+   and executing nothing — `test/space_migration_preview_test.dart`;
+7. the gateway capability registry — `test/capability_registry_test.dart`.
+   It reads `gateway.ready`, refines its verdicts from the outcome of real
+   calls, and treats an absent advertisement as `unknown` rather than
+   `unsupported`, so older gateways are still tried instead of being locked
+   out. `ProjectsGatewayClient` reports every outcome into it and skips a
+   method already proven missing.
 
-Still open in Phase 0: the capability registry, and step 7 (real Gateway smoke
-test on a device). The migration *write* path stays unimplemented on purpose
-until the preview has been validated against a real gateway.
+Still open in Phase 0: step 7 of the slice above (real Gateway smoke test on a
+device). The migration *write* path stays unimplemented on purpose until the
+preview has been validated against a real gateway.
 
 ---
 
