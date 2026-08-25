@@ -12,6 +12,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../models/connection.dart';
 import '../services/chat_space_store.dart';
@@ -20,11 +21,20 @@ import '../services/projects_repository.dart';
 import '../theme/hermes_theme.dart';
 import '../widgets/hermes_components.dart';
 import '../widgets/hermes_shell.dart';
+import '../widgets/more_pane.dart';
 import '../widgets/projects_pane.dart';
+import 'cron_screen.dart';
+import 'memory_screen.dart';
+import 'settings_screen.dart';
+import 'skills_screen.dart';
 
 /// Builds the Projects repository for a connection. Injectable for tests.
 typedef ProjectsRepositoryFactory =
     ProjectsRepository Function(SavedConnection connection);
+
+/// Opens the authenticated Hermes dashboard for a URL. Injectable for tests so
+/// the fallback can be asserted without launching a real browser.
+typedef DashboardLauncher = Future<void> Function(String url);
 
 class WorkspaceScreen extends StatefulWidget {
   final SavedConnection connection;
@@ -36,10 +46,14 @@ class WorkspaceScreen extends StatefulWidget {
   /// Called when the user opens a project.
   final ValueChanged<String>? onOpenProject;
 
+  /// Overrides how the Hermes dashboard fallback is opened.
+  final DashboardLauncher? onOpenDashboard;
+
   const WorkspaceScreen({
     required this.connection,
     this.repositoryFactory,
     this.onOpenProject,
+    this.onOpenDashboard,
     super.key,
   });
 
@@ -167,13 +181,63 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
               'will land here.',
         );
       case HermesDestination.more:
-        return const EmptyState(
-          icon: Icons.more_horiz,
-          title: 'More — Coming next',
-          message:
-              'Files, assets, search, cron, skills, memory, and settings will '
-              'be reachable from here.',
+        return MorePane(
+          sections: buildMoreSections(dashboardReachable: _dashboardReachable),
+          onSelect: _openMoreEntry,
         );
+    }
+  }
+
+  /// The dashboard only exists when the connection names a host to reach it
+  /// on. Without one, every dashboard-backed entry is disabled *with a reason*
+  /// rather than hidden, per the roadmap's capability-discovery rule.
+  bool get _dashboardReachable => widget.connection.host.trim().isNotEmpty;
+
+  /// The dashboard origin, which is not the gateway chat origin: it has its
+  /// own port and optional path prefix.
+  String get _dashboardUrl {
+    final connection = widget.connection;
+    final scheme = connection.useHttps ? 'https' : 'http';
+    return SavedConnection.joinBaseUrl(
+      '$scheme://${connection.host}:${connection.dashboardPort}',
+      connection.dashboardPrefix ?? '',
+    );
+  }
+
+  Future<void> _openDashboard() async {
+    final launcher = widget.onOpenDashboard;
+    if (launcher != null) {
+      await launcher(_dashboardUrl);
+      return;
+    }
+    final uri = Uri.tryParse(_dashboardUrl);
+    if (uri == null) return;
+    final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (launched || !mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Could not open the Hermes dashboard.')),
+    );
+  }
+
+  void _push(Widget screen) {
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute<void>(builder: (_) => screen));
+  }
+
+  void _openMoreEntry(MoreEntry entry) {
+    final connection = widget.connection;
+    switch (entry.id) {
+      case 'cron':
+        _push(CronScreen(connection: connection));
+      case 'skills':
+        _push(SkillsScreen(connection: connection));
+      case 'memory':
+        _push(MemoryScreen(connection: connection));
+      case 'settings':
+        _push(SettingsScreen(connection: connection));
+      case 'dashboard':
+        unawaited(_openDashboard());
     }
   }
 

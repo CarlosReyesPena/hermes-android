@@ -727,9 +727,18 @@ Steps 1–6 of the slice above are implemented and covered by passing tests:
    counts read-only, and never offers to create a server project the gateway
    cannot host. Pull-to-refresh still re-probes, so a gateway upgrade is
    picked up without reinstalling.
+9. the **More destination and the embedded Dashboard fallback entry** —
+   `test/more_pane_test.dart`, `test/workspace_screen_test.dart`. The fourth
+   shell destination now lists every capability instead of a placeholder:
+   Files/Assets/Search are labelled `Coming next` rather than hidden, Cron,
+   Skills, Memory and the Dashboard fallback open the existing screens, and a
+   connection with no reachable dashboard host disables exactly those entries
+   *with a stated reason* rather than removing them. Settings stays reachable
+   in every case so a broken connection can be repaired from inside the app.
 
 Still open in Phase 0: step 7 of the slice above (real Gateway smoke test on a
-device). The migration *write* path stays unimplemented on purpose until the
+device) and the characterization tests for current chat/recovery/notification
+behavior. The migration *write* path stays unimplemented on purpose until the
 preview has been validated against a real gateway.
 
 ---

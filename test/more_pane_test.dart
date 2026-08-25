@@ -1,0 +1,263 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:hermes_android/core/theme/hermes_theme.dart';
+import 'package:hermes_android/core/widgets/more_pane.dart';
+
+Future<void> _pumpPane(
+  WidgetTester tester, {
+  required List<MoreSection> sections,
+  ValueChanged<MoreEntry>? onSelect,
+  // Tall by default so assertions are about content, not scroll position; the
+  // narrow-phone tests below set a real phone height explicitly.
+  Size size = const Size(360, 1600),
+  double textScale = 1.0,
+  Brightness brightness = Brightness.dark,
+}) async {
+  tester.view.physicalSize = size;
+  tester.view.devicePixelRatio = 1.0;
+  addTearDown(tester.view.reset);
+
+  await tester.pumpWidget(
+    MaterialApp(
+      theme: hermesTheme(brightness),
+      home: Builder(
+        builder: (context) => MediaQuery(
+          data: MediaQuery.of(
+            context,
+          ).copyWith(textScaler: TextScaler.linear(textScale)),
+          child: Scaffold(
+            body: MorePane(
+              sections: sections,
+              onSelect: onSelect ?? (_) {},
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
+  await tester.pumpAndSettle();
+}
+
+void main() {
+  group('buildMoreSections', () {
+    test('exposes every roadmap destination exactly once', () {
+      final sections = buildMoreSections(dashboardReachable: true);
+      final ids = [
+        for (final section in sections)
+          for (final entry in section.entries) entry.id,
+      ];
+
+      expect(ids.toSet(), hasLength(ids.length), reason: 'ids must be unique');
+      expect(
+        ids,
+        containsAll(<String>[
+          'files',
+          'assets',
+          'search',
+          'cron',
+          'skills',
+          'memory',
+          'settings',
+          'dashboard',
+        ]),
+      );
+    });
+
+    test('every section has a title and at least one entry', () {
+      for (final section in buildMoreSections(dashboardReachable: true)) {
+        expect(section.title, isNotEmpty);
+        expect(section.entries, isNotEmpty);
+      }
+    });
+
+    test('dashboard-backed entries are available when the dashboard is', () {
+      final entries = {
+        for (final section in buildMoreSections(dashboardReachable: true))
+          for (final entry in section.entries) entry.id: entry,
+      };
+
+      for (final id in ['cron', 'skills', 'memory', 'dashboard', 'settings']) {
+        expect(
+          entries[id]!.availability,
+          MoreEntryAvailability.available,
+          reason: '$id must be usable on a reachable dashboard',
+        );
+      }
+    });
+
+    test('a missing dashboard disables its entries with a reason', () {
+      final entries = {
+        for (final section in buildMoreSections(dashboardReachable: false))
+          for (final entry in section.entries) entry.id: entry,
+      };
+
+      for (final id in ['cron', 'skills', 'memory', 'dashboard']) {
+        final entry = entries[id]!;
+        expect(
+          entry.availability,
+          MoreEntryAvailability.unavailable,
+          reason: '$id needs the dashboard',
+        );
+        expect(
+          entry.unavailableReason,
+          isNotNull,
+          reason: '$id must explain why it is disabled, not just grey out',
+        );
+        expect(entry.unavailableReason, isNotEmpty);
+      }
+    });
+
+    test('local settings stay reachable without a dashboard', () {
+      final entries = {
+        for (final section in buildMoreSections(dashboardReachable: false))
+          for (final entry in section.entries) entry.id: entry,
+      };
+
+      expect(entries['settings']!.availability, MoreEntryAvailability.available);
+    });
+
+    test('unbuilt surfaces are announced, never silently dropped', () {
+      final entries = {
+        for (final section in buildMoreSections(dashboardReachable: true))
+          for (final entry in section.entries) entry.id: entry,
+      };
+
+      for (final id in ['files', 'assets', 'search']) {
+        expect(entries[id]!.availability, MoreEntryAvailability.comingSoon);
+      }
+    });
+  });
+
+  group('MorePane', () {
+    List<MoreSection> sections({bool dashboardReachable = true}) =>
+        buildMoreSections(dashboardReachable: dashboardReachable);
+
+    testWidgets('renders every section title and entry', (tester) async {
+      final built = sections();
+      await _pumpPane(tester, sections: built);
+
+      for (final section in built) {
+        expect(find.text(section.title), findsOneWidget);
+      }
+      expect(find.text('Cron'), findsOneWidget);
+      expect(find.text('Settings'), findsOneWidget);
+    });
+
+    testWidgets('selecting an available entry reports it once', (tester) async {
+      final picked = <String>[];
+      await _pumpPane(
+        tester,
+        sections: sections(),
+        onSelect: (entry) => picked.add(entry.id),
+      );
+
+      await tester.tap(find.text('Cron'));
+      await tester.pumpAndSettle();
+
+      expect(picked, ['cron']);
+    });
+
+    testWidgets('an unavailable entry cannot be selected', (tester) async {
+      final picked = <String>[];
+      await _pumpPane(
+        tester,
+        sections: sections(dashboardReachable: false),
+        onSelect: (entry) => picked.add(entry.id),
+      );
+
+      await tester.tap(find.text('Cron'), warnIfMissed: false);
+      await tester.pumpAndSettle();
+
+      expect(picked, isEmpty);
+    });
+
+    testWidgets('an unavailable entry explains why on screen', (tester) async {
+      final built = sections(dashboardReachable: false);
+      await _pumpPane(tester, sections: built);
+
+      final cron = built
+          .expand((section) => section.entries)
+          .firstWhere((entry) => entry.id == 'cron');
+
+      expect(find.text(cron.unavailableReason!), findsWidgets);
+    });
+
+    testWidgets('a coming-soon entry is labelled and not selectable', (
+      tester,
+    ) async {
+      final picked = <String>[];
+      await _pumpPane(
+        tester,
+        sections: sections(),
+        onSelect: (entry) => picked.add(entry.id),
+      );
+
+      expect(find.text('Coming next'), findsWidgets);
+
+      await tester.tap(find.text('Files'), warnIfMissed: false);
+      await tester.pumpAndSettle();
+
+      expect(picked, isEmpty);
+    });
+
+    testWidgets('survives a large text scale on a narrow phone', (
+      tester,
+    ) async {
+      await _pumpPane(
+        tester,
+        sections: sections(),
+        size: const Size(320, 640),
+        textScale: 1.8,
+      );
+
+      expect(tester.takeException(), isNull);
+      expect(find.text('Files'), findsOneWidget);
+    });
+
+    testWidgets('scrolls to the last entry on a real phone height', (
+      tester,
+    ) async {
+      await _pumpPane(tester, sections: sections(), size: const Size(360, 720));
+
+      await tester.scrollUntilVisible(
+        find.text('Settings'),
+        160,
+        scrollable: find.byType(Scrollable).first,
+      );
+
+      expect(find.text('Settings'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('renders in the light theme', (tester) async {
+      await _pumpPane(
+        tester,
+        sections: sections(),
+        brightness: Brightness.light,
+      );
+
+      expect(tester.takeException(), isNull);
+      expect(find.text('Settings'), findsOneWidget);
+    });
+
+    testWidgets('every entry is reachable by a screen reader', (tester) async {
+      final built = sections();
+      await _pumpPane(tester, sections: built);
+
+      for (final section in built) {
+        for (final entry in section.entries) {
+          await tester.scrollUntilVisible(
+            find.text(entry.title),
+            120,
+            scrollable: find.byType(Scrollable).first,
+          );
+          expect(
+            find.bySemanticsLabel(RegExp(entry.title)),
+            findsWidgets,
+            reason: '${entry.title} must be announced',
+          );
+        }
+      }
+    });
+  });
+}

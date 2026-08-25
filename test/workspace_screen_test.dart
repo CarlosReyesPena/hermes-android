@@ -8,14 +8,18 @@ import 'package:hermes_android/core/services/projects_repository.dart';
 import 'package:hermes_android/core/theme/hermes_theme.dart';
 import 'package:hermes_android/core/widgets/hermes_components.dart';
 import 'package:hermes_android/core/widgets/hermes_shell.dart';
+import 'package:hermes_android/core/widgets/more_pane.dart';
 import 'package:hermes_android/core/widgets/projects_pane.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-SavedConnection _connection({String? desktopGatewayUrl}) {
+SavedConnection _connection({
+  String? desktopGatewayUrl,
+  String host = 'hermes-miniserver.example',
+}) {
   return SavedConnection(
     id: 'conn-1',
     label: 'Miniserver',
-    host: 'hermes-miniserver.example',
+    host: host,
     port: 8642,
     apiKey: 'key',
     desktopGatewayUrl: desktopGatewayUrl,
@@ -56,6 +60,7 @@ Future<void> _pump(
   required SavedConnection connection,
   ProjectsRepository? repository,
   List<String>? openedProjects,
+  List<String>? openedDashboards,
   Size size = const Size(400, 800),
 }) async {
   tester.view.physicalSize = size;
@@ -69,6 +74,9 @@ Future<void> _pump(
         connection: connection,
         repositoryFactory: repository == null ? null : (_) => repository,
         onOpenProject: openedProjects?.add,
+        onOpenDashboard: openedDashboards == null
+            ? null
+            : (url) async => openedDashboards.add(url),
       ),
     ),
   );
@@ -181,7 +189,7 @@ void main() {
     expect(find.byType(ProjectsPane), findsNothing);
   });
 
-  testWidgets('Home, Activity, and More are honest about not shipping yet', (
+  testWidgets('Home and Activity are honest about not shipping yet', (
     tester,
   ) async {
     await _pump(
@@ -194,7 +202,6 @@ void main() {
     for (final destination in [
       HermesDestination.home,
       HermesDestination.activity,
-      HermesDestination.more,
     ]) {
       await tester.tap(find.text(destination.label).last);
       await tester.pumpAndSettle();
@@ -205,6 +212,74 @@ void main() {
       );
       expect(find.textContaining('Coming'), findsOneWidget);
     }
+  });
+
+  testWidgets('the More destination lists every capability', (tester) async {
+    await _pump(
+      tester,
+      connection: _connection(desktopGatewayUrl: 'https://host:8642'),
+      repository: await _repository([]),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text(HermesDestination.more.label).last);
+    await tester.pumpAndSettle();
+
+    expect(find.byType(MorePane), findsOneWidget);
+    expect(find.text('Cron'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('Settings'),
+      160,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.text('Settings'), findsOneWidget);
+  });
+
+  testWidgets('More offers the embedded dashboard fallback', (tester) async {
+    final opened = <String>[];
+    await _pump(
+      tester,
+      connection: _connection(desktopGatewayUrl: 'https://host:8642'),
+      repository: await _repository([]),
+      openedDashboards: opened,
+      size: const Size(400, 1600),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text(HermesDestination.more.label).last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Open the Hermes dashboard'));
+    await tester.pumpAndSettle();
+
+    expect(opened, hasLength(1));
+    // The fallback must target the dashboard, not the gateway chat port.
+    expect(opened.single, contains('hermes-miniserver.example'));
+    expect(opened.single, contains('9119'));
+  });
+
+  testWidgets('More disables dashboard entries without a reachable host', (
+    tester,
+  ) async {
+    final opened = <String>[];
+    await _pump(
+      tester,
+      connection: _connection(
+        desktopGatewayUrl: 'https://host:8642',
+        host: '   ',
+      ),
+      repository: await _repository([]),
+      openedDashboards: opened,
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text(HermesDestination.more.label).last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Cron'), warnIfMissed: false);
+    await tester.pumpAndSettle();
+
+    expect(opened, isEmpty);
+    expect(find.textContaining('Needs a reachable Hermes dashboard'),
+        findsWidgets);
   });
 
   testWidgets('switching destinations keeps the projects state alive', (
