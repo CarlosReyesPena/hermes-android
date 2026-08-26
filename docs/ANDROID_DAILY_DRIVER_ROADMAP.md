@@ -748,10 +748,28 @@ Steps 1–6 of the slice above are implemented and covered by passing tests:
     instead of stacking duplicates. The id is now masked to the 31-bit range
     rather than negated, which removes the `hashCode.abs()` overflow edge case.
 
+11. the **chat display characterization tests** —
+    `test/chat_display_items_test.dart`. The chat list projection that lived
+    inline in `chat_screen.dart` is now the pure `buildChatDisplayItems`
+    helper in `lib/core/utils/chat_display_items.dart`, so the shipped
+    rendering order is pinned before Phase 1.5 reworks message hierarchy:
+    user/assistant prose in order, `_retry_prompt` carrying the last user
+    prompt onto each assistant reply (and never onto the first message when no
+    prompt preceded it), non-chat roles dropped, empty messages dropped,
+    consecutive tool results collapsed into one positionally matched activity
+    card, unmatched streamed tool activities appended as a trailing card, the
+    caller's activity list left unmutated, reasoning emitted as its own
+    `ChatReasoningItem` before the bubble (expanded in verbose mode or when the
+    gateway marks it verbose), and subagents then notices appended last. One
+    test deliberately records a known wart rather than fixing it: an assistant
+    reply that *embeds* a raw tool-result block is classified as a tool result
+    and its prose is dropped, so Phase 1.5 changing that becomes a visible,
+    intentional decision instead of a silent regression.
+
 Still open in Phase 0: step 7 of the slice above (real Gateway smoke test on a
-device) and the characterization tests for current chat and turn-recovery
-behavior. The migration *write* path stays unimplemented on purpose until the
-preview has been validated against a real gateway.
+device) and the characterization tests for turn-recovery behavior. The
+migration *write* path stays unimplemented on purpose until the preview has
+been validated against a real gateway.
 
 ---
 

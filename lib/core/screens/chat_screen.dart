@@ -31,6 +31,7 @@ import '../models/gateway_clarify.dart';
 import '../models/gateway_insight.dart';
 import '../models/gateway_sensitive_prompt.dart';
 import '../models/gateway_turn_contract.dart';
+import '../utils/chat_display_items.dart';
 import '../utils/chat_history_scroll.dart';
 import '../utils/message_content.dart';
 import '../utils/responsive.dart';
@@ -72,13 +73,6 @@ const _reasoningEffortLabels = <String, String>{
   'max': 'Max',
   'ultra': 'Ultra',
 };
-
-class _GatewayReasoningDisplay {
-  final String text;
-  final bool initiallyExpanded;
-
-  const _GatewayReasoningDisplay(this.text, this.initiallyExpanded);
-}
 
 enum _ResponseTransport { none, rest, desktop }
 
@@ -2937,63 +2931,13 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
       );
     }
 
-    // Build display list: consecutive tool messages grouped into cards,
-    // interleaved with user/assistant bubbles.
-    final toolQueue = List<GatewayToolActivity>.from(_toolActivities);
-    final displayMessages = <dynamic>[];
-    final currentGroup = <GatewayToolActivity>[];
-    String? lastUserPrompt;
-
-    for (final msg in _messages) {
-      final role = (msg['role'] as String?) ?? 'assistant';
-      if (isToolResultMessage(msg)) {
-        if (toolQueue.isNotEmpty) {
-          currentGroup.add(toolQueue.removeAt(0));
-        }
-        continue;
-      }
-      if (role != 'user' && role != 'assistant') continue;
-      final content = stripToolResultText(messageContentToText(msg['content']));
-      final reasoning = msg['_gateway_reasoning']?.toString() ?? '';
-      if (content.isEmpty && reasoning.trim().isEmpty) continue;
-
-      if (currentGroup.isNotEmpty) {
-        displayMessages.add(currentGroup.toList());
-        currentGroup.clear();
-      }
-      if (role == 'assistant' && reasoning.trim().isNotEmpty) {
-        displayMessages.add(
-          _GatewayReasoningDisplay(
-            reasoning,
-            _verboseMode || msg['_gateway_reasoning_verbose'] == true,
-          ),
-        );
-      }
-      if (content.isNotEmpty) {
-        if (role == 'user') lastUserPrompt = content;
-        displayMessages.add({
-          ...msg,
-          '_display_content': content,
-          if (role == 'assistant' && lastUserPrompt != null)
-            '_retry_prompt': lastUserPrompt,
-        });
-      }
-    }
-    if (currentGroup.isNotEmpty) {
-      displayMessages.add(currentGroup.toList());
-    }
-
-    // Tools from SSE events that arrived during streaming but haven't been
-    // matched to server messages yet — show them as a card.
-    if (toolQueue.isNotEmpty) {
-      displayMessages.add(toolQueue.toList());
-    }
-    if (_subagentActivities.isNotEmpty) {
-      displayMessages.add(
-        List<GatewaySubagentActivity>.from(_subagentActivities),
-      );
-    }
-    displayMessages.addAll(_gatewayNotices);
+    final displayMessages = buildChatDisplayItems(
+      messages: _messages,
+      toolActivities: _toolActivities,
+      subagentActivities: _subagentActivities,
+      notices: _gatewayNotices,
+      verbose: _verboseMode,
+    );
 
     return NotificationListener<ScrollMetricsNotification>(
       onNotification: (notification) {
@@ -3018,7 +2962,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
             if (item is List<GatewaySubagentActivity>) {
               return GatewaySubagentCard(activities: item);
             }
-            if (item is _GatewayReasoningDisplay) {
+            if (item is ChatReasoningItem) {
               return GatewayReasoningCard(
                 text: item.text,
                 initiallyExpanded: item.initiallyExpanded,
