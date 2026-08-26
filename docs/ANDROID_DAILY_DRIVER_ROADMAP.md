@@ -783,10 +783,30 @@ Steps 1–6 of the slice above are implemented and covered by passing tests:
     `GatewayTurnCoordinatorFailure.values`, so a new failure mode added later
     defaults to the safe branch or fails the suite.
 
+13. the **Home attention digest** — `test/home_digest_test.dart`. The ranking
+    half of the Phase 1 Home screen is the pure `buildHomeDigest` helper in
+    `lib/core/utils/home_digest.dart`, so the attention rules are pinned
+    before any pixel is drawn: sections are emitted in the validated order
+    (Needs you > Running > Continue > Recently completed), empty sections are
+    dropped rather than rendered as empty lists, a blocked session appears in
+    `Needs you` *only* and never also as running, blocked work is never aged
+    out while idle and completed work respect their windows, a finished
+    session is ranked by its end time rather than its start time, a clock
+    skewed into the future is shown rather than dropped, unknown attention or
+    running ids are ignored instead of conjuring phantom rows, a capped
+    section reports its `overflow` and true `totalCount`, and `blockedCount`
+    ignores the cap so the shell badge stays accurate. The digest is a pure
+    function of `(sessions, now, attention, running, projectNames)` and does
+    not mutate the caller's list, so the widget that consumes it in the next
+    slice inherits no hidden state.
+
 Still open in Phase 0: step 7 of the slice above (real Gateway smoke test on a
-device) and the remaining characterization tests for turn-recovery behavior.
-The migration *write* path stays unimplemented on purpose until the preview has
-been validated against a real gateway.
+device). The migration *write* path stays unimplemented on purpose until the
+preview has been validated against a real gateway.
+
+Next slice: render `buildHomeDigest` in the `HermesDestination.home` pane of
+`WorkspaceScreen`, replacing the `Coming next` placeholder, with the designed
+loading, empty, offline, and error states Phase 1 acceptance requires.
 
 ---
 
