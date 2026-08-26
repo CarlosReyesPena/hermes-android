@@ -134,6 +134,11 @@ class ChatScreen extends StatefulWidget {
   @visibleForTesting
   final VoiceComposerAdapter? testVoiceComposerAdapter;
 
+  /// Lets a test observe what the chat posts to Android when a turn settles,
+  /// without touching the notification platform channel.
+  @visibleForTesting
+  final TurnNotificationService? testTurnNotifications;
+
   const ChatScreen({
     required this.connection,
     required this.session,
@@ -145,6 +150,7 @@ class ChatScreen extends StatefulWidget {
     this.testRemoteAttachmentUpload,
     this.testInitialAttachmentDrafts = const [],
     this.testVoiceComposerAdapter,
+    this.testTurnNotifications,
     super.key,
   });
 
@@ -230,7 +236,8 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _turnNotifications = TurnNotificationService();
+    _turnNotifications =
+        widget.testTurnNotifications ?? TurnNotificationService();
     unawaited(_turnNotifications.ensureInitialized());
     _client =
         widget.testApiClient ??
