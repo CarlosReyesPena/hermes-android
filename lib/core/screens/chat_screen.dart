@@ -35,6 +35,7 @@ import '../utils/chat_display_items.dart';
 import '../utils/chat_history_scroll.dart';
 import '../utils/message_content.dart';
 import '../utils/responsive.dart';
+import '../utils/turn_recovery_fallback.dart';
 import '../widgets/gateway_activity_card.dart';
 import '../widgets/attachment_draft_tile.dart';
 import '../widgets/chat_end_affordance.dart';
@@ -717,10 +718,11 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
       }
     } catch (error) {
       if (!mounted) return;
-      if (allowLegacyFallback &&
-          error is GatewayTurnCoordinatorException &&
-          error.failure ==
-              GatewayTurnCoordinatorFailure.unsupportedCapability) {
+      final fallback = classifyTurnRecoveryFailure(
+        error,
+        allowLegacyFallback: allowLegacyFallback,
+      );
+      if (fallback == TurnRecoveryFallback.legacyTransport) {
         setState(() {
           _legacyTransportFallback = true;
           _sending = false;

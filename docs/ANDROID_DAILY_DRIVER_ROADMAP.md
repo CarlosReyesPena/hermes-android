@@ -766,9 +766,26 @@ Steps 1–6 of the slice above are implemented and covered by passing tests:
     and its prose is dropped, so Phase 1.5 changing that becomes a visible,
     intentional decision instead of a silent regression.
 
+12. the **turn-recovery fallback characterization tests** —
+    `test/turn_recovery_fallback_test.dart`. The decision that used to live
+    inline in `_recoverPendingTurn` is now the pure
+    `classifyTurnRecoveryFailure` helper in
+    `lib/core/utils/turn_recovery_fallback.dart`, so the last guard against a
+    double submit is pinned before Phase 3 touches recovery: only an explicit
+    `unsupportedCapability` on the *first* recovery pass may switch a chat to
+    the labelled legacy transport. Every other coordinator failure — including
+    `unsupportedCapabilityWithPendingTurns`, where durable turns already exist
+    server-side — plus transport errors, `JsonRpcError` authorization
+    failures, and arbitrary exceptions all resolve to `reportUnavailable`,
+    which keeps the durable transport and the composer blocked. A later resume
+    (`allowLegacyFallback: false`) can never degrade a gateway that already
+    recovered successfully. The enum-driven test iterates
+    `GatewayTurnCoordinatorFailure.values`, so a new failure mode added later
+    defaults to the safe branch or fails the suite.
+
 Still open in Phase 0: step 7 of the slice above (real Gateway smoke test on a
-device) and the characterization tests for turn-recovery behavior. The
-migration *write* path stays unimplemented on purpose until the preview has
+device) and the remaining characterization tests for turn-recovery behavior.
+The migration *write* path stays unimplemented on purpose until the preview has
 been validated against a real gateway.
 
 ---
