@@ -736,8 +736,20 @@ Steps 1–6 of the slice above are implemented and covered by passing tests:
    *with a stated reason* rather than removing them. Settings stays reachable
    in every case so a broken connection can be repaired from inside the app.
 
+10. the **notification characterization tests** —
+    `test/turn_notification_service_test.dart`. `TurnNotificationService` now
+    posts through a `TurnNotificationSink` seam instead of calling the
+    `flutter_local_notifications` plugin directly, so the shipped behaviour is
+    pinned before Phase 3 replaces it: one idempotent initialization that
+    degrades to a silent no-op (and can be retried) when the platform channel
+    is missing, notifications dropped while uninitialized, the `Hermes Turns`
+    channel identity, the turn id carried as the deep-link payload, and one
+    stable non-negative id per turn so a turn replaces its own notification
+    instead of stacking duplicates. The id is now masked to the 31-bit range
+    rather than negated, which removes the `hashCode.abs()` overflow edge case.
+
 Still open in Phase 0: step 7 of the slice above (real Gateway smoke test on a
-device) and the characterization tests for current chat/recovery/notification
+device) and the characterization tests for current chat and turn-recovery
 behavior. The migration *write* path stays unimplemented on purpose until the
 preview has been validated against a real gateway.
 
