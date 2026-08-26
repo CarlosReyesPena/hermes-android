@@ -119,6 +119,66 @@ void main() {
     });
   });
 
+  group('runtime permission', () {
+    test('initialization asks Android for the notification permission',
+        () async {
+      await service.ensureInitialized();
+
+      // Android 13+ denies POST_NOTIFICATIONS by default even when the
+      // manifest declares it. Never asking means every notification is
+      // silently dropped by the OS.
+      expect(sink.permissionRequestCount, 1);
+    });
+
+    test('the permission is requested once, not on every call', () async {
+      await service.ensureInitialized();
+      await service.ensureInitialized();
+
+      expect(sink.permissionRequestCount, 1);
+    });
+
+    test('a denied permission is reported instead of silently dropping posts',
+        () async {
+      sink.permissionResult = false;
+
+      await service.ensureInitialized();
+
+      expect(service.permissionGranted, isFalse);
+    });
+
+    test('a granted permission lets turn notifications through', () async {
+      sink.permissionResult = true;
+
+      await service.ensureInitialized();
+      await service.showTurnCompleted(turnSummary: 'done', turnId: 'turn-1');
+
+      expect(service.permissionGranted, isTrue);
+      expect(sink.shown, hasLength(1));
+    });
+
+    test('a platform that needs no runtime permission stays usable', () async {
+      // iOS and Android < 13 return null: no runtime gate to satisfy.
+      sink.permissionResult = null;
+
+      await service.ensureInitialized();
+      await service.showTurnCompleted(turnSummary: 'done', turnId: 'turn-1');
+
+      expect(service.permissionGranted, isTrue);
+      expect(sink.shown, hasLength(1));
+    });
+
+    test('a failing permission request does not break initialization',
+        () async {
+      sink.permissionError = StateError('no platform channel');
+
+      await service.ensureInitialized();
+
+      // The app must keep running; notifications degrade, they never crash.
+      await service.showTurnCompleted(turnSummary: 'done', turnId: 'turn-1');
+      expect(sink.shown, hasLength(1));
+    });
+  });
+
   group('cancellation', () {
     test('cancels the exact id that was shown for that turn', () async {
       await service.ensureInitialized();

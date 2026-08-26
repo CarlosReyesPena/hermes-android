@@ -49,3 +49,4 @@ app.*.map.json
 # Local keystore properties
 /key.properties
 /release.keystore
+key.properties

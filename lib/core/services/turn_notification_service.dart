@@ -42,6 +42,13 @@ class TurnNotification {
 abstract class TurnNotificationSink {
   Future<void> initialize();
 
+  /// Asks the platform for permission to post notifications.
+  ///
+  /// Returns `true` when granted, `false` when denied, and `null` when the
+  /// platform has no runtime gate (iOS, Android < 13) — in which case posting
+  /// is already allowed.
+  Future<bool?> requestPermission();
+
   Future<void> show(TurnNotification notification);
 
   Future<void> cancel(int id);
@@ -72,6 +79,28 @@ class PluginTurnNotificationSink implements TurnNotificationSink {
     );
 
     await _plugin.initialize(settings);
+  }
+
+  @override
+  Future<bool?> requestPermission() async {
+    final android = _plugin
+        .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin
+        >();
+    if (android != null) {
+      return android.requestNotificationsPermission();
+    }
+
+    final ios = _plugin
+        .resolvePlatformSpecificImplementation<
+          IOSFlutterLocalNotificationsPlugin
+        >();
+    if (ios != null) {
+      return ios.requestPermissions(alert: true, badge: true, sound: true);
+    }
+
+    // No platform implementation resolved: nothing gates posting here.
+    return null;
   }
 
   @override
@@ -126,11 +155,19 @@ class TurnNotificationService {
   final TurnNotificationSink _sink;
 
   bool _initialized = false;
+  bool _permissionGranted = true;
 
   TurnNotificationService({
     TurnNotificationSink? sink,
     FlutterLocalNotificationsPlugin? plugin,
   }) : _sink = sink ?? PluginTurnNotificationSink(plugin: plugin);
+
+  /// Whether the platform currently allows Hermes to post notifications.
+  ///
+  /// `false` means Android 13+ denied POST_NOTIFICATIONS: turns still complete
+  /// but the OS drops every notification, so the UI can surface that instead of
+  /// leaving the user wondering why nothing arrives.
+  bool get permissionGranted => _permissionGranted;
 
   /// One-shot initialisation of the Hermes notification channel.
   ///
@@ -146,6 +183,19 @@ class TurnNotificationService {
     } catch (_) {
       // Platform not available (e.g. test environment) — notifications
       // silently degrade to no-op.
+      return;
+    }
+
+    // Android 13+ denies POST_NOTIFICATIONS until it is requested at runtime,
+    // even though the manifest declares it. Without this, every notification
+    // is dropped by the OS with no error surfaced anywhere.
+    try {
+      final granted = await _sink.requestPermission();
+      _permissionGranted = granted ?? true;
+    } catch (_) {
+      // A failing permission channel must not break the app; assume the
+      // platform imposes no runtime gate rather than blocking notifications.
+      _permissionGranted = true;
     }
   }
 
