@@ -18,8 +18,10 @@ import '../services/chat_space_store.dart';
 import '../services/connection_manager.dart';
 import '../services/desktop_gateway_client.dart';
 import '../services/gateway_turn_application_controller.dart';
+import '../services/gateway_turn_journal.dart';
 import '../services/projects_repository.dart';
 import '../theme/hermes_theme.dart';
+import '../utils/home_turn_signals.dart';
 import '../widgets/hermes_components.dart';
 import '../widgets/hermes_shell.dart';
 import '../widgets/home_pane.dart';
@@ -42,6 +44,11 @@ typedef DashboardLauncher = Future<void> Function(String url);
 /// Builds the screen a Home row opens. Injectable so the navigation contract
 /// can be asserted without constructing a live chat transport.
 typedef WorkspaceSessionScreenBuilder = Widget Function(Session session);
+
+/// Reads the attention/running signals Home ranks by. Injectable so the
+/// ranking can be asserted without a real recovery journal.
+typedef WorkspaceTurnSignalsLoader =
+    Future<HomeTurnSignals> Function(SavedConnection connection);
 
 /// The chat screen a Home row opens by default.
 ///
@@ -86,6 +93,9 @@ class WorkspaceScreen extends StatefulWidget {
   /// Overrides the screen a Home row opens.
   final WorkspaceSessionScreenBuilder? sessionScreenBuilder;
 
+  /// Overrides how Home reads its attention and running signals.
+  final WorkspaceTurnSignalsLoader? turnSignalsLoader;
+
   /// Overrides how the Hermes dashboard fallback is opened.
   final DashboardLauncher? onOpenDashboard;
 
@@ -97,6 +107,7 @@ class WorkspaceScreen extends StatefulWidget {
     this.turnApplicationController,
     this.sessionsLoader,
     this.sessionScreenBuilder,
+    this.turnSignalsLoader,
     this.onOpenDashboard,
     super.key,
   });
@@ -116,10 +127,21 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
   /// Reaches the live Home pane so it can be refreshed after a chat closes.
   final _homeKey = GlobalKey<HomePaneState>();
 
+  /// The last known attention/running signals. Home ranks with these; an
+  /// empty value simply means everything falls back to `Continue working`.
+  HomeTurnSignals _turnSignals = HomeTurnSignals.empty;
+
+  /// Read lazily so a connection that never opens Home never touches secure
+  /// storage, and so tests that inject a loader never construct one at all.
+  GatewayTurnJournal? _journal;
+
   /// Home reads the same REST session list the session list screen uses; the
   /// injected loader wins so tests never touch a transport.
   late final HomeSessionsLoader _loadSessions =
       widget.sessionsLoader ?? _loadSessionsFromGateway;
+
+  late final WorkspaceTurnSignalsLoader _loadTurnSignals =
+      widget.turnSignalsLoader ?? _loadTurnSignalsFromJournal;
 
   Future<List<Session>> _loadSessionsFromGateway() {
     final connection = widget.connection;
@@ -130,6 +152,53 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
           pathPrefix: connection.gatewayPrefix ?? '',
         );
     return api.getSessions();
+  }
+
+  /// Derives Home's signals from the durable turn recovery journal.
+  ///
+  /// The journal is the only store that already survives process death and
+  /// knows what a chat was doing, so no new gateway contract is required and
+  /// legacy REST connections keep working — they simply have no scope, and
+  /// [readHomeTurnSignals] then reports nothing.
+  Future<HomeTurnSignals> _loadTurnSignalsFromJournal(
+    SavedConnection connection,
+  ) {
+    final endpointDigest = endpointDigestForConnection(connection);
+    if (endpointDigest == null) {
+      return Future.value(HomeTurnSignals.empty);
+    }
+    return readHomeTurnSignals(
+      journal: _journal ??= GatewayTurnJournal(),
+      connectionId: connection.id,
+      endpointDigest: endpointDigest,
+    );
+  }
+
+  /// Reads the sessions, and refreshes the signals alongside them.
+  ///
+  /// The signal read is deliberately *not* awaited before the sessions are
+  /// returned: it hits secure storage, and holding the whole screen on a
+  /// skeleton until the journal answers would trade a working Home for a
+  /// slightly better-ranked one. The ranking simply improves a frame later.
+  ///
+  /// Both are refreshed together so returning from a chat picks up both —
+  /// `HomePaneState.refresh` only knows how to re-read sessions, and a digest
+  /// ranked with stale signals is worse than one ranked with none.
+  Future<List<Session>> _loadHome() {
+    unawaited(_refreshTurnSignals());
+    return _loadSessions();
+  }
+
+  Future<void> _refreshTurnSignals() async {
+    HomeTurnSignals signals;
+    try {
+      signals = await _loadTurnSignals(widget.connection);
+    } catch (_) {
+      // A journal that cannot be read degrades the ranking, never the screen.
+      signals = HomeTurnSignals.empty;
+    }
+    if (!mounted) return;
+    setState(() => _turnSignals = signals);
   }
 
   @override
@@ -231,7 +300,9 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
       case HermesDestination.home:
         return HomePane(
           key: _homeKey,
-          loadSessions: _loadSessions,
+          loadSessions: _loadHome,
+          attention: _turnSignals.attention,
+          running: _turnSignals.running,
           onOpenSession: _openSession,
         );
       case HermesDestination.activity:
@@ -341,6 +412,10 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
       appBar: AppBar(title: Text(widget.connection.label), centerTitle: false),
       body: HermesShell(
         initialDestination: HermesDestination.home,
+        // The badge is the only attention signal visible from another
+        // destination, so blocked work has to raise it even while the user is
+        // in Projects or More.
+        badges: {HermesDestination.home: _turnSignals.attention.length},
         builder: _pane,
       ),
     );

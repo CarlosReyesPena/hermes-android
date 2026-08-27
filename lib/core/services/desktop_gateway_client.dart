@@ -60,7 +60,12 @@ class DesktopGatewayClient {
     required this._documentProfile,
   });
 
-  factory DesktopGatewayClient.fromConnection(SavedConnection connection) {
+  /// The canonical gateway origin for [connection].
+  ///
+  /// Extracted so the recovery-journal scope can be derived without opening a
+  /// transport: an omitted default port and an explicit one must resolve to
+  /// the same string, or the same gateway would be recorded under two scopes.
+  static String normalizedGatewayBaseUrl(SavedConnection connection) {
     final raw = connection.desktopGatewayUrl?.trim() ?? '';
     if (raw.isEmpty) {
       throw ArgumentError('A Desktop Gateway URL is required for this feature');
@@ -79,16 +84,41 @@ class DesktopGatewayClient {
         : baseUri.scheme == 'https'
         ? 443
         : 80;
-    final baseUrl = SavedConnection.joinBaseUrl(
+    return SavedConnection.joinBaseUrl(
       '${baseUri.scheme}://${baseUri.host}:$port',
       pathPrefix,
     );
+  }
+
+  static String _endpointDigest(String baseUrl) =>
+      sha256.convert(utf8.encode(baseUrl)).toString();
+
+  /// The recovery-journal endpoint scope for [connection], or `null` when the
+  /// connection names no usable Desktop Gateway.
+  ///
+  /// Returning `null` rather than throwing keeps callers that only want to
+  /// *read* journal state — such as the Home digest — free of try/catch around
+  /// a plain configuration fact.
+  static String? endpointDigestFor(SavedConnection connection) {
+    try {
+      return _endpointDigest(normalizedGatewayBaseUrl(connection));
+    } on ArgumentError {
+      return null;
+    }
+  }
+
+  factory DesktopGatewayClient.fromConnection(SavedConnection connection) {
+    final baseUrl = normalizedGatewayBaseUrl(connection);
+    final baseUri = Uri.parse(baseUrl);
+    final pathPrefix = baseUri.path == '/' ? '' : baseUri.path;
     return DesktopGatewayClient._(
       connectionId: connection.id,
       baseUrl: baseUrl,
       dashboard: DashboardClient(
         host: baseUri.host,
-        port: port,
+        // The normalized base URL always carries an explicit port, so this
+        // never falls back to a scheme default.
+        port: baseUri.port,
         useHttps: baseUri.scheme == 'https',
         pathPrefix: pathPrefix,
         username: connection.dashboardUsername,
@@ -226,7 +256,7 @@ class DesktopGatewayClient {
   }) {
     return _turnCoordinatorRegistry ??= GatewayTurnCoordinatorRegistry(
       connectionId: _connectionId,
-      endpointDigest: sha256.convert(utf8.encode(_baseUrl)).toString(),
+      endpointDigest: _endpointDigest(_baseUrl),
       journal: journal ?? GatewayTurnJournal(),
       freshSocketFactory: () async {
         final ticket = await _dashboard.mintWebSocketTicket();

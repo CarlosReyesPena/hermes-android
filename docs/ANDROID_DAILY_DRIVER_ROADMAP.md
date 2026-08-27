@@ -841,16 +841,47 @@ Steps 1–6 of the slice above are implemented and covered by passing tests:
     inert_turn_application_session.dart` is the reusable no-op turn session
     those widget tests mount against.
 
+16. the **Home turn signals** — `test/home_turn_signals_test.dart`,
+    `test/workspace_screen_test.dart`. `HomePane` accepted `attention` and
+    `running` but `WorkspaceScreen` passed neither, so every row ranked as
+    `Continue working` and the shell's attention badge stayed empty. Both
+    inputs are now derived from the durable turn recovery journal by the pure
+    `buildHomeTurnSignals` helper in `lib/core/utils/home_turn_signals.dart`:
+    the journal is the only store that already survives process death and
+    knows what a chat was doing, so **no new gateway contract is required and
+    legacy REST connections keep working** — a connection with no Desktop
+    Gateway simply has no journal scope and reports nothing. The rules pinned
+    by test: `waiting_input` and `failed` become attention with distinct
+    reasons, a *recovery* failure is attention even on a turn the server
+    completed (the composer stays blocked, which is the whole point), a turn
+    with no status yet still counts as running because the submit is
+    outstanding, attention outranks a concurrent running turn on the same
+    session so a chat is never drawn twice, the freshest blocking reason wins,
+    a running turn whose entry has not moved for `kHomeRunningStaleAfter` is
+    dropped rather than displayed as live while blocked work is never aged
+    out, a clock skewed behind the journal keeps the turn running rather than
+    hiding it, and entries whose binding belongs to another connection *or
+    another gateway endpoint* are excluded. The endpoint scope comes from the
+    new `DesktopGatewayClient.endpointDigestFor`, which the client itself now
+    uses when constructing the coordinator registry, so the scope Home reads
+    can never drift from the one the coordinator writes — one test asserts
+    the two are byte-identical. On the screen side: blocked work raises the
+    Home badge so it is visible from Projects or More, returning from a chat
+    re-reads the signals as well as the sessions (the reason a chat was
+    blocked usually stops being true inside it), and a journal read that
+    throws degrades the *ranking* to empty without ever blanking or blocking
+    the screen — the signal read is deliberately not awaited before the
+    sessions render, so a slow secure-storage read costs a better ranking a
+    frame later rather than a skeleton.
+
 Still open in Phase 0: step 7 of the slice above (real Gateway smoke test on a
 device). The migration *write* path stays unimplemented on purpose until the
 preview has been validated against a real gateway.
 
-Next slice: feed Home real attention and running signals. `HomePane` already
-accepts `attention`, `running`, and `projectNames`, but `WorkspaceScreen`
-currently passes none of them, so every row still ranks as `Continue working`
-and the shell's attention badge stays empty. The next tranche wires the
-gateway activity/approval state into those three inputs — the chat route they
-feed into now exists, so the ranked rows will finally be actionable.
+Next slice: give Home a `New` button offering **Project chat** and **Quick
+chat**. Home can now rank and open existing work, but there is still no way to
+*start* work from it, so the roadmap's global New affordance is the smallest
+remaining gap in the Phase 1 Home before the Activity destination is built.
 
 ---
 
