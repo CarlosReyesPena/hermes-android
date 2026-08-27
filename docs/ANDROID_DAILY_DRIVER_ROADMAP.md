@@ -800,13 +800,34 @@ Steps 1–6 of the slice above are implemented and covered by passing tests:
     not mutate the caller's list, so the widget that consumes it in the next
     slice inherits no hidden state.
 
+14. the **Home pane** — `test/home_pane_test.dart`,
+    `test/workspace_screen_test.dart`. `HermesDestination.home` no longer shows
+    a `Coming next` placeholder: it renders `buildHomeDigest` through the new
+    `HomePane` in `lib/core/widgets/home_pane.dart`, with the four states
+    Phase 1 acceptance requires expressed as designed states rather than
+    spinners. The behaviours that are pinned by test: a skeleton holds the
+    screen until the *first* read lands, sections draw in the validated
+    attention order, a blocked row states its reason and is never also drawn as
+    running, a stale attention id draws nothing, a capped section says how many
+    rows it hid, and the calm `Nothing needs you` state replaces an empty list.
+    Two failure paths are distinguished on purpose: a *first* read that fails
+    becomes a retryable `ErrorState`, while a *later* failure keeps the last
+    known digest on screen behind an offline notice — losing the network must
+    never blank the screen the user relies on. Sessions are read through an
+    injectable `HomeSessionsLoader` that defaults to the same authenticated
+    `ApiClient.getSessions()` REST call the session list already uses, so no
+    new gateway contract is required and legacy gateways keep working.
+
 Still open in Phase 0: step 7 of the slice above (real Gateway smoke test on a
 device). The migration *write* path stays unimplemented on purpose until the
 preview has been validated against a real gateway.
 
-Next slice: render `buildHomeDigest` in the `HermesDestination.home` pane of
-`WorkspaceScreen`, replacing the `Coming next` placeholder, with the designed
-loading, empty, offline, and error states Phase 1 acceptance requires.
+Next slice: feed Home real attention and running signals. `HomePane` already
+accepts `attention`, `running`, and `projectNames`, but `WorkspaceScreen`
+currently passes none of them, so every row ranks as `Continue working`. The
+next tranche wires the gateway activity/approval state into those three inputs
+and hands `onOpenSession` a real chat route, which also makes the shell's
+attention badge meaningful.
 
 ---
 

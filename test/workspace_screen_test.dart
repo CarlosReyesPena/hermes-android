@@ -1,16 +1,32 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hermes_android/core/models/connection.dart';
+import 'package:hermes_android/core/models/session.dart';
 import 'package:hermes_android/core/screens/workspace_screen.dart';
 import 'package:hermes_android/core/services/chat_space_store.dart';
 import 'package:hermes_android/core/services/projects_gateway_client.dart';
 import 'package:hermes_android/core/services/projects_repository.dart';
 import 'package:hermes_android/core/theme/hermes_theme.dart';
+import 'package:hermes_android/core/utils/home_digest.dart';
 import 'package:hermes_android/core/widgets/hermes_components.dart';
 import 'package:hermes_android/core/widgets/hermes_shell.dart';
+import 'package:hermes_android/core/widgets/home_pane.dart';
 import 'package:hermes_android/core/widgets/more_pane.dart';
 import 'package:hermes_android/core/widgets/projects_pane.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+Session _session({required String id, required String title}) {
+  return Session(
+    id: id,
+    title: title,
+    model: 'claude-opus-5',
+    source: 'gateway',
+    messageCount: 4,
+    isActive: true,
+    preview: 'preview',
+    startedAt: DateTime.now().millisecondsSinceEpoch / 1000.0,
+  );
+}
 
 SavedConnection _connection({
   String? desktopGatewayUrl,
@@ -61,6 +77,9 @@ Future<void> _pump(
   ProjectsRepository? repository,
   List<String>? openedProjects,
   List<String>? openedDashboards,
+  List<String>? openedSessions,
+  List<Session>? sessions,
+  Object? sessionsError,
   Size size = const Size(400, 800),
 }) async {
   tester.view.physicalSize = size;
@@ -74,6 +93,15 @@ Future<void> _pump(
         connection: connection,
         repositoryFactory: repository == null ? null : (_) => repository,
         onOpenProject: openedProjects?.add,
+        onOpenSession: openedSessions == null
+            ? null
+            : (session) => openedSessions.add(session.id),
+        sessionsLoader: sessions == null && sessionsError == null
+            ? null
+            : () async {
+                if (sessionsError != null) throw sessionsError;
+                return sessions ?? const <Session>[];
+              },
         onOpenDashboard: openedDashboards == null
             ? null
             : (url) async => openedDashboards.add(url),
@@ -189,9 +217,7 @@ void main() {
     expect(find.byType(ProjectsPane), findsNothing);
   });
 
-  testWidgets('Home and Activity are honest about not shipping yet', (
-    tester,
-  ) async {
+  testWidgets('Activity is honest about not shipping yet', (tester) async {
     await _pump(
       tester,
       connection: _connection(desktopGatewayUrl: 'https://host:8642'),
@@ -199,19 +225,64 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    for (final destination in [
-      HermesDestination.home,
-      HermesDestination.activity,
-    ]) {
-      await tester.tap(find.text(destination.label).last);
-      await tester.pumpAndSettle();
-      expect(
-        find.byType(EmptyState),
-        findsOneWidget,
-        reason: '${destination.label} must show a designed placeholder',
-      );
-      expect(find.textContaining('Coming'), findsOneWidget);
-    }
+    await tester.tap(find.text(HermesDestination.activity.label).last);
+    await tester.pumpAndSettle();
+    expect(find.byType(EmptyState), findsOneWidget);
+    expect(find.textContaining('Coming'), findsOneWidget);
+  });
+
+  testWidgets('Home renders the attention digest instead of a placeholder', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      connection: _connection(desktopGatewayUrl: 'https://host:8642'),
+      repository: await _repository([]),
+      sessions: [
+        _session(id: 's1', title: 'Roadmap slice'),
+      ],
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byType(HomePane), findsOneWidget);
+    expect(find.text(HomeSectionKind.continueWorking.title), findsOneWidget);
+    expect(find.text('Roadmap slice'), findsOneWidget);
+    // The placeholder it replaces must be gone, not merely pushed down.
+    expect(find.textContaining('Home — Coming next'), findsNothing);
+  });
+
+  testWidgets('opening a Home row reports the session to the host', (
+    tester,
+  ) async {
+    final opened = <String>[];
+    await _pump(
+      tester,
+      connection: _connection(desktopGatewayUrl: 'https://host:8642'),
+      repository: await _repository([]),
+      sessions: [_session(id: 's1', title: 'Roadmap slice')],
+      openedSessions: opened,
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Roadmap slice'));
+    await tester.pumpAndSettle();
+
+    expect(opened, ['s1']);
+  });
+
+  testWidgets('a Home read failure stays recoverable rather than fatal', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      connection: _connection(desktopGatewayUrl: 'https://host:8642'),
+      repository: await _repository([]),
+      sessionsError: Exception('offline'),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byType(ErrorState), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('the More destination lists every capability', (tester) async {

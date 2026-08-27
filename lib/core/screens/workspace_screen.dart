@@ -14,13 +14,14 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import '../models/connection.dart';
 import '../services/chat_space_store.dart';
+import '../services/connection_manager.dart';
 import '../services/desktop_gateway_client.dart';
 import '../services/projects_repository.dart';
 import '../theme/hermes_theme.dart';
 import '../widgets/hermes_components.dart';
 import '../widgets/hermes_shell.dart';
+import '../widgets/home_pane.dart';
 import '../widgets/more_pane.dart';
 import '../widgets/projects_pane.dart';
 import 'cron_screen.dart';
@@ -46,6 +47,13 @@ class WorkspaceScreen extends StatefulWidget {
   /// Called when the user opens a project.
   final ValueChanged<String>? onOpenProject;
 
+  /// Called when the user opens a chat from the Home digest.
+  final ValueChanged<Session>? onOpenSession;
+
+  /// Overrides how Home reads the sessions it ranks. Injectable for tests so
+  /// the digest can be asserted without a live gateway.
+  final HomeSessionsLoader? sessionsLoader;
+
   /// Overrides how the Hermes dashboard fallback is opened.
   final DashboardLauncher? onOpenDashboard;
 
@@ -53,6 +61,8 @@ class WorkspaceScreen extends StatefulWidget {
     required this.connection,
     this.repositoryFactory,
     this.onOpenProject,
+    this.onOpenSession,
+    this.sessionsLoader,
     this.onOpenDashboard,
     super.key,
   });
@@ -65,8 +75,25 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
   ProjectsRepository? _repository;
   DesktopGatewayClient? _ownedGateway;
   ChatSpaceStore? _spaceStore;
+  ApiClient? _sessionsApi;
   bool _ownsRepository = false;
   bool _initialized = false;
+
+  /// Home reads the same REST session list the session list screen uses; the
+  /// injected loader wins so tests never touch a transport.
+  late final HomeSessionsLoader _loadSessions =
+      widget.sessionsLoader ?? _loadSessionsFromGateway;
+
+  Future<List<Session>> _loadSessionsFromGateway() {
+    final connection = widget.connection;
+    final api =
+        _sessionsApi ??= ApiClient(
+          baseUrl: connection.baseUrl,
+          apiKey: connection.apiKey,
+          pathPrefix: connection.gatewayPrefix ?? '',
+        );
+    return api.getSessions();
+  }
 
   @override
   void initState() {
@@ -165,12 +192,9 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
           spaceStore: _spaceStore,
         );
       case HermesDestination.home:
-        return const EmptyState(
-          icon: Icons.home_outlined,
-          title: 'Home — Coming next',
-          message:
-              'This becomes the attention dashboard: what needs you, what is '
-              'running, and what to continue.',
+        return HomePane(
+          loadSessions: _loadSessions,
+          onOpenSession: widget.onOpenSession,
         );
       case HermesDestination.activity:
         return const EmptyState(
