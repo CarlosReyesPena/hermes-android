@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hermes_android/core/models/connection.dart';
 import 'package:hermes_android/core/models/session.dart';
+import 'package:hermes_android/core/screens/chat_screen.dart';
 import 'package:hermes_android/core/screens/workspace_screen.dart';
 import 'package:hermes_android/core/services/chat_space_store.dart';
+import 'package:hermes_android/core/services/gateway_turn_application_controller.dart';
 import 'package:hermes_android/core/services/projects_gateway_client.dart';
 import 'package:hermes_android/core/services/projects_repository.dart';
 import 'package:hermes_android/core/theme/hermes_theme.dart';
@@ -14,6 +16,8 @@ import 'package:hermes_android/core/widgets/home_pane.dart';
 import 'package:hermes_android/core/widgets/more_pane.dart';
 import 'package:hermes_android/core/widgets/projects_pane.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import 'support/inert_turn_application_session.dart';
 
 Session _session({required String id, required String title}) {
   return Session(
@@ -80,6 +84,7 @@ Future<void> _pump(
   List<String>? openedSessions,
   List<Session>? sessions,
   Object? sessionsError,
+  WorkspaceSessionScreenBuilder? sessionScreenBuilder,
   Size size = const Size(400, 800),
 }) async {
   tester.view.physicalSize = size;
@@ -102,6 +107,7 @@ Future<void> _pump(
                 if (sessionsError != null) throw sessionsError;
                 return sessions ?? const <Session>[];
               },
+        sessionScreenBuilder: sessionScreenBuilder,
         onOpenDashboard: openedDashboards == null
             ? null
             : (url) async => openedDashboards.add(url),
@@ -268,6 +274,164 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(opened, ['s1']);
+  });
+
+  testWidgets('a Home row with no host callback opens the chat itself', (
+    tester,
+  ) async {
+    // Without this the shell is a dead end: Home ranks the work that needs
+    // Carlos and then refuses to open it.
+    final opened = <Session>[];
+    await _pump(
+      tester,
+      connection: _connection(desktopGatewayUrl: 'https://host:8642'),
+      repository: await _repository([]),
+      sessions: [_session(id: 's1', title: 'Roadmap slice')],
+      sessionScreenBuilder: (session) {
+        opened.add(session);
+        return Scaffold(body: Text('chat:${session.id}'));
+      },
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Roadmap slice'));
+    await tester.pumpAndSettle();
+
+    expect(opened.map((session) => session.id), ['s1']);
+    expect(find.text('chat:s1'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('a host callback still wins over the built-in chat route', (
+    tester,
+  ) async {
+    // A host that owns navigation must not get a second screen pushed under
+    // its own.
+    final reported = <String>[];
+    final built = <Session>[];
+    await _pump(
+      tester,
+      connection: _connection(desktopGatewayUrl: 'https://host:8642'),
+      repository: await _repository([]),
+      sessions: [_session(id: 's1', title: 'Roadmap slice')],
+      openedSessions: reported,
+      sessionScreenBuilder: (session) {
+        built.add(session);
+        return const Scaffold(body: Text('chat'));
+      },
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Roadmap slice'));
+    await tester.pumpAndSettle();
+
+    expect(reported, ['s1']);
+    expect(built, isEmpty);
+    expect(find.text('chat'), findsNothing);
+  });
+
+  testWidgets('returning from a chat refreshes the Home digest', (
+    tester,
+  ) async {
+    // Attention state changes while the user is inside the chat: coming back
+    // to a stale digest would re-show work that is no longer blocked.
+    var reads = 0;
+    final repository = await _repository([]);
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: hermesTheme(Brightness.dark),
+        home: WorkspaceScreen(
+          connection: _connection(desktopGatewayUrl: 'https://host:8642'),
+          repositoryFactory: (_) => repository,
+          sessionsLoader: () async {
+            reads++;
+            return [_session(id: 's1', title: 'Roadmap slice')];
+          },
+          sessionScreenBuilder: (session) => Scaffold(
+            body: Builder(
+              builder: (context) => TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('back'),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final readsBeforeOpening = reads;
+
+    await tester.tap(find.text('Roadmap slice'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('back'));
+    await tester.pumpAndSettle();
+
+    expect(reads, greaterThan(readsBeforeOpening));
+    expect(find.text('Roadmap slice'), findsOneWidget);
+  });
+
+  testWidgets('the default chat route carries the session and connection', (
+    tester,
+  ) async {
+    // The builder default is what ships; a test that only exercises an
+    // injected builder would never notice it handing ChatScreen the wrong
+    // connection.
+    final connection = _connection(desktopGatewayUrl: 'https://host:8642');
+    final session = _session(id: 's1', title: 'Roadmap slice');
+    final controller = GatewayTurnApplicationController(
+      sessionFactory: (_) => InertTurnApplicationSession(),
+    );
+    addTearDown(controller.close);
+
+    final screen = buildWorkspaceChatScreen(
+      connection: connection,
+      session: session,
+      turnApplicationController: controller,
+    );
+
+    expect(screen, isA<ChatScreen>());
+    final chat = screen as ChatScreen;
+    expect(chat.session.id, 's1');
+    expect(chat.connection.id, connection.id);
+    // The recovery owner outlives the screen; dropping it here would silently
+    // break durable turn resume for every chat opened from Home.
+    expect(chat.turnApplicationController, same(controller));
+  });
+
+  testWidgets('a chat opened from Home inherits the turn recovery owner', (
+    tester,
+  ) async {
+    // Home must not become a second, weaker way into a chat: a turn started
+    // from here has to survive leaving the screen exactly like one started
+    // from the session list.
+    final controller = GatewayTurnApplicationController(
+      sessionFactory: (_) => InertTurnApplicationSession(),
+    );
+    addTearDown(controller.close);
+    final repository = await _repository([]);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: hermesTheme(Brightness.dark),
+        home: WorkspaceScreen(
+          connection: _connection(desktopGatewayUrl: 'https://host:8642'),
+          repositoryFactory: (_) => repository,
+          turnApplicationController: controller,
+          sessionsLoader: () async => [
+            _session(id: 's1', title: 'Roadmap slice'),
+          ],
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Roadmap slice'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+
+    final chat = tester.widget<ChatScreen>(find.byType(ChatScreen));
+    expect(chat.session.id, 's1');
+    expect(chat.turnApplicationController, same(controller));
   });
 
   testWidgets('a Home read failure stays recoverable rather than fatal', (

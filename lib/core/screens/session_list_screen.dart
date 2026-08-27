@@ -886,7 +886,14 @@ class _SessionListScreenState extends State<SessionListScreen> {
               subtitle: const Text('Projects, Activity — new navigation'),
               onTap: () {
                 Navigator.pop(context);
-                _openScreen(WorkspaceScreen(connection: widget.connection));
+                _openScreen(
+                  WorkspaceScreen(
+                    connection: widget.connection,
+                    // Home opens chats itself now; without the owner they
+                    // would lose durable turn recovery.
+                    turnApplicationController: widget.turnApplicationController,
+                  ),
+                );
               },
             ),
             const Divider(),

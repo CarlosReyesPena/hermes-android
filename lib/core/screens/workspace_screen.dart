@@ -17,6 +17,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../services/chat_space_store.dart';
 import '../services/connection_manager.dart';
 import '../services/desktop_gateway_client.dart';
+import '../services/gateway_turn_application_controller.dart';
 import '../services/projects_repository.dart';
 import '../theme/hermes_theme.dart';
 import '../widgets/hermes_components.dart';
@@ -24,6 +25,7 @@ import '../widgets/hermes_shell.dart';
 import '../widgets/home_pane.dart';
 import '../widgets/more_pane.dart';
 import '../widgets/projects_pane.dart';
+import 'chat_screen.dart';
 import 'cron_screen.dart';
 import 'memory_screen.dart';
 import 'settings_screen.dart';
@@ -37,6 +39,28 @@ typedef ProjectsRepositoryFactory =
 /// the fallback can be asserted without launching a real browser.
 typedef DashboardLauncher = Future<void> Function(String url);
 
+/// Builds the screen a Home row opens. Injectable so the navigation contract
+/// can be asserted without constructing a live chat transport.
+typedef WorkspaceSessionScreenBuilder = Widget Function(Session session);
+
+/// The chat screen a Home row opens by default.
+///
+/// Exposed so a test can assert what actually ships rather than only the
+/// injected stand-in. [turnApplicationController] is threaded through
+/// deliberately: it owns durable turn recovery above the Navigator, so a chat
+/// opened from Home must resume exactly like one opened from the session list.
+Widget buildWorkspaceChatScreen({
+  required SavedConnection connection,
+  required Session session,
+  GatewayTurnApplicationController? turnApplicationController,
+}) {
+  return ChatScreen(
+    connection: connection,
+    session: session,
+    turnApplicationController: turnApplicationController,
+  );
+}
+
 class WorkspaceScreen extends StatefulWidget {
   final SavedConnection connection;
 
@@ -47,12 +71,20 @@ class WorkspaceScreen extends StatefulWidget {
   /// Called when the user opens a project.
   final ValueChanged<String>? onOpenProject;
 
-  /// Called when the user opens a chat from the Home digest.
+  /// Called when the user opens a chat from the Home digest. When null, this
+  /// screen pushes the chat itself, so the shell is never a dead end.
   final ValueChanged<Session>? onOpenSession;
+
+  /// Owns durable turn recovery above this screen's lifetime. Passed to every
+  /// chat opened from Home so a turn survives leaving the chat.
+  final GatewayTurnApplicationController? turnApplicationController;
 
   /// Overrides how Home reads the sessions it ranks. Injectable for tests so
   /// the digest can be asserted without a live gateway.
   final HomeSessionsLoader? sessionsLoader;
+
+  /// Overrides the screen a Home row opens.
+  final WorkspaceSessionScreenBuilder? sessionScreenBuilder;
 
   /// Overrides how the Hermes dashboard fallback is opened.
   final DashboardLauncher? onOpenDashboard;
@@ -62,7 +94,9 @@ class WorkspaceScreen extends StatefulWidget {
     this.repositoryFactory,
     this.onOpenProject,
     this.onOpenSession,
+    this.turnApplicationController,
     this.sessionsLoader,
+    this.sessionScreenBuilder,
     this.onOpenDashboard,
     super.key,
   });
@@ -78,6 +112,9 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
   ApiClient? _sessionsApi;
   bool _ownsRepository = false;
   bool _initialized = false;
+
+  /// Reaches the live Home pane so it can be refreshed after a chat closes.
+  final _homeKey = GlobalKey<HomePaneState>();
 
   /// Home reads the same REST session list the session list screen uses; the
   /// injected loader wins so tests never touch a transport.
@@ -193,8 +230,9 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
         );
       case HermesDestination.home:
         return HomePane(
+          key: _homeKey,
           loadSessions: _loadSessions,
-          onOpenSession: widget.onOpenSession,
+          onOpenSession: _openSession,
         );
       case HermesDestination.activity:
         return const EmptyState(
@@ -247,6 +285,35 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
     Navigator.of(
       context,
     ).push(MaterialPageRoute<void>(builder: (_) => screen));
+  }
+
+  /// Opens a chat from the Home digest.
+  ///
+  /// A host that supplied [WorkspaceScreen.onOpenSession] owns navigation, so
+  /// this screen must not also push a route underneath it. Otherwise it opens
+  /// the chat itself and re-reads Home on return, because the reason a chat
+  /// was blocked usually stops being true while the user is inside it.
+  Future<void> _openSession(Session session) async {
+    final report = widget.onOpenSession;
+    if (report != null) {
+      report(session);
+      return;
+    }
+
+    final builder = widget.sessionScreenBuilder;
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) =>
+            builder?.call(session) ??
+            buildWorkspaceChatScreen(
+              connection: widget.connection,
+              session: session,
+              turnApplicationController: widget.turnApplicationController,
+            ),
+      ),
+    );
+    if (!mounted) return;
+    unawaited(_homeKey.currentState?.refresh() ?? Future<void>.value());
   }
 
   void _openMoreEntry(MoreEntry entry) {

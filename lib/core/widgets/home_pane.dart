@@ -61,10 +61,10 @@ class HomePane extends StatefulWidget {
   });
 
   @override
-  State<HomePane> createState() => _HomePaneState();
+  State<HomePane> createState() => HomePaneState();
 }
 
-class _HomePaneState extends State<HomePane> {
+class HomePaneState extends State<HomePane> {
   /// The last successful read. `null` until one lands, which is exactly the
   /// condition for showing the skeleton.
   List<Session>? _sessions;
@@ -80,6 +80,13 @@ class _HomePaneState extends State<HomePane> {
     super.initState();
     unawaited(_load());
   }
+
+  /// Re-reads the ranked sessions.
+  ///
+  /// Public so a host can refresh Home after the user acts elsewhere — coming
+  /// back from a chat to a digest that still lists the work as blocked would
+  /// be worse than a spinner.
+  Future<void> refresh() => _load();
 
   Future<void> _load() async {
     if (_loading) return;

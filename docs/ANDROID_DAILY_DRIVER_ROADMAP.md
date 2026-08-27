@@ -818,16 +818,39 @@ Steps 1–6 of the slice above are implemented and covered by passing tests:
     `ApiClient.getSessions()` REST call the session list already uses, so no
     new gateway contract is required and legacy gateways keep working.
 
+15. the **Home chat route** — `test/workspace_screen_test.dart`,
+    `test/workspace_entry_point_test.dart`. Home ranked the work that needed
+    Carlos and then refused to open it: `WorkspaceScreen` passed
+    `onOpenSession` straight through, so a row was inert unless a host
+    supplied a callback, and nothing did. The shell now opens the chat itself
+    through `buildWorkspaceChatScreen`, and four rules are pinned by test: a
+    host `onOpenSession` still wins outright and suppresses the built-in route
+    (a host that owns navigation must not get a second screen pushed under its
+    own), the shipped default really is a `ChatScreen` carrying the right
+    session and connection, returning from a chat re-reads the digest through
+    the new public `HomePaneState.refresh` (the reason a chat was blocked
+    usually stops being true while the user is inside it, and coming back to a
+    stale digest is worse than a spinner), and the chat inherits the
+    application-scoped `GatewayTurnApplicationController` so a turn started
+    from Home survives leaving the screen exactly like one started from the
+    session list. That last rule is guarded at the *real* call site as well:
+    `workspace_entry_point_test.dart` drives the session-list drawer entry
+    that constructs the shell, because a dropped controller there would lose
+    durable turn recovery for every chat opened from Home while every
+    `WorkspaceScreen` test still passed in isolation. `test/support/
+    inert_turn_application_session.dart` is the reusable no-op turn session
+    those widget tests mount against.
+
 Still open in Phase 0: step 7 of the slice above (real Gateway smoke test on a
 device). The migration *write* path stays unimplemented on purpose until the
 preview has been validated against a real gateway.
 
 Next slice: feed Home real attention and running signals. `HomePane` already
 accepts `attention`, `running`, and `projectNames`, but `WorkspaceScreen`
-currently passes none of them, so every row ranks as `Continue working`. The
-next tranche wires the gateway activity/approval state into those three inputs
-and hands `onOpenSession` a real chat route, which also makes the shell's
-attention badge meaningful.
+currently passes none of them, so every row still ranks as `Continue working`
+and the shell's attention badge stays empty. The next tranche wires the
+gateway activity/approval state into those three inputs — the chat route they
+feed into now exists, so the ranked rows will finally be actionable.
 
 ---
 
