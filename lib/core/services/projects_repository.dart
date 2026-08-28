@@ -18,6 +18,8 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/hermes_project.dart';
+import '../models/project_sessions_tree.dart';
+import '../models/session.dart';
 import 'chat_space_store.dart';
 import 'projects_gateway_client.dart';
 
@@ -121,6 +123,42 @@ class SpaceMigrationPlan {
       entries.fold(0, (total, entry) => total + entry.sessionCount);
 }
 
+/// One project's chats, as an immutable snapshot the UI can render directly.
+///
+/// Deliberately separate from [ProjectsView]: opening a project must never be
+/// able to disturb the Projects list. A gateway that serves `projects.list`
+/// but predates `projects.project_sessions` reports [ProjectsSupport
+/// .unsupported] *here* while the pane behind it keeps working.
+class ProjectSessionsView {
+  final String projectId;
+
+  /// The server's own project → repo → lane grouping, when it answered one.
+  final ProjectSessionsTree? tree;
+
+  /// Every chat in the project, flattened in server order.
+  final List<Session> sessions;
+
+  final ProjectsSupport support;
+
+  /// True when these chats came from an earlier read that a failure has since
+  /// left unrefreshed.
+  final bool isStale;
+
+  /// The failure that prevented a live read, if any.
+  final Object? error;
+
+  const ProjectSessionsView({
+    required this.projectId,
+    this.tree,
+    this.sessions = const [],
+    this.support = ProjectsSupport.unknown,
+    this.isStale = false,
+    this.error,
+  });
+
+  bool get isEmpty => sessions.isEmpty;
+}
+
 /// Repository over the gateway Projects family.
 class ProjectsRepository {
   final ProjectsGatewayClient client;
@@ -129,6 +167,15 @@ class ProjectsRepository {
 
   final _controller = StreamController<ProjectsView>.broadcast();
   ProjectsView _current = ProjectsView.empty;
+
+  /// Last good drill-in per project, so re-entering one opens with content.
+  final _sessionsCache = <String, ProjectSessionsView>{};
+
+  /// In-flight drill-in reads, so two opens racing each other share one call.
+  final _sessionsInFlight = <String, Future<ProjectSessionsView>>{};
+
+  /// Set once the gateway proves it predates `projects.project_sessions`.
+  bool _sessionsUnsupported = false;
 
   ProjectsRepository({
     required this.client,
@@ -308,6 +355,93 @@ class ProjectsRepository {
           sessionCount: counts[space.id] ?? 0,
         ),
     ]);
+  }
+
+  /// The chats inside one project, as the server groups them.
+  ///
+  /// Cached per project: re-entering a project shows the previous contents
+  /// immediately and costs no request unless [refresh] is set. A failure never
+  /// discards chats already read — losing the list because the socket blinked
+  /// is worse than showing it behind an offline notice.
+  Future<ProjectSessionsView> projectSessions(
+    String id, {
+    bool refresh = false,
+  }) async {
+    final cached = _sessionsCache[id];
+    if (!refresh && cached != null) return cached;
+
+    // A gateway already proven to lack the family, or the drill-in method
+    // itself, is never probed again: the answer cannot change without a
+    // reconnect, and every wasted round trip is a slower project screen.
+    if (_current.support == ProjectsSupport.unsupported ||
+        _sessionsUnsupported) {
+      return ProjectSessionsView(
+        projectId: id,
+        support: ProjectsSupport.unsupported,
+        sessions: cached?.sessions ?? const [],
+        tree: cached?.tree,
+      );
+    }
+
+    final inFlight = _sessionsInFlight[id];
+    if (inFlight != null) return inFlight;
+
+    final request = _readProjectSessions(id, cached);
+    _sessionsInFlight[id] = request;
+    try {
+      return await request;
+    } finally {
+      _sessionsInFlight.remove(id);
+    }
+  }
+
+  Future<ProjectSessionsView> _readProjectSessions(
+    String id,
+    ProjectSessionsView? cached,
+  ) async {
+    try {
+      final tree = await client.projectSessions(id);
+      final view = ProjectSessionsView(
+        projectId: id,
+        tree: tree,
+        sessions: _sessionsOf(tree),
+        support: ProjectsSupport.native,
+      );
+      _sessionsCache[id] = view;
+      return view;
+    } on ProjectsUnsupportedException {
+      // Only this call is missing. The Projects list stays exactly as it is:
+      // flipping the whole pane into compatibility mode would hide server
+      // projects the gateway serves perfectly well.
+      _sessionsUnsupported = true;
+      return ProjectSessionsView(
+        projectId: id,
+        support: ProjectsSupport.unsupported,
+        sessions: cached?.sessions ?? const [],
+        tree: cached?.tree,
+      );
+    } catch (error) {
+      return ProjectSessionsView(
+        projectId: id,
+        tree: cached?.tree,
+        sessions: cached?.sessions ?? const [],
+        support: _current.support,
+        isStale: cached != null,
+        error: error,
+      );
+    }
+  }
+
+  /// The chats to render for [tree].
+  ///
+  /// Lane grouping is preferred because it is what the server ranked, but a
+  /// project whose chats carry no repo/cwd produces no lanes at all while the
+  /// server still lists them in `previewSessions`. Showing "no chats yet" then
+  /// would be a lie the user cannot resolve from the phone.
+  static List<Session> _sessionsOf(ProjectSessionsTree? tree) {
+    if (tree == null) return const [];
+    final grouped = tree.allSessions;
+    return grouped.isNotEmpty ? grouped : tree.previewSessions;
   }
 
   Future<void> close() async {

@@ -1002,6 +1002,32 @@ preview has been validated against a real gateway.
     leaves the family intact. Both directions are pinned, so the guard cannot
     be loosened into never detecting a genuinely old gateway either.
 
+20. the **repository half of the drill-in** —
+    `test/project_sessions_repository_test.dart`. The RPC existed but nothing
+    above it did, so a project card still had nowhere to go.
+    `ProjectsRepository.projectSessions` now returns a `ProjectSessionsView`
+    with the same shape of guarantees `ProjectsView` already gives the pane,
+    and every rule a project screen would otherwise reinvent in widget code is
+    pinned here instead: an unknown project is an **empty** result rather than
+    an error screen, a project whose chats produced no repo/lane grouping
+    falls back to the server's own `previewSessions` (rendering "no chats yet"
+    while the server just listed some would be a lie the user cannot resolve
+    from the phone), a re-entered project is served from a per-project cache
+    at no request while `refresh: true` forces a live read, two opens racing
+    each other share one in-flight request instead of hammering the gateway,
+    a failed *re-read* keeps the chats already on screen behind `isStale` +
+    `error` while a failed *first* read reports the error with `isStale`
+    false so the UI draws a retryable state rather than an offline banner
+    over a blank, and each project caches separately.
+
+    Two compatibility rules matter most and are pinned in both directions. A
+    gateway that serves `projects.list` but predates
+    `projects.project_sessions` marks **only this view** unsupported: the
+    Projects list behind it keeps its `native` support and its projects, so
+    one missing sibling can never hide server projects the gateway serves
+    perfectly well. And a gateway already proven to lack the whole family
+    spends **zero** requests here — asserted by call count, not by comment.
+
 Still open in Phase 0: step 7 (real Gateway smoke test on a device). It cannot
 run unattended — no device is attached in the automated environment — and it
 remains the only item blocking the migration *write* path. Every Phase 1 shell
