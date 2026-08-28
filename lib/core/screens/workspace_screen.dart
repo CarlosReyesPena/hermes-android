@@ -14,6 +14,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../models/hermes_project.dart';
 import '../services/chat_space_store.dart';
 import '../services/connection_manager.dart';
 import '../services/desktop_gateway_client.dart';
@@ -22,10 +23,12 @@ import '../services/gateway_turn_journal.dart';
 import '../services/projects_repository.dart';
 import '../theme/hermes_theme.dart';
 import '../utils/home_turn_signals.dart';
+import '../utils/new_chat_options.dart';
 import '../widgets/hermes_components.dart';
 import '../widgets/hermes_shell.dart';
 import '../widgets/home_pane.dart';
 import '../widgets/more_pane.dart';
+import '../widgets/new_chat_sheet.dart';
 import '../widgets/projects_pane.dart';
 import 'chat_screen.dart';
 import 'cron_screen.dart';
@@ -49,6 +52,14 @@ typedef WorkspaceSessionScreenBuilder = Widget Function(Session session);
 /// ranking can be asserted without a real recovery journal.
 typedef WorkspaceTurnSignalsLoader =
     Future<HomeTurnSignals> Function(SavedConnection connection);
+
+/// Identifies Home's global New button, so a test asserts the affordance
+/// itself rather than an icon that another widget could also draw.
+const Key kWorkspaceNewChatButtonKey = Key('workspace-new-chat');
+
+/// Generates the id a new chat is created under. Injectable so a test can pin
+/// it; the app uses the same generator the session list already uses.
+typedef NewChatSessionIdFactory = String Function();
 
 /// The chat screen a Home row opens by default.
 ///
@@ -96,6 +107,13 @@ class WorkspaceScreen extends StatefulWidget {
   /// Overrides how Home reads its attention and running signals.
   final WorkspaceTurnSignalsLoader? turnSignalsLoader;
 
+  /// Called when the user starts a chat from Home's New button. When null,
+  /// this screen opens the chat itself, so New is never an inert affordance.
+  final ValueChanged<NewChatDraft>? onNewChat;
+
+  /// Overrides the id a new chat is created under.
+  final NewChatSessionIdFactory? newChatSessionIdFactory;
+
   /// Overrides how the Hermes dashboard fallback is opened.
   final DashboardLauncher? onOpenDashboard;
 
@@ -108,6 +126,8 @@ class WorkspaceScreen extends StatefulWidget {
     this.sessionsLoader,
     this.sessionScreenBuilder,
     this.turnSignalsLoader,
+    this.onNewChat,
+    this.newChatSessionIdFactory,
     this.onOpenDashboard,
     super.key,
   });
@@ -126,6 +146,10 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
 
   /// Reaches the live Home pane so it can be refreshed after a chat closes.
   final _homeKey = GlobalKey<HomePaneState>();
+
+  /// The destination currently on screen. The New button is a Home
+  /// affordance: over Projects or More it would be ambiguous what it creates.
+  HermesDestination _destination = HermesDestination.home;
 
   /// The last known attention/running signals. Home ranks with these; an
   /// empty value simply means everything falls back to `Continue working`.
@@ -387,6 +411,74 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
     unawaited(_homeKey.currentState?.refresh() ?? Future<void>.value());
   }
 
+  /// The Projects state the New sheet reasons about.
+  ///
+  /// A connection with no Desktop Gateway has nowhere to host projects, which
+  /// is the same situation for the user as a gateway that predates them: the
+  /// mode is offered, disabled, with a reason.
+  Future<ProjectsView> _projectsForNewChat() async {
+    final repository = _repository;
+    if (repository == null) {
+      return const ProjectsView(support: ProjectsSupport.unsupported);
+    }
+    // Home may be the first screen the user ever opens, in which case nothing
+    // has probed the gateway yet. Probe now rather than claiming `unknown`.
+    if (repository.current.support == ProjectsSupport.unknown) {
+      return repository.refresh();
+    }
+    return repository.current;
+  }
+
+  /// Runs Home's global New affordance.
+  ///
+  /// Every product rule it depends on lives in `new_chat_options.dart`; this
+  /// method only sequences the two questions (which mode, then which project)
+  /// and opens the result.
+  Future<void> _startNewChat() async {
+    final view = await _projectsForNewChat();
+    if (!mounted) return;
+
+    final mode = await showModalBottomSheet<NewChatMode>(
+      context: context,
+      builder: (_) => NewChatSheet(options: buildNewChatOptionsFor(view)),
+    );
+    if (mode == null || !mounted) return;
+
+    HermesProject? project;
+    if (mode == NewChatMode.projectChat) {
+      final projects = view.projects
+          .where((candidate) => !candidate.archived)
+          .toList();
+      if (projects.isEmpty) return;
+      // A single project carries no decision, so do not charge a tap for it.
+      project = projects.length == 1
+          ? projects.single
+          : await showModalBottomSheet<HermesProject>(
+              context: context,
+              isScrollControlled: true,
+              builder: (_) => ProjectPickerSheet(projects: projects),
+            );
+      if (project == null || !mounted) return;
+    }
+
+    final draft = buildNewChatDraft(
+      mode: mode,
+      sessionId:
+          (widget.newChatSessionIdFactory ??
+                  GatewayChatClient.generateSessionId)
+              .call(),
+      now: DateTime.now(),
+      project: project,
+    );
+
+    final report = widget.onNewChat;
+    if (report != null) {
+      report(draft);
+      return;
+    }
+    await _openSession(draft.session);
+  }
+
   void _openMoreEntry(MoreEntry entry) {
     final connection = widget.connection;
     switch (entry.id) {
@@ -416,6 +508,18 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
         // destination, so blocked work has to raise it even while the user is
         // in Projects or More.
         badges: {HermesDestination.home: _turnSignals.attention.length},
+        onDestinationChanged: (destination) =>
+            setState(() => _destination = destination),
+        // The FAB belongs to the shell, not to this Scaffold: above the shell
+        // it would float over the bottom bar and swallow taps on More.
+        floatingActionButton: _destination == HermesDestination.home
+            ? FloatingActionButton.extended(
+                key: kWorkspaceNewChatButtonKey,
+                onPressed: () => unawaited(_startNewChat()),
+                icon: const Icon(Icons.add),
+                label: const Text('New'),
+              )
+            : null,
         builder: _pane,
       ),
     );

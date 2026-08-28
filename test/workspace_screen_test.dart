@@ -11,6 +11,7 @@ import 'package:hermes_android/core/services/projects_repository.dart';
 import 'package:hermes_android/core/theme/hermes_theme.dart';
 import 'package:hermes_android/core/utils/home_digest.dart';
 import 'package:hermes_android/core/utils/home_turn_signals.dart';
+import 'package:hermes_android/core/utils/new_chat_options.dart';
 import 'package:hermes_android/core/widgets/hermes_components.dart';
 import 'package:hermes_android/core/widgets/hermes_shell.dart';
 import 'package:hermes_android/core/widgets/home_pane.dart';
@@ -87,6 +88,7 @@ Future<void> _pump(
   Object? sessionsError,
   WorkspaceSessionScreenBuilder? sessionScreenBuilder,
   WorkspaceTurnSignalsLoader? turnSignalsLoader,
+  ValueChanged<NewChatDraft>? onNewChat,
   Size size = const Size(400, 800),
 }) async {
   tester.view.physicalSize = size;
@@ -111,6 +113,7 @@ Future<void> _pump(
               },
         sessionScreenBuilder: sessionScreenBuilder,
         turnSignalsLoader: turnSignalsLoader,
+        onNewChat: onNewChat,
         onOpenDashboard: openedDashboards == null
             ? null
             : (url) async => openedDashboards.add(url),
@@ -725,6 +728,229 @@ void main() {
 
       expect(find.text('Roadmap slice'), findsOneWidget);
       expect(endpointDigestForConnection(scoped!), isNull);
+    });
+  });
+
+  group('the global New button', () {
+    testWidgets('is offered on Home', (tester) async {
+      await _pump(
+        tester,
+        connection: _connection(desktopGatewayUrl: 'https://host:8642'),
+        repository: await _repository([]),
+        sessions: const [],
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(kWorkspaceNewChatButtonKey), findsOneWidget);
+    });
+
+    testWidgets('is not offered on the other destinations', (tester) async {
+      // New is a Home affordance. Leaving it floating over Projects or More
+      // would make it ambiguous what it would create.
+      await _pump(
+        tester,
+        connection: _connection(desktopGatewayUrl: 'https://host:8642'),
+        repository: await _repository([]),
+        sessions: const [],
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text(HermesDestination.more.label).last);
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(kWorkspaceNewChatButtonKey), findsNothing);
+    });
+
+    testWidgets('offers both validated modes with their explanations', (
+      tester,
+    ) async {
+      await _pump(
+        tester,
+        connection: _connection(desktopGatewayUrl: 'https://host:8642'),
+        repository: await _repository([
+          _projectJson(id: 'p1', name: 'Hermes Android'),
+        ]),
+        sessions: const [],
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(kWorkspaceNewChatButtonKey));
+      await tester.pumpAndSettle();
+
+      for (final mode in NewChatMode.values) {
+        expect(find.text(mode.label), findsOneWidget);
+        expect(find.text(mode.description), findsOneWidget);
+      }
+    });
+
+    testWidgets('disables Project chat with a stated reason when the gateway '
+        'hosts none, and keeps Quick chat usable', (tester) async {
+      // Capability-discovery rule: never hide, always explain. And a legacy
+      // gateway must still be able to start work from Home.
+      await _pump(
+        tester,
+        connection: _connection(),
+        sessions: const [],
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(kWorkspaceNewChatButtonKey));
+      await tester.pumpAndSettle();
+
+      expect(find.text(NewChatMode.projectChat.label), findsOneWidget);
+      final blocked = tester.widget<ListTile>(
+        find.ancestor(
+          of: find.text(NewChatMode.projectChat.label),
+          matching: find.byType(ListTile),
+        ),
+      );
+      expect(blocked.enabled, isFalse);
+
+      final quick = tester.widget<ListTile>(
+        find.ancestor(
+          of: find.text(NewChatMode.quickChat.label),
+          matching: find.byType(ListTile),
+        ),
+      );
+      expect(quick.enabled, isTrue);
+    });
+
+    testWidgets('a quick chat opens a chat that carries no project', (
+      tester,
+    ) async {
+      final opened = <NewChatDraft>[];
+      await _pump(
+        tester,
+        connection: _connection(),
+        sessions: const [],
+        onNewChat: opened.add,
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(kWorkspaceNewChatButtonKey));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(NewChatMode.quickChat.label));
+      await tester.pumpAndSettle();
+
+      expect(opened, hasLength(1));
+      expect(opened.single.isQuick, isTrue);
+      expect(opened.single.projectId, isNull);
+      expect(opened.single.session.id, isNotEmpty);
+    });
+
+    testWidgets('a project chat asks which project and carries it', (
+      tester,
+    ) async {
+      final opened = <NewChatDraft>[];
+      await _pump(
+        tester,
+        connection: _connection(desktopGatewayUrl: 'https://host:8642'),
+        repository: await _repository([
+          _projectJson(id: 'p1', name: 'Hermes Android'),
+          _projectJson(id: 'p2', name: 'ScriptHive'),
+        ]),
+        sessions: const [],
+        onNewChat: opened.add,
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(kWorkspaceNewChatButtonKey));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(NewChatMode.projectChat.label));
+      await tester.pumpAndSettle();
+
+      expect(find.text('ScriptHive'), findsOneWidget);
+      await tester.tap(find.text('ScriptHive'));
+      await tester.pumpAndSettle();
+
+      expect(opened, hasLength(1));
+      expect(opened.single.isQuick, isFalse);
+      expect(opened.single.projectId, 'p2');
+    });
+
+    testWidgets('a project chat with exactly one project skips the picker', (
+      tester,
+    ) async {
+      // Asking "which project?" when there is only one is a tap that carries
+      // no decision.
+      final opened = <NewChatDraft>[];
+      await _pump(
+        tester,
+        connection: _connection(desktopGatewayUrl: 'https://host:8642'),
+        repository: await _repository([
+          _projectJson(id: 'p1', name: 'Hermes Android'),
+        ]),
+        sessions: const [],
+        onNewChat: opened.add,
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(kWorkspaceNewChatButtonKey));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(NewChatMode.projectChat.label));
+      await tester.pumpAndSettle();
+
+      expect(opened, hasLength(1));
+      expect(opened.single.projectId, 'p1');
+    });
+
+    testWidgets('dismissing the sheet creates nothing', (tester) async {
+      final opened = <NewChatDraft>[];
+      await _pump(
+        tester,
+        connection: _connection(),
+        sessions: const [],
+        onNewChat: opened.add,
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(kWorkspaceNewChatButtonKey));
+      await tester.pumpAndSettle();
+      Navigator.of(tester.element(find.text(NewChatMode.quickChat.label))).pop();
+      await tester.pumpAndSettle();
+
+      expect(opened, isEmpty);
+    });
+
+    testWidgets('every new chat gets its own session id', (tester) async {
+      // A reused id would resume the previous chat instead of starting one.
+      final opened = <NewChatDraft>[];
+      await _pump(
+        tester,
+        connection: _connection(),
+        sessions: const [],
+        onNewChat: opened.add,
+      );
+      await tester.pumpAndSettle();
+
+      for (var i = 0; i < 2; i++) {
+        await tester.tap(find.byKey(kWorkspaceNewChatButtonKey));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(NewChatMode.quickChat.label));
+        await tester.pumpAndSettle();
+      }
+
+      expect(opened, hasLength(2));
+      expect(opened[0].session.id, isNot(opened[1].session.id));
+    });
+
+    testWidgets('the shipped default opens a real chat screen', (tester) async {
+      // Without a host callback the shell must open the chat itself, exactly
+      // like the Home rows do — otherwise New is an inert button.
+      await _pump(
+        tester,
+        connection: _connection(),
+        sessions: const [],
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(kWorkspaceNewChatButtonKey));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(NewChatMode.quickChat.label));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+
+      expect(find.byType(ChatScreen), findsOneWidget);
     });
   });
 }

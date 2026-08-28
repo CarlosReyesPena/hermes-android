@@ -84,11 +84,19 @@ class HermesShell extends StatefulWidget {
   final Map<HermesDestination, int> badges;
   final ValueChanged<HermesDestination>? onDestinationChanged;
 
+  /// The shell's floating action button.
+  ///
+  /// Owned here rather than by a host Scaffold: the shell draws the bottom
+  /// bar, so a FAB placed above it would float over the last destination and
+  /// swallow its taps.
+  final Widget? floatingActionButton;
+
   const HermesShell({
     required this.builder,
     this.initialDestination = HermesDestination.home,
     this.badges = const {},
     this.onDestinationChanged,
+    this.floatingActionButton,
     super.key,
   });
 
@@ -141,6 +149,7 @@ class _HermesShellState extends State<HermesShell> {
     if (useRail) {
       return Scaffold(
         backgroundColor: tokens.surface,
+        floatingActionButton: widget.floatingActionButton,
         body: Row(
           children: [
             NavigationRail(
@@ -169,6 +178,7 @@ class _HermesShellState extends State<HermesShell> {
     return Scaffold(
       backgroundColor: tokens.surface,
       body: pane,
+      floatingActionButton: widget.floatingActionButton,
       bottomNavigationBar: NavigationBar(
         backgroundColor: tokens.raised,
         indicatorColor: tokens.accent.withValues(alpha: 0.18),

@@ -874,14 +874,54 @@ Steps 1–6 of the slice above are implemented and covered by passing tests:
     sessions render, so a slow secure-storage read costs a better ranking a
     frame later rather than a skeleton.
 
+17. the **global New button** — `test/new_chat_options_test.dart`,
+    `test/workspace_screen_test.dart`, `test/hermes_shell_test.dart`. Home
+    could rank and open existing work but never *start* any. The two validated
+    creation modes now live in the pure `new_chat_options.dart` helper —
+    `buildNewChatOptions` decides what is runnable, `buildNewChatDraft` shapes
+    the session — so the product rules are assertable without pumping a frame.
+    What is pinned by test: both modes are always listed and a mode that
+    cannot run is returned *disabled with a reason* rather than hidden, an
+    unprobed gateway says it is still loading instead of claiming Projects are
+    unsupported, a `native` gateway with no project yet asks for one instead
+    of blaming the gateway, an archived project cannot enable Project chat
+    while a *stale cached* listing still can (offline degrades freshness, not
+    the ability to work), **Quick chat stays enabled on a legacy gateway** so
+    a REST-only connection can still start work from Home, a Quick chat never
+    inherits the active project even when one is passed, it is marked `Quick`
+    and carries its `kQuickChatRetention` (72 h) deadline, a Project chat
+    without a project throws rather than silently degrading to a Quick chat,
+    and the drafted session is shaped like one the gateway returns
+    (seconds-since-epoch `startedAt`, so a brand new chat ranks correctly in
+    the digest instead of at 1970). On the screen side: the button appears on
+    Home only, the picker is skipped when exactly one project exists,
+    dismissing either sheet creates nothing, each tap gets a fresh session id,
+    and the shipped default really opens a `ChatScreen` through the same
+    `_openSession` path as a Home row — so a chat started from New inherits
+    the application-scoped turn controller and durable recovery.
+
+    One real regression was found and fixed by this slice rather than shipped:
+    a FAB placed on the *outer* `Scaffold` floated over the shell's own bottom
+    bar and swallowed every tap on the `More` destination. `HermesShell` now
+    owns `floatingActionButton` for both the bar and the rail layout, and
+    `hermes_shell_test.dart` pins that navigation still works underneath one.
+
 Still open in Phase 0: step 7 of the slice above (real Gateway smoke test on a
 device). The migration *write* path stays unimplemented on purpose until the
 preview has been validated against a real gateway.
 
-Next slice: give Home a `New` button offering **Project chat** and **Quick
-chat**. Home can now rank and open existing work, but there is still no way to
-*start* work from it, so the roadmap's global New affordance is the smallest
-remaining gap in the Phase 1 Home before the Activity destination is built.
+Next slice: build the **Activity destination**, which is still a `Coming next`
+placeholder. Home now ranks, opens, and starts work, so the remaining Phase 1
+gap is the global operational timeline — and the signals it needs
+(`buildHomeTurnSignals` over the durable recovery journal) already exist and
+are tested, so the slice is presentation over a proven data source rather than
+a new gateway contract.
+
+Note for a later slice: `NewChatDraft.projectId` and `expiresAt` are currently
+*carried* rather than *persisted*. Associating a new chat with its server
+Project, and enforcing the 72 h Quick-chat archive, both belong to the write
+path that Phase 0 deliberately leaves unimplemented until the migration
+preview is validated against a real gateway.
 
 ---
 

@@ -8,6 +8,7 @@ Future<void> _pumpShell(
   HermesDestination initial = HermesDestination.home,
   ValueChanged<HermesDestination>? onDestinationChanged,
   Map<HermesDestination, int> badges = const {},
+  Widget? floatingActionButton,
   Size size = const Size(360, 720),
   double textScale = 1.0,
   Brightness brightness = Brightness.dark,
@@ -30,6 +31,7 @@ Future<void> _pumpShell(
             initialDestination: initial,
             badges: badges,
             onDestinationChanged: onDestinationChanged,
+            floatingActionButton: floatingActionButton,
             builder: (context, destination) =>
                 Center(child: Text('pane:${destination.name}')),
           ),
@@ -203,6 +205,66 @@ void main() {
           reason: '${destination.label} must be reachable by screen reader',
         );
       }
+    });
+
+    testWidgets('a floating action button never covers the navigation bar', (
+      tester,
+    ) async {
+      // The shell owns the bottom bar, so it must own the FAB too: one placed
+      // by an outer Scaffold sits over the last destination and swallows its
+      // taps.
+      await _pumpShell(
+        tester,
+        floatingActionButton: FloatingActionButton.extended(
+          onPressed: () {},
+          label: const Text('New'),
+        ),
+      );
+
+      await tester.tap(find.text(HermesDestination.more.label));
+      await tester.pumpAndSettle();
+
+      expect(find.text('pane:more'), findsOneWidget);
+    });
+
+    testWidgets('a floating action button is drawn when supplied', (
+      tester,
+    ) async {
+      await _pumpShell(
+        tester,
+        floatingActionButton: FloatingActionButton.extended(
+          onPressed: () {},
+          label: const Text('New'),
+        ),
+      );
+
+      expect(find.byType(FloatingActionButton), findsOneWidget);
+    });
+
+    testWidgets('no floating action button is drawn by default', (
+      tester,
+    ) async {
+      await _pumpShell(tester);
+
+      expect(find.byType(FloatingActionButton), findsNothing);
+    });
+
+    testWidgets('the rail also accepts a floating action button', (
+      tester,
+    ) async {
+      await _pumpShell(
+        tester,
+        size: const Size(900, 700),
+        floatingActionButton: FloatingActionButton.extended(
+          onPressed: () {},
+          label: const Text('New'),
+        ),
+      );
+
+      expect(find.byType(FloatingActionButton), findsOneWidget);
+      await tester.tap(find.text(HermesDestination.more.label));
+      await tester.pumpAndSettle();
+      expect(find.text('pane:more'), findsOneWidget);
     });
   });
 }
