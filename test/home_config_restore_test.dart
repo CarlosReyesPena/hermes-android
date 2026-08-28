@@ -1,0 +1,156 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:hermes_android/core/services/config_backup_service.dart';
+import 'package:hermes_android/core/services/connection_manager.dart';
+import 'package:hermes_android/core/services/gateway_turn_application_controller.dart';
+import 'package:hermes_android/main.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+import 'support/inert_turn_application_session.dart';
+
+class _MemoryCredentialStore implements CredentialStore {
+  final Map<String, String> values = <String, String>{};
+  final Map<String, String> _cache = <String, String>{};
+
+  @override
+  Future<void> delete(String key) async {
+    values.remove(key);
+    _cache.remove(key);
+  }
+
+  @override
+  Future<String?> read(String key) async {
+    final value = values[key];
+    if (value == null) {
+      _cache.remove(key);
+    } else {
+      _cache[key] = value;
+    }
+    return value;
+  }
+
+  @override
+  String? readCached(String key) => _cache[key];
+
+  @override
+  Future<void> write(String key, String value) async {
+    values[key] = value;
+  }
+}
+
+Future<ConnectionManager> buildManager() async {
+  SharedPreferences.setMockInitialValues(<String, Object>{});
+  final prefs = await SharedPreferences.getInstance();
+  return ConnectionManager.create(
+    prefs,
+    credentialStore: _MemoryCredentialStore(),
+  );
+}
+
+Future<void> pumpHome(
+  WidgetTester tester,
+  ConnectionManager manager, {
+  Future<String?> Function()? pickBackupFile,
+  Future<ConfigImportResult> Function(String, String, ConfigImportMode)?
+  importBackup,
+}) async {
+  await tester.pumpWidget(
+    MaterialApp(
+      home: HomeScreen(
+        connManager: manager,
+        turnApplicationController: GatewayTurnApplicationController(
+          sessionFactory: (_) => InertTurnApplicationSession(),
+        ),
+        pickBackupFile: pickBackupFile,
+        importBackup: importBackup,
+      ),
+    ),
+  );
+  await tester.pumpAndSettle();
+}
+
+void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  testWidgets('a device with no connections can still reach restore', (
+    tester,
+  ) async {
+    final manager = await buildManager();
+    await pumpHome(tester, manager);
+
+    // The whole point of a config backup is the fresh install, where Settings
+    // is unreachable because no connection exists yet.
+    expect(manager.getConnections(), isEmpty);
+    expect(find.byKey(const Key('home_restore_config_button')), findsOneWidget);
+  });
+
+  testWidgets('restore stays reachable once connections exist', (tester) async {
+    final manager = await buildManager();
+    await manager.saveConnection('Miniserver', 'host', 8642, 'key');
+    await pumpHome(tester, manager);
+
+    expect(find.byKey(const Key('home_restore_config_menu')), findsOneWidget);
+  });
+
+  testWidgets('tapping restore on an empty device opens the import sheet', (
+    tester,
+  ) async {
+    final manager = await buildManager();
+    await pumpHome(
+      tester,
+      manager,
+      pickBackupFile: () async => 'encrypted-backup',
+    );
+
+    await tester.tap(find.byKey(const Key('home_restore_config_button')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('import_passphrase_field')), findsOneWidget);
+    expect(find.byKey(const Key('import_mode_merge')), findsOneWidget);
+  });
+
+  testWidgets('a restored connection appears without restarting the app', (
+    tester,
+  ) async {
+    final manager = await buildManager();
+    await pumpHome(tester, manager);
+
+    expect(find.text('No connections'), findsOneWidget);
+
+    // Simulate what a successful import does to storage, then let the screen
+    // refresh the way the import flow asks it to.
+    await manager.importConnections([
+      SavedConnection(
+        id: 'restored-1',
+        label: 'Miniserver',
+        host: 'hermes-miniserver.example.ts.net',
+        port: 8642,
+        apiKey: 'sk-restored',
+        useHttps: true,
+      ),
+    ], replaceExisting: false);
+
+    final state = tester.state<HomeScreenState>(find.byType(HomeScreen));
+    state.refreshConnections();
+    await tester.pumpAndSettle();
+
+    expect(find.text('No connections'), findsNothing);
+    expect(find.text('Miniserver'), findsOneWidget);
+  });
+
+  testWidgets('the import sheet offers merge and replace', (tester) async {
+    final manager = await buildManager();
+    await pumpHome(
+      tester,
+      manager,
+      pickBackupFile: () async => 'encrypted-backup',
+    );
+
+    await tester.tap(find.byKey(const Key('home_restore_config_button')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Merge'), findsOneWidget);
+    expect(find.text('Replace'), findsOneWidget);
+    expect(ConfigImportMode.values, hasLength(2));
+  });
+}

@@ -2,12 +2,16 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'core/services/config_backup.dart';
+import 'core/services/config_backup_io.dart';
+import 'core/services/config_backup_service.dart';
 import 'core/services/connection_manager.dart';
 import 'core/services/gateway_turn_application_controller.dart';
 import 'core/services/text_size_preference.dart';
 import 'core/screens/session_list_screen.dart';
 import 'core/theme/hermes_theme.dart';
 import 'core/utils/responsive.dart';
+import 'core/widgets/config_backup_card.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -149,24 +153,82 @@ class HermesHeader extends StatelessWidget {
 class HomeScreen extends StatefulWidget {
   final ConnectionManager connManager;
   final GatewayTurnApplicationController turnApplicationController;
+  final Future<String?> Function()? pickBackupFile;
+  final Future<ConfigImportResult> Function(
+    String contents,
+    String passphrase,
+    ConfigImportMode mode,
+  )?
+  importBackup;
 
   const HomeScreen({
     required this.connManager,
     required this.turnApplicationController,
+    this.pickBackupFile,
+    this.importBackup,
     super.key,
   });
 
   @override
-  State<HomeScreen> createState() => _HomeScreenState();
+  State<HomeScreen> createState() => HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class HomeScreenState extends State<HomeScreen> {
   List<SavedConnection> _connections = [];
   bool _autoNavigated = false;
   static const String _lastConnectionKey = 'last_connection_id';
 
   void _refresh() {
     setState(() => _connections = widget.connManager.getConnections());
+  }
+
+  /// Public only so the import flow and its widget test can refresh Home after
+  /// restoring connections without restarting the process.
+  void refreshConnections() => _refresh();
+
+  ConfigBackupIo get _backupIo =>
+      ConfigBackupIo(connectionManager: widget.connManager);
+
+  Future<void> _showRestoreConfig() async {
+    String? contents;
+    try {
+      contents =
+          await (widget.pickBackupFile?.call() ?? _backupIo.pickBackupFile());
+    } catch (error) {
+      if (!mounted) return;
+      _showRestoreError(error);
+      return;
+    }
+    if (contents == null || !mounted) return;
+
+    final choice = await showModalBottomSheet<ImportChoice>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => const ImportOptionsSheet(),
+    );
+    if (choice == null || !mounted) return;
+
+    try {
+      final importer = widget.importBackup ?? _backupIo.importEncrypted;
+      final result = await importer(contents, choice.passphrase, choice.mode);
+      if (!mounted) return;
+      _refresh();
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(result.summary)));
+    } catch (error) {
+      if (!mounted) return;
+      _showRestoreError(error);
+    }
+  }
+
+  void _showRestoreError(Object error) {
+    final message = error is ConfigBackupException
+        ? error.message
+        : 'The backup could not be restored.';
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   Future<void> _closeDialogAndRefresh(BuildContext dialogContext) async {
@@ -717,6 +779,15 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
         centerTitle: true,
+        actions: [
+          if (_connections.isNotEmpty)
+            IconButton(
+              key: const Key('home_restore_config_menu'),
+              tooltip: 'Restore configuration',
+              onPressed: _showRestoreConfig,
+              icon: const Icon(Icons.settings_backup_restore),
+            ),
+        ],
       ),
       body: _connections.isEmpty
           ? Center(
@@ -736,6 +807,13 @@ class _HomeScreenState extends State<HomeScreen> {
                       context,
                     ).textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
                     textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 20),
+                  OutlinedButton.icon(
+                    key: const Key('home_restore_config_button'),
+                    onPressed: _showRestoreConfig,
+                    icon: const Icon(Icons.settings_backup_restore),
+                    label: const Text('Restore configuration'),
                   ),
                 ],
               ),
