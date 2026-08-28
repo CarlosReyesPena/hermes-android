@@ -195,6 +195,79 @@ class ConnectionManager {
     ).map(_hydrateFromCachedCredentials).toList();
   }
 
+  /// Returns every saved connection with its secrets read back from the secure
+  /// store, rather than from the in-memory cache used by [getConnections].
+  ///
+  /// Config export needs this: a freshly launched app has an empty credential
+  /// cache, so [getConnections] alone would hand back connections with blank
+  /// API keys and silently produce a useless backup.
+  Future<List<SavedConnection>> loadConnectionsWithSecrets() async {
+    final connections = _connectionsFromMaps(_readConnectionMaps());
+    final hydrated = <SavedConnection>[];
+    for (final connection in connections) {
+      final encoded = await _credentialStore.read(_credentialKey(connection.id));
+      if (encoded == null) {
+        hydrated.add(connection);
+        continue;
+      }
+      final credentials = _ConnectionCredentials.decode(encoded);
+      hydrated.add(
+        connection.copyWith(
+          apiKey: credentials.apiKey,
+          dashboardPassword: credentials.dashboardPassword,
+          clearDashboardPassword: credentials.dashboardPassword == null,
+        ),
+      );
+    }
+    return hydrated;
+  }
+
+  /// Writes a whole set of connections at once, preserving their ids.
+  ///
+  /// Every credential bundle is written and verified before the metadata list
+  /// is committed, matching the fail-closed contract of the single-connection
+  /// paths. When [replaceExisting] is true, connections absent from [incoming]
+  /// are removed along with their credentials.
+  Future<void> importConnections(
+    List<SavedConnection> incoming, {
+    required bool replaceExisting,
+  }) async {
+    final current = _connectionsFromMaps(_readConnectionMaps());
+
+    final ordered = List<SavedConnection>.of(incoming);
+
+    final List<SavedConnection> next;
+    final removed = <SavedConnection>[];
+    if (replaceExisting) {
+      final keep = ordered.map((connection) => connection.id).toSet();
+      removed.addAll(
+        current.where((connection) => !keep.contains(connection.id)),
+      );
+      next = ordered;
+    } else {
+      final incomingIds = ordered.map((connection) => connection.id).toSet();
+      next = <SavedConnection>[
+        ...ordered,
+        ...current.where((connection) => !incomingIds.contains(connection.id)),
+      ];
+    }
+
+    for (final connection in ordered) {
+      await _writeAndVerifyCredentials(
+        connection.id,
+        _ConnectionCredentials.fromConnection(connection),
+      );
+    }
+    for (final connection in removed) {
+      await _writeAndVerifyCredentials(
+        connection.id,
+        const _ConnectionCredentials(apiKey: '', dashboardPassword: null),
+      );
+    }
+
+    await _saveAll(next);
+  }
+
   Future<void> saveConnection(
     String label,
     String host,

@@ -1,8 +1,17 @@
 // Settings screen for model selection, theme toggle, and app info.
+import 'dart:convert';
+import 'dart:io';
+
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_tts/flutter_tts.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../services/config_backup.dart';
+import '../services/config_backup_service.dart';
 import '../services/connection_manager.dart';
+import '../widgets/config_backup_card.dart';
 import '../widgets/text_size_settings_card.dart';
 import '../../main.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -366,11 +375,97 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
         const SizedBox(height: 16),
 
+        // ---- Section: Backup ----
+        _buildSectionHeader('Backup & restore'),
+        ConfigBackupCard(
+          onExport: _exportConfig,
+          onDeliverExport: _deliverExport,
+          onPickBackupFile: _pickBackupFile,
+          onImport: _importConfig,
+        ),
+        const SizedBox(height: 16),
+
         // ---- Section: About ----
         _buildSectionHeader('About'),
         _AboutCard(),
       ],
     );
+  }
+
+  ConfigBackupService _backupService() {
+    final app = context.findAncestorStateOfType<HermesAppState>()!;
+    return ConfigBackupService(
+      connectionManager: app.widget.connManager,
+      preferences: app.widget.connManager.prefs,
+    );
+  }
+
+  Future<String> _exportConfig(String passphrase) async {
+    String appVersion;
+    try {
+      final info = await PackageInfo.fromPlatform();
+      appVersion = '${info.version}+${info.buildNumber}';
+    } catch (_) {
+      appVersion = 'unknown';
+    }
+    final backup = await _backupService().export(appVersion: appVersion);
+    return ConfigBackupCodec.encrypt(backup, passphrase: passphrase);
+  }
+
+  Future<String?> _deliverExport(String contents) async {
+    final stamp = DateTime.now()
+        .toIso8601String()
+        .replaceAll(':', '-')
+        .split('.')
+        .first;
+    final directory = await getTemporaryDirectory();
+    final file = File('${directory.path}/hermes-config-$stamp.json');
+    await file.writeAsString(contents, flush: true);
+
+    final result = await SharePlus.instance.share(
+      ShareParams(
+        subject: 'Hermes configuration backup',
+        files: <XFile>[XFile(file.path, mimeType: 'application/json')],
+      ),
+    );
+    if (result.status == ShareResultStatus.dismissed) return null;
+    return file.uri.pathSegments.last;
+  }
+
+  Future<String?> _pickBackupFile() async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.any,
+      allowMultiple: false,
+      withData: true,
+    );
+    final picked = result?.files.firstOrNull;
+    if (picked == null) return null;
+
+    final bytes = picked.bytes;
+    if (bytes != null) return utf8.decode(bytes, allowMalformed: true);
+    final path = picked.path;
+    if (path == null) {
+      throw const ConfigBackupException('That file could not be read.');
+    }
+    return File(path).readAsString();
+  }
+
+  Future<ConfigImportResult> _importConfig(
+    String contents,
+    String passphrase,
+    ConfigImportMode mode,
+  ) async {
+    final backup = await ConfigBackupCodec.decrypt(
+      contents,
+      passphrase: passphrase,
+    );
+    final result = await _backupService().import(backup, mode: mode);
+    if (mounted) {
+      // Theme and text size are read at app root; refresh so a restored
+      // preference is visible without restarting the app.
+      context.findAncestorStateOfType<HermesAppState>()?.setState(() {});
+    }
+    return result;
   }
 
   Widget _buildSectionHeader(String title) {
