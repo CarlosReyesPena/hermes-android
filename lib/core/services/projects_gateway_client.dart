@@ -1,4 +1,5 @@
 import '../models/hermes_project.dart';
+import '../models/project_sessions_tree.dart';
 import 'capability_registry.dart';
 import 'ws_client.dart';
 
@@ -35,6 +36,15 @@ class ProjectsUnsupportedException implements Exception {
 /// probed at most once instead of on every screen build.
 class ProjectsGatewayClient {
   static const _unknownMethodCode = -32601;
+
+  /// The method whose presence defines the whole `projects.*` family.
+  ///
+  /// Support is decided by this one call only. A gateway may ship
+  /// `projects.list` and predate a newer sibling such as
+  /// `projects.project_sessions`; letting that sibling flip the family verdict
+  /// would drop the entire Projects pane into local-only compatibility mode,
+  /// and the verdict is cached, so nothing would ever re-probe to undo it.
+  static const _probeMethod = 'projects.list';
 
   final GatewayRpcCall _call;
 
@@ -73,6 +83,23 @@ class ProjectsGatewayClient {
   Future<HermesProject> get(String id) async {
     final result = await _request('projects.get', {'id': _requireId(id)});
     return _requireProject('projects.get', result);
+  }
+
+  /// The hydrated contents of one project: repos, lanes, and their chats.
+  ///
+  /// Returns `null` when the gateway knows no such project, or when the
+  /// profile has no projects database at all. That is an empty result rather
+  /// than a failure: the caller shows "no chats yet", never an error screen.
+  Future<ProjectSessionsTree?> projectSessions(
+    String id, {
+    int? sessionLimit,
+  }) async {
+    final params = <String, dynamic>{'project_id': _requireId(id)};
+    if (sessionLimit != null) params['session_limit'] = sessionLimit;
+    final result = await _request('projects.project_sessions', params);
+    final project = result['project'];
+    if (project is! Map) return null;
+    return ProjectSessionsTree.fromJson(Map<String, dynamic>.from(project));
   }
 
   Future<HermesProject> create({
@@ -151,7 +178,7 @@ class ProjectsGatewayClient {
     final capabilities = this.capabilities;
     // A gateway already proven to lack this method is not probed again.
     if (capabilities != null && capabilities.isUnsupported(method)) {
-      _supported = false;
+      if (method == _probeMethod) _supported = false;
       throw ProjectsUnsupportedException(
         method,
         'This gateway does not support $method',
@@ -175,7 +202,9 @@ class ProjectsGatewayClient {
           : JsonRpcError(method, 'Gateway projects call failed');
       capabilities?.recordFailure(method, rpcError);
       if (_isUnknownMethod(rpcError)) {
-        _supported = false;
+        // Only the probe method can disown the family; a missing sibling
+        // leaves the earlier verdict — and the rest of the pane — intact.
+        if (method == _probeMethod) _supported = false;
         throw ProjectsUnsupportedException(method, rpcError.message);
       }
       // A real projects error still proves the RPC family exists.

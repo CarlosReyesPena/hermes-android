@@ -965,11 +965,50 @@ preview has been validated against a real gateway.
     the Home read as well as from the pane, because a badge that only appears
     once the user visits Activity cannot do the one job a badge has.
 
-Next slice: Phase 0 step 7 — the real Gateway smoke test on a device, which is
-now the only unfinished item blocking the migration *write* path. Every Phase 1
-shell destination (Home, Projects, Activity, More) is implemented and covered,
-so the next code slice should not begin until the shell has been validated
-against a real gateway on hardware.
+19. the **`projects.project_sessions` drill-in contract** —
+    `test/project_sessions_tree_test.dart`. `ProjectsRepository` was specified
+    to wrap `projects.list/create/update/archive/delete/set_active/tree/
+    project_sessions`, but only the mutation half existed: nothing could answer
+    *which chats live in this project*, so opening a project card had nowhere
+    to go. `ProjectsGatewayClient.projectSessions` now calls the native RPC and
+    parses it into `ProjectSessionsTree`
+    (`lib/core/models/project_sessions_tree.dart`), mirroring the server's own
+    project → repo → lane grouping from `tui_gateway/project_tree.py` rather
+    than deriving a second one on device — Android and Desktop cannot disagree
+    about where a chat belongs if only one of them decides. Lane rows decode
+    into the same `Session` model the chat list already renders, so a project
+    chat will open through the existing route with no parallel model.
+
+    Pinned by test: an unknown project id answers `{"project": null}` and is
+    read as an *empty* result rather than an error (the caller shows "no chats
+    yet", never a red screen), a repo the server seeded with no lanes is kept
+    because a brand-new project is exactly that and dropping it would render
+    an entered project blank, a sparse compacted row renders with defaults
+    instead of crashing the project view while a row with **no id** is dropped
+    (it could only ever be a dead tap target), `allSessions` flattens lanes in
+    server order and de-duplicates a chat that legitimately appears under two
+    lanes, a repo with no reported `sessionCount` falls back to the rows it
+    actually holds, a blank id throws without spending a request, and a 5063
+    argument rejection stays a `JsonRpcError` instead of being misread as an
+    old gateway.
+
+    One real bug was found by this slice rather than shipped. Any unknown
+    `projects.*` method set the cached family verdict to unsupported, so a
+    gateway that serves `projects.list` perfectly but predates the drill-in
+    would have dropped the **whole** Projects pane into local-only
+    compatibility mode — permanently, since the verdict is cached and nothing
+    re-probes. Support is now decided by `projects.list` alone; a missing
+    sibling is recorded against that method in the `CapabilityRegistry` and
+    leaves the family intact. Both directions are pinned, so the guard cannot
+    be loosened into never detecting a genuinely old gateway either.
+
+Still open in Phase 0: step 7 (real Gateway smoke test on a device). It cannot
+run unattended — no device is attached in the automated environment — and it
+remains the only item blocking the migration *write* path. Every Phase 1 shell
+destination (Home, Projects, Activity, More) is implemented and covered, so no
+*screen* slice should begin until the shell has been validated against a real
+gateway on hardware; the data layer above is contract-level work that the
+device test does not gate.
 
 Note for a later slice: `NewChatDraft.projectId` and `expiresAt` are currently
 *carried* rather than *persisted*. Associating a new chat with its server
