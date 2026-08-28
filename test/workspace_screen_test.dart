@@ -9,9 +9,11 @@ import 'package:hermes_android/core/services/gateway_turn_application_controller
 import 'package:hermes_android/core/services/projects_gateway_client.dart';
 import 'package:hermes_android/core/services/projects_repository.dart';
 import 'package:hermes_android/core/theme/hermes_theme.dart';
+import 'package:hermes_android/core/utils/activity_feed.dart';
 import 'package:hermes_android/core/utils/home_digest.dart';
 import 'package:hermes_android/core/utils/home_turn_signals.dart';
 import 'package:hermes_android/core/utils/new_chat_options.dart';
+import 'package:hermes_android/core/widgets/activity_pane.dart';
 import 'package:hermes_android/core/widgets/hermes_components.dart';
 import 'package:hermes_android/core/widgets/hermes_shell.dart';
 import 'package:hermes_android/core/widgets/home_pane.dart';
@@ -88,6 +90,7 @@ Future<void> _pump(
   Object? sessionsError,
   WorkspaceSessionScreenBuilder? sessionScreenBuilder,
   WorkspaceTurnSignalsLoader? turnSignalsLoader,
+  WorkspaceActivityFeedLoader? activityFeedLoader,
   ValueChanged<NewChatDraft>? onNewChat,
   Size size = const Size(400, 800),
 }) async {
@@ -113,6 +116,7 @@ Future<void> _pump(
               },
         sessionScreenBuilder: sessionScreenBuilder,
         turnSignalsLoader: turnSignalsLoader,
+        activityFeedLoader: activityFeedLoader,
         onNewChat: onNewChat,
         onOpenDashboard: openedDashboards == null
             ? null
@@ -238,18 +242,24 @@ void main() {
     expect(find.byType(ProjectsPane), findsNothing);
   });
 
-  testWidgets('Activity is honest about not shipping yet', (tester) async {
+  testWidgets('Activity no longer ships a placeholder', (tester) async {
     await _pump(
       tester,
       connection: _connection(desktopGatewayUrl: 'https://host:8642'),
       repository: await _repository([]),
+      sessions: const [],
+      activityFeedLoader: (_, _) async =>
+          const ActivityFeed(groups: [], blockedCount: 0, runningCount: 0),
     );
     await tester.pumpAndSettle();
 
     await tester.tap(find.text(HermesDestination.activity.label).last);
     await tester.pumpAndSettle();
-    expect(find.byType(EmptyState), findsOneWidget);
-    expect(find.textContaining('Coming'), findsOneWidget);
+
+    expect(find.byType(ActivityPane), findsOneWidget);
+    expect(find.textContaining('Coming'), findsNothing);
+    // The empty timeline is a designed calm state, not a placeholder.
+    expect(find.text('Nothing is running'), findsOneWidget);
   });
 
   testWidgets('Home renders the attention digest instead of a placeholder', (
@@ -951,6 +961,222 @@ void main() {
       await tester.pump(const Duration(milliseconds: 400));
 
       expect(find.byType(ChatScreen), findsOneWidget);
+    });
+  });
+
+  group('Activity destination', () {
+    testWidgets('renders the timeline instead of a placeholder', (
+      tester,
+    ) async {
+      await _pump(
+        tester,
+        connection: _connection(desktopGatewayUrl: 'https://host:8642'),
+        repository: await _repository([]),
+        sessions: const [],
+        activityFeedLoader: (_, _) async => ActivityFeed(
+          groups: [
+            ActivityGroup(
+              kind: ActivityGroupKind.running,
+              items: [
+                ActivityItem(
+                  sessionId: 's1',
+                  title: 'Deploy ScriptHive',
+                  clientTurnId: 'turn-1',
+                  label: 'Running',
+                  status: HermesStatus.running,
+                  updatedAt: DateTime.now(),
+                ),
+              ],
+              totalCount: 1,
+            ),
+          ],
+          blockedCount: 0,
+          runningCount: 1,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text(HermesDestination.activity.label).last);
+      await tester.pumpAndSettle();
+
+      expect(find.byType(ActivityPane), findsOneWidget);
+      expect(find.text(ActivityGroupKind.running.title), findsOneWidget);
+      expect(find.text('Deploy ScriptHive'), findsOneWidget);
+      expect(find.textContaining('Coming next'), findsNothing);
+    });
+
+    testWidgets('titles rows from the sessions Home already read', (
+      tester,
+    ) async {
+      // The turn journal deliberately stores no prose, so without this the
+      // whole timeline would read `Untitled chat`. Reusing the session list
+      // costs no new gateway contract and no extra request.
+      final seen = <Map<String, String>>[];
+      await _pump(
+        tester,
+        connection: _connection(desktopGatewayUrl: 'https://host:8642'),
+        repository: await _repository([]),
+        sessions: [
+          _session(id: 's1', title: 'Roadmap slice'),
+          _session(id: 's2', title: 'Other chat'),
+        ],
+        activityFeedLoader: (_, titles) async {
+          seen.add(titles);
+          return const ActivityFeed(
+            groups: [],
+            blockedCount: 0,
+            runningCount: 0,
+          );
+        },
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text(HermesDestination.activity.label).last);
+      await tester.pumpAndSettle();
+
+      expect(seen, isNotEmpty);
+      expect(seen.last, {'s1': 'Roadmap slice', 's2': 'Other chat'});
+    });
+
+    testWidgets('opening a row opens that chat', (tester) async {
+      final opened = <String>[];
+      await _pump(
+        tester,
+        connection: _connection(desktopGatewayUrl: 'https://host:8642'),
+        repository: await _repository([]),
+        sessions: [_session(id: 's1', title: 'Roadmap slice')],
+        openedSessions: opened,
+        activityFeedLoader: (_, _) async => ActivityFeed(
+          groups: [
+            ActivityGroup(
+              kind: ActivityGroupKind.needsYou,
+              items: [
+                ActivityItem(
+                  sessionId: 's1',
+                  title: 'Roadmap slice',
+                  clientTurnId: 'turn-1',
+                  label: 'Waiting for your input',
+                  status: HermesStatus.blocked,
+                  updatedAt: DateTime.now(),
+                ),
+              ],
+              totalCount: 1,
+            ),
+          ],
+          blockedCount: 1,
+          runningCount: 0,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text(HermesDestination.activity.label).last);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Roadmap slice'));
+      await tester.pumpAndSettle();
+
+      expect(opened, ['s1']);
+    });
+
+    testWidgets('a row whose chat is gone does not open a phantom screen', (
+      tester,
+    ) async {
+      // The journal outlives a deleted session. Opening a chat that no longer
+      // exists would push a screen that can never load, so the row is a no-op.
+      final opened = <String>[];
+      await _pump(
+        tester,
+        connection: _connection(desktopGatewayUrl: 'https://host:8642'),
+        repository: await _repository([]),
+        sessions: const [],
+        openedSessions: opened,
+        activityFeedLoader: (_, _) async => ActivityFeed(
+          groups: [
+            ActivityGroup(
+              kind: ActivityGroupKind.running,
+              items: [
+                ActivityItem(
+                  sessionId: 'ghost',
+                  clientTurnId: 'turn-1',
+                  label: 'Running',
+                  status: HermesStatus.running,
+                  updatedAt: DateTime.now(),
+                ),
+              ],
+              totalCount: 1,
+            ),
+          ],
+          blockedCount: 0,
+          runningCount: 1,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text(HermesDestination.activity.label).last);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Untitled chat'));
+      await tester.pumpAndSettle();
+
+      expect(opened, isEmpty);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('blocked work raises the Activity badge', (tester) async {
+      await _pump(
+        tester,
+        connection: _connection(desktopGatewayUrl: 'https://host:8642'),
+        repository: await _repository([]),
+        sessions: const [],
+        activityFeedLoader: (_, _) async => ActivityFeed(
+          groups: [
+            ActivityGroup(
+              kind: ActivityGroupKind.needsYou,
+              items: [
+                ActivityItem(
+                  sessionId: 's1',
+                  title: 'Blocked chat',
+                  clientTurnId: 'turn-1',
+                  label: 'Waiting for your input',
+                  status: HermesStatus.blocked,
+                  updatedAt: DateTime.now(),
+                ),
+              ],
+              totalCount: 2,
+            ),
+          ],
+          // Deliberately larger than the visible item count: a badge states
+          // how much work is blocked, not how much of it fits on screen.
+          blockedCount: 2,
+          runningCount: 0,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final shell = tester.widget<HermesShell>(find.byType(HermesShell));
+      expect(shell.badges[HermesDestination.activity], 2);
+    });
+
+    testWidgets('a feed that cannot be read never breaks the shell', (
+      tester,
+    ) async {
+      await _pump(
+        tester,
+        connection: _connection(desktopGatewayUrl: 'https://host:8642'),
+        repository: await _repository([]),
+        sessions: const [],
+        activityFeedLoader: (_, _) async => throw StateError('journal locked'),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text(HermesDestination.activity.label).last);
+      await tester.pumpAndSettle();
+
+      expect(find.byType(ErrorState), findsOneWidget);
+      expect(tester.takeException(), isNull);
+
+      // The rest of the shell must keep working while Activity is broken.
+      await tester.tap(find.text(HermesDestination.more.label).last);
+      await tester.pumpAndSettle();
+      expect(find.byType(MorePane), findsOneWidget);
     });
   });
 }

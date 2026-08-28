@@ -22,8 +22,10 @@ import '../services/gateway_turn_application_controller.dart';
 import '../services/gateway_turn_journal.dart';
 import '../services/projects_repository.dart';
 import '../theme/hermes_theme.dart';
+import '../utils/activity_feed.dart';
 import '../utils/home_turn_signals.dart';
 import '../utils/new_chat_options.dart';
+import '../widgets/activity_pane.dart';
 import '../widgets/hermes_components.dart';
 import '../widgets/hermes_shell.dart';
 import '../widgets/home_pane.dart';
@@ -52,6 +54,18 @@ typedef WorkspaceSessionScreenBuilder = Widget Function(Session session);
 /// ranking can be asserted without a real recovery journal.
 typedef WorkspaceTurnSignalsLoader =
     Future<HomeTurnSignals> Function(SavedConnection connection);
+
+/// Reads the Activity timeline. Injectable so the destination can be asserted
+/// without a real recovery journal.
+///
+/// Receives the session titles the screen has cached, because the turn
+/// journal deliberately stores no prose: the titles are an input to the feed,
+/// not something it can discover.
+typedef WorkspaceActivityFeedLoader =
+    Future<ActivityFeed> Function(
+      SavedConnection connection,
+      Map<String, String> sessionTitles,
+    );
 
 /// Identifies Home's global New button, so a test asserts the affordance
 /// itself rather than an icon that another widget could also draw.
@@ -107,6 +121,9 @@ class WorkspaceScreen extends StatefulWidget {
   /// Overrides how Home reads its attention and running signals.
   final WorkspaceTurnSignalsLoader? turnSignalsLoader;
 
+  /// Overrides how Activity reads its timeline.
+  final WorkspaceActivityFeedLoader? activityFeedLoader;
+
   /// Called when the user starts a chat from Home's New button. When null,
   /// this screen opens the chat itself, so New is never an inert affordance.
   final ValueChanged<NewChatDraft>? onNewChat;
@@ -126,6 +143,7 @@ class WorkspaceScreen extends StatefulWidget {
     this.sessionsLoader,
     this.sessionScreenBuilder,
     this.turnSignalsLoader,
+    this.activityFeedLoader,
     this.onNewChat,
     this.newChatSessionIdFactory,
     this.onOpenDashboard,
@@ -147,6 +165,9 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
   /// Reaches the live Home pane so it can be refreshed after a chat closes.
   final _homeKey = GlobalKey<HomePaneState>();
 
+  /// Reaches the live Activity pane for the same reason.
+  final _activityKey = GlobalKey<ActivityPaneState>();
+
   /// The destination currently on screen. The New button is a Home
   /// affordance: over Projects or More it would be ambiguous what it creates.
   HermesDestination _destination = HermesDestination.home;
@@ -154,6 +175,19 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
   /// The last known attention/running signals. Home ranks with these; an
   /// empty value simply means everything falls back to `Continue working`.
   HomeTurnSignals _turnSignals = HomeTurnSignals.empty;
+
+  /// How much work Activity reports as blocked, for the shell badge. Held
+  /// separately from the feed so the badge survives a destination switch that
+  /// disposes the pane.
+  int _activityBlockedCount = 0;
+
+  /// Session id to title, from the last successful session read.
+  ///
+  /// The turn journal deliberately stores no prose, so Activity has no titles
+  /// of its own. Reusing what Home already fetched costs no extra request and
+  /// no new gateway contract; a turn whose chat is absent simply stays
+  /// untitled rather than being dropped or given a fabricated name.
+  Map<String, String> _sessionTitles = const {};
 
   /// Read lazily so a connection that never opens Home never touches secure
   /// storage, and so tests that inject a loader never construct one at all.
@@ -210,7 +244,86 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
   /// ranked with stale signals is worse than one ranked with none.
   Future<List<Session>> _loadHome() {
     unawaited(_refreshTurnSignals());
-    return _loadSessions();
+    return _loadSessions().then((sessions) {
+      // Cache the titles for Activity. Done here rather than in a second
+      // request: the journal knows what ran, the session list knows what it
+      // was called, and only one of the two costs a round trip.
+      _cacheSessionTitles(sessions);
+      // The Activity badge is the only signal of blocked work visible while
+      // the user is on another destination, so it cannot wait for the pane
+      // to be mounted for the first time.
+      unawaited(_refreshActivityBadge());
+      return sessions;
+    });
+  }
+
+  /// Reads the timeline purely to keep the shell badge honest.
+  ///
+  /// Failures are swallowed: an unreadable journal costs a badge, and must
+  /// never surface as an error on a destination the user is not looking at.
+  Future<void> _refreshActivityBadge() async {
+    try {
+      await _loadActivity();
+    } catch (_) {
+      if (!mounted || _activityBlockedCount == 0) return;
+      setState(() => _activityBlockedCount = 0);
+    }
+  }
+
+  void _cacheSessionTitles(List<Session> sessions) {
+    final titles = <String, String>{};
+    for (final session in sessions) {
+      final title = session.title.trim();
+      if (title.isEmpty) continue;
+      titles[session.id] = title;
+    }
+    _sessionTitles = Map.unmodifiable(titles);
+  }
+
+  /// Reads the Activity timeline from the durable turn journal.
+  ///
+  /// Same store, same scope, and same degradation rule as Home's signals: a
+  /// connection with no Desktop Gateway has no journal scope and reports an
+  /// empty timeline instead of an error, so a legacy REST connection keeps
+  /// working.
+  Future<ActivityFeed> _loadActivityFeedFromJournal(
+    SavedConnection connection,
+    Map<String, String> sessionTitles,
+  ) async {
+    final endpointDigest = endpointDigestForConnection(connection);
+    if (endpointDigest == null) {
+      return const ActivityFeed(groups: [], blockedCount: 0, runningCount: 0);
+    }
+    return readActivityFeed(
+      journal: _journal ??= GatewayTurnJournal(),
+      connectionId: connection.id,
+      endpointDigest: endpointDigest,
+      sessionTitles: sessionTitles,
+    );
+  }
+
+  /// Reads the feed and keeps the shell badge in step with it.
+  Future<ActivityFeed> _loadActivity() async {
+    final loader =
+        widget.activityFeedLoader ?? _loadActivityFeedFromJournal;
+    // Titles may not be cached yet when Activity is the first destination the
+    // user opens; read the sessions once so rows are not all untitled. A
+    // failed read degrades a row's title, never the timeline itself.
+    if (_sessionTitles.isEmpty) {
+      try {
+        _cacheSessionTitles(await _loadSessions());
+      } catch (_) {}
+    }
+    final feed = await loader(widget.connection, _sessionTitles);
+    if (mounted && feed.blockedCount != _activityBlockedCount) {
+      // Deferred: the pane calls this from its own build-triggered load, and
+      // setState during that frame would rebuild the shell mid-layout.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        setState(() => _activityBlockedCount = feed.blockedCount);
+      });
+    }
+    return feed;
   }
 
   Future<void> _refreshTurnSignals() async {
@@ -330,12 +443,10 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
           onOpenSession: _openSession,
         );
       case HermesDestination.activity:
-        return const EmptyState(
-          icon: Icons.bolt_outlined,
-          title: 'Activity — Coming next',
-          message:
-              'Running turns, pending approvals, failures, and completed work '
-              'will land here.',
+        return ActivityPane(
+          key: _activityKey,
+          loadFeed: _loadActivity,
+          onOpenItem: _openActivityItem,
         );
       case HermesDestination.more:
         return MorePane(
@@ -409,6 +520,37 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
     );
     if (!mounted) return;
     unawaited(_homeKey.currentState?.refresh() ?? Future<void>.value());
+  }
+
+  /// Opens the chat an Activity row belongs to.
+  ///
+  /// The journal outlives a deleted session, so a row can name a chat the
+  /// gateway no longer has. Pushing a chat screen for it would open a surface
+  /// that can never load, so an unknown session is a deliberate no-op rather
+  /// than a broken navigation.
+  Future<void> _openActivityItem(ActivityItem item) async {
+    final session = _sessionForActivity(item);
+    if (session == null) return;
+    await _openSession(session);
+    if (!mounted) return;
+    unawaited(_activityKey.currentState?.refresh() ?? Future<void>.value());
+  }
+
+  /// The live session an Activity row points at, or `null` when the chat is
+  /// no longer known.
+  Session? _sessionForActivity(ActivityItem item) {
+    final title = _sessionTitles[item.sessionId];
+    if (title == null) return null;
+    return Session(
+      id: item.sessionId,
+      title: title,
+      model: '',
+      source: '',
+      messageCount: 0,
+      isActive: true,
+      preview: '',
+      startedAt: item.updatedAt.millisecondsSinceEpoch / 1000.0,
+    );
   }
 
   /// The Projects state the New sheet reasons about.
@@ -507,7 +649,10 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
         // The badge is the only attention signal visible from another
         // destination, so blocked work has to raise it even while the user is
         // in Projects or More.
-        badges: {HermesDestination.home: _turnSignals.attention.length},
+        badges: {
+          HermesDestination.home: _turnSignals.attention.length,
+          HermesDestination.activity: _activityBlockedCount,
+        },
         onDestinationChanged: (destination) =>
             setState(() => _destination = destination),
         // The FAB belongs to the shell, not to this Scaffold: above the shell

@@ -910,12 +910,66 @@ Still open in Phase 0: step 7 of the slice above (real Gateway smoke test on a
 device). The migration *write* path stays unimplemented on purpose until the
 preview has been validated against a real gateway.
 
-Next slice: build the **Activity destination**, which is still a `Coming next`
-placeholder. Home now ranks, opens, and starts work, so the remaining Phase 1
-gap is the global operational timeline — and the signals it needs
-(`buildHomeTurnSignals` over the durable recovery journal) already exist and
-are tested, so the slice is presentation over a proven data source rather than
-a new gateway contract.
+18. the **Activity destination** — `test/activity_feed_test.dart`,
+    `test/activity_pane_test.dart`, `test/workspace_screen_test.dart`. The
+    fourth shell destination was the last `Coming next` placeholder. It now
+    renders a real global operational timeline, split the same way the rest of
+    Phase 1 is: the pure `buildActivityFeed` helper in
+    `lib/core/utils/activity_feed.dart` owns every grouping rule, and
+    `ActivityPane` in `lib/core/widgets/activity_pane.dart` owns only
+    presentation and the four designed states.
+
+    Its source is the durable turn recovery journal — the same store
+    `buildHomeTurnSignals` reads — so **no new gateway contract is required
+    and legacy REST connections keep working**: a connection with no Desktop
+    Gateway has no journal scope and reports an empty timeline rather than an
+    error. Where Activity deliberately differs from Home is recorded by test
+    rather than left implicit: Home deduplicates to one row per *chat* because
+    it ranks conversations, while Activity emits one row per *turn* because it
+    is a timeline of work, so a chat that ran three jobs reports three rows;
+    and where Home silently drops a running turn whose journal entry has gone
+    stale (drawing it as live would be a lie), Activity reports it as
+    `Stalled — no update from Hermes`, because an operational timeline that
+    quietly loses work is worse than one that admits it. Also pinned: groups
+    emit in the validated order Needs you > Running > Failed > Completed with
+    empty groups dropped, a recovery failure outranks the status the server
+    reported (a turn the server completed but the client could not reconcile
+    leaves the composer blocked, so filing it under Completed would state the
+    opposite of the truth), an interrupted turn reads as `Stopped` rather than
+    as completed work, blocked work is never aged out while finished work
+    respects its window, a clock skewed behind the journal keeps a turn
+    running instead of fabricating a failure, entries whose binding belongs to
+    another connection *or another gateway endpoint* are excluded, a capped
+    group reports its overflow while the badge counts ignore the cap, and an
+    enum-driven test iterates `GatewayRecoveryTurnStatus.values` so a status
+    added later must be classified deliberately instead of vanishing from the
+    timeline.
+
+    On the screen side the pane matches `HomePane` on purpose, so the two
+    never disagree about the same failure: a skeleton holds the screen until
+    the first read lands, a *first* read that fails becomes a retryable
+    `ErrorState`, a *later* failure keeps the last known timeline behind an
+    offline notice, and an empty feed becomes the calm `Nothing is running`
+    state. Rows state their elapsed time (a blocked row without "for how long"
+    is not actionable) and are drawn inert rather than fake-tappable when no
+    handler is supplied.
+
+    Two wiring rules are pinned at the real call site in `WorkspaceScreen`.
+    First, the journal stores no prose, so the timeline would otherwise read
+    `Untitled chat` end to end: titles are reused from the session list Home
+    already fetched, at no extra request and no new contract, and a turn whose
+    chat is absent keeps its row untitled rather than being dropped or given a
+    fabricated name. Second, the journal outlives a deleted session, so a row
+    naming a chat the gateway no longer has is a deliberate no-op instead of a
+    push to a screen that can never load. The Activity badge is refreshed from
+    the Home read as well as from the pane, because a badge that only appears
+    once the user visits Activity cannot do the one job a badge has.
+
+Next slice: Phase 0 step 7 — the real Gateway smoke test on a device, which is
+now the only unfinished item blocking the migration *write* path. Every Phase 1
+shell destination (Home, Projects, Activity, More) is implemented and covered,
+so the next code slice should not begin until the shell has been validated
+against a real gateway on hardware.
 
 Note for a later slice: `NewChatDraft.projectId` and `expiresAt` are currently
 *carried* rather than *persisted*. Associating a new chat with its server
