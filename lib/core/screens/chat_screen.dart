@@ -264,7 +264,12 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     );
     _chatModelStore = ChatModelOverrideStore.open();
     _sessionModelRestore = _restoreSessionModelOverride();
-    if (widget.connection.desktopGatewayUrl?.trim().isNotEmpty == true) {
+    final hasDashboardAuth =
+        widget.connection.dashboardProxied ||
+        (widget.connection.dashboardUsername?.trim().isNotEmpty == true &&
+            widget.connection.dashboardPassword?.trim().isNotEmpty == true);
+    if (widget.connection.desktopGatewayUrl?.trim().isNotEmpty == true ||
+        hasDashboardAuth) {
       try {
         _desktopGateway = DesktopGatewayClient.fromConnection(
           widget.connection,
@@ -1177,7 +1182,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
-            'Configure Desktop Gateway URL and Dashboard credentials to choose a chat model.',
+            'Configure Dashboard credentials to choose a chat model.',
           ),
         ),
       );

@@ -37,20 +37,25 @@ class AiSearchQueryRewriter {
 
     late http.Response response;
     try {
-      response = await _http.post(
-        Uri.parse('$_baseUrl/v1/search/rewrite'),
-        headers: {
-          'Authorization': 'Bearer $_apiKey',
-          'Content-Type': 'application/json',
-        },
-        body: jsonEncode({
-          'query': original,
-          'provider': provider.trim(),
-          'model': model.trim(),
-        }),
-      );
-    } catch (error) {
-      throw AiSearchRewriteException('Could not reach Hermes: $error');
+      response = await _http
+          .post(
+            Uri.parse('$_baseUrl/v1/search/rewrite'),
+            headers: {
+              'Authorization': 'Bearer $_apiKey',
+              'Content-Type': 'application/json',
+            },
+            body: jsonEncode({
+              'query': original,
+              'provider': provider.trim(),
+              'model': model.trim(),
+            }),
+          )
+          .timeout(const Duration(seconds: 12));
+    } catch (_) {
+      // AI-assisted rewriting is an enhancement, never a dependency of search.
+      // A disconnected host, timeout, or provider outage degrades to the user's
+      // original full-text query rather than turning Search into an error page.
+      return original;
     }
 
     if (response.statusCode == 401 || response.statusCode == 403) {
@@ -58,10 +63,10 @@ class AiSearchQueryRewriter {
         'The Hermes API rejected the saved API key.',
       );
     }
-    if (response.statusCode == 404) {
-      throw const AiSearchRewriteException(
-        'This Hermes server does not support lightweight AI search yet.',
-      );
+    if (response.statusCode == 404 ||
+        response.statusCode == 429 ||
+        response.statusCode >= 500) {
+      return original;
     }
     if (response.statusCode != 200) {
       throw AiSearchRewriteException(

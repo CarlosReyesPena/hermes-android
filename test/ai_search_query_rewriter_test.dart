@@ -87,23 +87,24 @@ void main() {
     );
   });
 
-  test('reports that an older Hermes server lacks the endpoint', () async {
-    final client = AiSearchQueryRewriter(
-      baseUrl: 'http://gateway.example:8642',
-      apiKey: 'key',
-      httpClient: MockClient((_) async => http.Response('Not found', 404)),
-    );
+  test('falls back to the original query when AI rewrite is unavailable', () async {
+    for (final status in [404, 429, 503]) {
+      final client = AiSearchQueryRewriter(
+        baseUrl: 'http://gateway.example:8642',
+        apiKey: 'test-key',
+        httpClient: MockClient((_) async => http.Response('Unavailable', status)),
+      );
 
-    await expectLater(
-      client.rewrite(query: 'find this', provider: 'nvidia', model: 'model'),
-      throwsA(
-        isA<AiSearchRewriteException>().having(
-          (e) => e.message,
-          'message',
-          contains('does not support lightweight AI search'),
+      expect(
+        await client.rewrite(
+          query: 'find this',
+          provider: 'nvidia',
+          model: 'model',
         ),
-      ),
-    );
+        'find this',
+        reason: 'HTTP $status should degrade to ordinary full-text search',
+      );
+    }
   });
 
   test('surfaces auth and server error messages', () async {

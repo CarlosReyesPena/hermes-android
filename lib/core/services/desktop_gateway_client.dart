@@ -66,10 +66,21 @@ class DesktopGatewayClient {
   /// transport: an omitted default port and an explicit one must resolve to
   /// the same string, or the same gateway would be recorded under two scopes.
   static String normalizedGatewayBaseUrl(SavedConnection connection) {
-    final raw = connection.desktopGatewayUrl?.trim() ?? '';
-    if (raw.isEmpty) {
-      throw ArgumentError('A Desktop Gateway URL is required for this feature');
-    }
+    final override = connection.desktopGatewayUrl?.trim() ?? '';
+    final overrideUri = override.isEmpty
+        ? null
+        : Uri.tryParse(override.contains('://') ? override : 'https://$override');
+    final isDistinctOverride =
+        overrideUri != null &&
+        overrideUri.host.isNotEmpty &&
+        overrideUri.host.toLowerCase() != connection.host.toLowerCase();
+    final raw = isDistinctOverride
+        ? override
+        : SavedConnection.joinBaseUrl(
+            '${connection.useHttps ? 'https' : 'http'}://'
+            '${connection.host}:${connection.dashboardPort}',
+            connection.dashboardPrefix ?? '',
+          );
     final normalized = raw.contains('://') ? raw : 'https://$raw';
     final uri = Uri.tryParse(normalized);
     if (uri == null ||
@@ -100,6 +111,13 @@ class DesktopGatewayClient {
   /// *read* journal state — such as the Home digest — free of try/catch around
   /// a plain configuration fact.
   static String? endpointDigestFor(SavedConnection connection) {
+    final hasExplicitOverride =
+        connection.desktopGatewayUrl?.trim().isNotEmpty == true;
+    final hasDashboardAuth =
+        connection.dashboardProxied ||
+        (connection.dashboardUsername?.trim().isNotEmpty == true &&
+            connection.dashboardPassword?.trim().isNotEmpty == true);
+    if (!hasExplicitOverride && !hasDashboardAuth) return null;
     try {
       return _endpointDigest(normalizedGatewayBaseUrl(connection));
     } on ArgumentError {
