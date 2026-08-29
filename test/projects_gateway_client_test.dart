@@ -280,6 +280,78 @@ void main() {
       expect(activeId, isNull);
     });
 
+    test('assigns a session to a server Project', () async {
+      final rpc = _RecordingRpc([
+        _ok({'session_id': 'chat-1', 'project_id': 'p1'}),
+      ]);
+      final client = ProjectsGatewayClient(rpc.call);
+
+      final projectId = await client.assignSession(
+        sessionId: 'chat-1',
+        projectId: 'p1',
+      );
+
+      expect(projectId, 'p1');
+      expect(rpc.calls.single.method, 'projects.assign_session');
+      expect(rpc.calls.single.params, {
+        'session_id': 'chat-1',
+        'project_id': 'p1',
+      });
+    });
+
+    test('moves a session back to Unassigned with an explicit null', () async {
+      final rpc = _RecordingRpc([
+        _ok({'session_id': 'chat-1', 'project_id': null}),
+      ]);
+      final client = ProjectsGatewayClient(rpc.call);
+
+      final projectId = await client.assignSession(
+        sessionId: 'chat-1',
+        projectId: null,
+      );
+
+      expect(projectId, isNull);
+      expect(rpc.calls.single.params, {
+        'session_id': 'chat-1',
+        'project_id': null,
+      });
+    });
+
+    test(
+      'assign session rejects a blank id before touching the gateway',
+      () async {
+        final rpc = _RecordingRpc([]);
+        final client = ProjectsGatewayClient(rpc.call);
+
+        await expectLater(
+          client.assignSession(sessionId: ' ', projectId: 'p1'),
+          throwsA(isA<ArgumentError>()),
+        );
+        expect(rpc.calls, isEmpty);
+      },
+    );
+
+    test('a missing assign sibling keeps projects.list supported', () async {
+      final registry = CapabilityRegistry();
+      final rpc = _RecordingRpc([
+        _ok({
+          'projects': [_projectJson()],
+        }),
+        _error(-32601, 'Unknown method: projects.assign_session'),
+      ]);
+      final client = ProjectsGatewayClient(rpc.call, capabilities: registry);
+      await client.list();
+
+      await expectLater(
+        client.assignSession(sessionId: 'chat-1', projectId: 'p1'),
+        throwsA(isA<ProjectsUnsupportedException>()),
+      );
+
+      expect(client.cachedSupport, isTrue);
+      expect(registry.isUnsupported('projects.assign_session'), isTrue);
+      expect(registry.isUnsupported('projects.list'), isFalse);
+    });
+
     test('a successful call marks the gateway as supported', () async {
       final rpc = _RecordingRpc([
         _ok({'projects': const [], 'active_id': null}),

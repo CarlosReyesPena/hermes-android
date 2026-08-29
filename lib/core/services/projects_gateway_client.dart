@@ -181,6 +181,43 @@ class ProjectsGatewayClient {
     return ProjectsSnapshot.fromJson(result);
   }
 
+  /// Moves an existing conversation into [projectId], or back to the
+  /// server-authoritative Unassigned bucket when null.
+  ///
+  /// The assignment is independent of cwd/repository inference. This is a
+  /// sibling capability: an older gateway may support Projects while lacking
+  /// this method, in which case [_request] reports only this method unsupported
+  /// and keeps the rest of the Projects surface alive.
+  Future<String?> assignSession({
+    required String sessionId,
+    required String? projectId,
+  }) async {
+    final sid = sessionId.trim();
+    if (sid.isEmpty) {
+      throw ArgumentError.value(
+        sessionId,
+        'sessionId',
+        'A session id is required',
+      );
+    }
+    final pid = projectId?.trim();
+    if (projectId != null && (pid == null || pid.isEmpty)) {
+      throw ArgumentError.value(
+        projectId,
+        'projectId',
+        'A project id must be non-empty or null',
+      );
+    }
+    final result = await _request('projects.assign_session', {
+      'session_id': sid,
+      'project_id': pid,
+    });
+    final assigned = result['project_id'];
+    return assigned is String && assigned.trim().isNotEmpty
+        ? assigned.trim()
+        : null;
+  }
+
   /// Selects [id] as the gateway's active project, or clears it when null.
   Future<String?> setActive(String? id) async {
     final params = <String, dynamic>{};

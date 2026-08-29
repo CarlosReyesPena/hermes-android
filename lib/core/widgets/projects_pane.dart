@@ -97,7 +97,14 @@ class _ProjectsPaneState extends State<ProjectsPane> {
           heightFactor: 0.7,
           child: SpaceMigrationPreview(
             plan: plan,
-            onDismiss: () => Navigator.pop(sheetContext),
+            onMigrate: () async {
+              final result = await widget.repository.migrateSpaces(spaces);
+              if (result.isComplete && mounted) {
+                await _refresh();
+              }
+              return result;
+            },
+            onDismiss: () => Navigator.of(sheetContext).pop(),
           ),
         ),
       ),
@@ -281,10 +288,7 @@ class _CompatibilityMode extends StatelessWidget {
                   'stays on this phone until the gateway can host projects.',
             )
           else ...[
-            SectionHeader(
-              title: 'On this device',
-              count: localSpaces.length,
-            ),
+            SectionHeader(title: 'On this device', count: localSpaces.length),
             for (final space in localSpaces)
               Padding(
                 padding: const EdgeInsets.fromLTRB(

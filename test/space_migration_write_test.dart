@@ -34,6 +34,7 @@ Map<String, dynamic> _projectJson({
 class _FakeGateway {
   final List<String> calls = [];
   final List<Map<String, dynamic>> createParams = [];
+  final List<Map<String, dynamic>> assignmentParams = [];
   List<Map<String, dynamic>> projects;
   String? activeId;
 
@@ -86,6 +87,12 @@ class _FakeGateway {
         projects = [...projects, created];
         if (params['use'] == true) activeId = created['id'] as String;
         return _ok({'project': created});
+      case 'projects.assign_session':
+        assignmentParams.add(Map<String, dynamic>.from(params));
+        return _ok({
+          'session_id': params['session_id'],
+          'project_id': params['project_id'],
+        });
       case 'projects.set_active':
         activeId = params['id'] as String?;
         return _ok({'active_id': activeId});
@@ -147,25 +154,34 @@ void main() {
         gateway.createParams.map((p) => p['name']),
         containsAll(['Alpha', 'Beta']),
       );
-      expect(repo.current.projects.map((p) => p.name), containsAll(['Alpha', 'Beta']));
-    });
-
-    test('skips a space the server already carries, by normalized name', () async {
-      final prefs = await SharedPreferences.getInstance();
-      final gateway = _FakeGateway(
-        projects: [_projectJson(id: 'p1', name: 'Hermes Android')],
+      expect(
+        repo.current.projects.map((p) => p.name),
+        containsAll(['Alpha', 'Beta']),
       );
-      final repo = _repository(gateway, prefs);
-      await repo.refresh();
-      // Same project, different casing/spacing than the local Space.
-      final store = await _storeWith(prefs, ['  hermes   android ', 'New One']);
-
-      final result = await repo.migrateSpaces(await store.load());
-
-      expect(result.createdProjects, 1);
-      expect(result.alreadyLinked, 1);
-      expect(gateway.createParams.single['name'], 'New One');
     });
+
+    test(
+      'skips a space the server already carries, by normalized name',
+      () async {
+        final prefs = await SharedPreferences.getInstance();
+        final gateway = _FakeGateway(
+          projects: [_projectJson(id: 'p1', name: 'Hermes Android')],
+        );
+        final repo = _repository(gateway, prefs);
+        await repo.refresh();
+        // Same project, different casing/spacing than the local Space.
+        final store = await _storeWith(prefs, [
+          '  hermes   android ',
+          'New One',
+        ]);
+
+        final result = await repo.migrateSpaces(await store.load());
+
+        expect(result.createdProjects, 1);
+        expect(result.alreadyLinked, 1);
+        expect(gateway.createParams.single['name'], 'New One');
+      },
+    );
 
     test('running it twice creates nothing the second time', () async {
       final prefs = await SharedPreferences.getInstance();
@@ -236,21 +252,57 @@ void main() {
       expect(after.assignments.length, 3);
     });
 
-    test('reports chats it could not link instead of claiming success', () async {
-      final prefs = await SharedPreferences.getInstance();
-      final gateway = _FakeGateway();
-      final repo = _repository(gateway, prefs);
-      await repo.refresh();
-      final store = await _storeWith(prefs, ['Alpha'], chatsPerSpace: 4);
+    test(
+      'links every local chat to its matched or created server Project',
+      () async {
+        final prefs = await SharedPreferences.getInstance();
+        final gateway = _FakeGateway(
+          projects: [_projectJson(id: 'p-existing', name: 'Alpha')],
+        );
+        final repo = _repository(gateway, prefs);
+        await repo.refresh();
+        final store = await _storeWith(prefs, [
+          'Alpha',
+          'Beta',
+        ], chatsPerSpace: 2);
 
-      final result = await repo.migrateSpaces(await store.load());
+        final result = await repo.migrateSpaces(await store.load());
 
-      // No `projects.*` RPC binds an existing session to a project, so the
-      // chats stay put. Saying "migrated" without saying that would be a lie.
-      expect(result.createdProjects, 1);
-      expect(result.unlinkedSessions, 4);
-      expect(result.isComplete, isTrue);
-    });
+        expect(result.createdProjects, 1);
+        expect(result.linkedSessions, 4);
+        expect(result.unlinkedSessions, 0);
+        expect(result.isComplete, isTrue);
+        expect(
+          gateway.assignmentParams,
+          containsAll([
+            {'session_id': 'chat-0', 'project_id': 'p-existing'},
+            {'session_id': 'chat-1', 'project_id': 'p-existing'},
+            {'session_id': 'chat-2', 'project_id': 'srv-2'},
+            {'session_id': 'chat-3', 'project_id': 'srv-2'},
+          ]),
+        );
+      },
+    );
+
+    test(
+      'an older gateway reports chats left local without disowning Projects',
+      () async {
+        final prefs = await SharedPreferences.getInstance();
+        final gateway = _FakeGateway();
+        gateway.unknownMethods.add('projects.assign_session');
+        final repo = _repository(gateway, prefs);
+        await repo.refresh();
+        final store = await _storeWith(prefs, ['Alpha'], chatsPerSpace: 2);
+
+        final result = await repo.migrateSpaces(await store.load());
+
+        expect(result.createdProjects, 1);
+        expect(result.linkedSessions, 0);
+        expect(result.unlinkedSessions, 2);
+        expect(result.isComplete, isFalse);
+        expect(repo.current.support, ProjectsSupport.native);
+      },
+    );
 
     test('an empty plan performs no writes at all', () async {
       final prefs = await SharedPreferences.getInstance();

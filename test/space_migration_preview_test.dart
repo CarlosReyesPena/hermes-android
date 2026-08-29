@@ -16,6 +16,7 @@ Future<void> _pump(
   WidgetTester tester,
   SpaceMigrationPlan plan, {
   VoidCallback? onDismiss,
+  Future<SpaceMigrationResult> Function()? onMigrate,
   Brightness brightness = Brightness.dark,
   double textScale = 1.0,
 }) async {
@@ -32,7 +33,11 @@ Future<void> _pump(
             context,
           ).copyWith(textScaler: TextScaler.linear(textScale)),
           child: Scaffold(
-            body: SpaceMigrationPreview(plan: plan, onDismiss: onDismiss),
+            body: SpaceMigrationPreview(
+              plan: plan,
+              onDismiss: onDismiss,
+              onMigrate: onMigrate,
+            ),
           ),
         ),
       ),
@@ -118,6 +123,72 @@ void main() {
     // The read-only preview must not offer a migrate button while the write
     // half of the migration is unimplemented.
     expect(find.widgetWithText(FilledButton, 'Migrate'), findsNothing);
+  });
+
+  testWidgets('executes the reviewed plan and reports full success', (
+    tester,
+  ) async {
+    final plan = SpaceMigrationPlan([
+      SpaceMigrationEntry(
+        space: _space('s1', 'ScriptHive'),
+        matchedProject: _project('p1', 'ScriptHive'),
+        sessionCount: 2,
+      ),
+    ]);
+    var calls = 0;
+
+    await _pump(
+      tester,
+      plan,
+      onMigrate: () async {
+        calls++;
+        return const SpaceMigrationResult(
+          createdProjects: 0,
+          alreadyLinked: 1,
+          linkedSessions: 2,
+          unlinkedSessions: 0,
+          failures: {},
+        );
+      },
+    );
+    await tester.tap(find.widgetWithText(FilledButton, 'Migrate'));
+    await tester.pumpAndSettle();
+
+    expect(calls, 1);
+    expect(find.textContaining('2 chats migrated'), findsOneWidget);
+    expect(find.text('Migration complete'), findsOneWidget);
+  });
+
+  testWidgets('reports a partial migration without hiding local data', (
+    tester,
+  ) async {
+    final plan = SpaceMigrationPlan([
+      SpaceMigrationEntry(
+        space: _space('s1', 'Legacy'),
+        matchedProject: null,
+        sessionCount: 2,
+      ),
+    ]);
+
+    await _pump(
+      tester,
+      plan,
+      onMigrate: () async => SpaceMigrationResult(
+        createdProjects: 1,
+        alreadyLinked: 0,
+        linkedSessions: 0,
+        unlinkedSessions: 2,
+        failures: {'Legacy/chat-1': StateError('unsupported')},
+      ),
+    );
+    await tester.tap(find.widgetWithText(FilledButton, 'Migrate'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Migration incomplete'), findsOneWidget);
+    expect(
+      find.textContaining('2 chats stayed in local Spaces'),
+      findsOneWidget,
+    );
   });
 
   testWidgets('an empty plan explains there is nothing to migrate', (

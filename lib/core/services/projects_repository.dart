@@ -109,10 +109,6 @@ class SpaceMigrationEntry {
 }
 
 /// What a completed migration actually did.
-///
-/// Deliberately honest about its limits. No `projects.*` RPC binds an existing
-/// session to a project, so chats stay where they are and are counted in
-/// [unlinkedSessions] rather than silently reported as migrated.
 class SpaceMigrationResult {
   /// Spaces turned into new server Projects.
   final int createdProjects;
@@ -120,21 +116,25 @@ class SpaceMigrationResult {
   /// Spaces the server already carried under the same (normalized) name.
   final int alreadyLinked;
 
-  /// Chats whose grouping the server cannot hold yet.
+  /// Chats now owned by their server Project.
+  final int linkedSessions;
+
+  /// Chats whose assignment failed or whose gateway predates the binding RPC.
   final int unlinkedSessions;
 
-  /// Space name → the error that stopped it. Empty on a clean run.
+  /// Space or `space/session` → the error that stopped it.
   final Map<String, Object> failures;
 
   const SpaceMigrationResult({
     required this.createdProjects,
     required this.alreadyLinked,
+    required this.linkedSessions,
     required this.unlinkedSessions,
     required this.failures,
   });
 
-  /// True when every space in the plan was accounted for.
-  bool get isComplete => failures.isEmpty;
+  /// Complete means every Project exists and every assigned chat moved.
+  bool get isComplete => failures.isEmpty && unlinkedSessions == 0;
 }
 
 /// A read-only description of what a Spaces migration *would* do.
@@ -409,31 +409,64 @@ class ProjectsRepository {
 
     final plan = planMigration(state);
     var created = 0;
-    var linked = 0;
-    var unlinked = 0;
+    var matched = 0;
+    var linkedSessions = 0;
+    var unlinkedSessions = 0;
+    var assignmentsSupported = true;
     final failures = <String, Object>{};
 
     for (final entry in plan.entries) {
-      unlinked += entry.sessionCount;
-      if (!entry.needsCreation) {
-        linked++;
-        continue;
+      HermesProject target;
+      if (entry.matchedProject case final existing?) {
+        target = existing;
+        matched++;
+      } else {
+        try {
+          // `use: false` — migrating is bookkeeping, not navigation. Stealing
+          // the active project would move the user somewhere they didn't ask
+          // to go.
+          target = await create(entry.space.name, select: false);
+          created++;
+        } catch (error) {
+          failures[entry.space.name] = error;
+          unlinkedSessions += entry.sessionCount;
+          continue;
+        }
       }
-      try {
-        // `use: false` — migrating is bookkeeping, not navigation. Stealing
-        // the active project would move the user somewhere they didn't ask
-        // to go.
-        await create(entry.space.name, select: false);
-        created++;
-      } catch (error) {
-        failures[entry.space.name] = error;
+
+      final sessionIds = state.assignments.entries
+          .where((assignment) => assignment.value == entry.space.id)
+          .map((assignment) => assignment.key);
+      for (final sessionId in sessionIds) {
+        if (!assignmentsSupported) {
+          unlinkedSessions++;
+          continue;
+        }
+        try {
+          await client.assignSession(
+            sessionId: sessionId,
+            projectId: target.id,
+          );
+          linkedSessions++;
+        } on ProjectsUnsupportedException catch (error) {
+          // A gateway can support the Projects family but predate this sibling.
+          // Stop probing after the first definitive answer and leave all local
+          // Spaces intact so nothing is lost.
+          assignmentsSupported = false;
+          unlinkedSessions++;
+          failures['${entry.space.name}/$sessionId'] = error;
+        } catch (error) {
+          unlinkedSessions++;
+          failures['${entry.space.name}/$sessionId'] = error;
+        }
       }
     }
 
     return SpaceMigrationResult(
       createdProjects: created,
-      alreadyLinked: linked,
-      unlinkedSessions: unlinked,
+      alreadyLinked: matched,
+      linkedSessions: linkedSessions,
+      unlinkedSessions: unlinkedSessions,
       failures: failures,
     );
   }

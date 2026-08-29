@@ -30,6 +30,7 @@ class _FakeGateway {
   String? activeId;
   Object? failNext;
   int listCalls = 0;
+  final List<Map<String, dynamic>> assignments = [];
 
   /// When set, `projects.list` waits on this before answering, so a test can
   /// observe the pane's loading state deterministically.
@@ -60,6 +61,12 @@ class _FakeGateway {
         );
         projects = [...projects, created];
         return _ok({'project': created});
+      case 'projects.assign_session':
+        assignments.add(Map<String, dynamic>.from(params));
+        return _ok({
+          'session_id': params['session_id'],
+          'project_id': params['project_id'],
+        });
       case 'projects.set_active':
         activeId = params['id'] as String?;
         return _ok({'active_id': activeId});
@@ -391,6 +398,33 @@ void main() {
     expect(find.byType(SpaceMigrationPreview), findsOneWidget);
     // The one local space matches the server project of the same name.
     expect(find.textContaining('Matches Hermes Android'), findsOneWidget);
+  });
+
+  testWidgets('migrates reviewed chats into their server Projects', (
+    tester,
+  ) async {
+    final preferences = await SharedPreferences.getInstance();
+    final store = ChatSpaceStore(preferences, connectionId: 'gateway-a');
+    final space = await store.createSpace('Hermes Android');
+    await store.assignSession('chat-1', space.id);
+    final gateway = _FakeGateway(
+      projects: [_projectJson(id: 'p1', name: 'Hermes Android')],
+    );
+    final repository = await _repo(gateway);
+
+    await _pumpPane(tester, repository, spaceStore: store);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Review local spaces'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Migrate'), findsOneWidget);
+    await tester.tap(find.text('Migrate'));
+    await tester.pumpAndSettle();
+
+    expect(gateway.assignments, [
+      {'session_id': 'chat-1', 'project_id': 'p1'},
+    ]);
+    expect(find.text('Migration complete'), findsOneWidget);
   });
 
   testWidgets('stays quiet when there are no local spaces to migrate', (

@@ -913,15 +913,17 @@ with live data, Projects listed the server's own project (no "unavailable"
 state), and the migration preview reported "1 space · 0 chats · 1 project to
 create" for a real local Space, stating that nothing had moved yet.
 
-That unblocked the migration *write* path, now implemented as
-`ProjectsRepository.migrateSpaces` and covered by
-`test/space_migration_write_test.dart`. It is idempotent (matching by
-normalized name, so a second run creates nothing), non-destructive (the local
-Spaces store is never cleared — it is the only record of the grouping until
-the server can hold chat → project links), and honest (a partial failure keeps
-the successful writes and reports the rest instead of claiming a clean run;
-chats that cannot be linked are counted in `unlinkedSessions` rather than
-reported as migrated).
+That unblocked the migration *write* path, now implemented end-to-end with
+Gateway RPC `projects.assign_session`, `ProjectsRepository.migrateSpaces`, and
+the reviewed migration action in `SpaceMigrationPreview`. It is covered by
+`test/projects_gateway_client_test.dart`, `test/space_migration_write_test.dart`,
+`test/space_migration_preview_test.dart`, and `test/projects_pane_test.dart`.
+It is idempotent (matching projects by normalized name), non-destructive (the
+local Spaces store remains available for rollback/retry), and honest (a partial
+failure keeps successful writes while `unlinkedSessions` and the UI report the
+rest). Each local chat is explicitly assigned to the matched or newly-created
+server Project; completing a migration no longer means merely creating empty
+Projects.
 
 18. the **Activity destination** — `test/activity_feed_test.dart`,
     `test/activity_pane_test.dart`, `test/workspace_screen_test.dart`. The
@@ -1181,13 +1183,13 @@ covered (`ProjectsRepository.migrateSpaces`,
 (Home, Projects, Activity, More) is implemented, covered, and now validated on
 hardware, so *screen* slices may begin.
 
-Note for a later slice: `NewChatDraft.projectId` is currently *carried* rather
+Note for the next slice: `NewChatDraft.projectId` is currently *carried* rather
 than *persisted*. `expiresAt` is no longer — the 72 h Quick-chat archive is
-implemented and enforced (item 23). Associating a new chat with its server
-Project remains the outstanding write-path work, and it is not blocked by the
-smoke test — it is blocked on the gateway itself, which exposes no `projects.*`
-RPC binding an existing session to a project. `migrateSpaces` reports those
-chats as `unlinkedSessions` rather than pretending they moved.
+implemented and enforced (item 23). The Gateway now exposes
+`projects.assign_session`, and existing Spaces chats are migrated through it.
+The remaining write-path work is to call that same RPC for a newly-created
+Project chat before opening it, with failure/retry UX that never silently drops
+the user's chosen Project.
 
 ---
 

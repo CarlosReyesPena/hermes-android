@@ -790,8 +790,8 @@
     "semantic_hash": ""
   },
   "docs/ANDROID_DAILY_DRIVER_ROADMAP.md": {
-    "mtime": 1788010184.9157693,
-    "ast_hash": "bcb311b0f8f9b271314addb7d6d672e7",
+    "mtime": 1788022149.3900883,
+    "ast_hash": "f69989bb9537c598f6bfec31d8c8c861",
     "semantic_hash": ""
   },
   "lib/core/models/hermes_project.dart": {
@@ -800,13 +800,13 @@
     "semantic_hash": ""
   },
   "lib/core/services/projects_gateway_client.dart": {
-    "mtime": 1787965814.270225,
-    "ast_hash": "5b88834cbe447c5a26c4f46d1d1a7041",
+    "mtime": 1788020783.6973443,
+    "ast_hash": "70ae458be0740a4d4f48bf15909e7a37",
     "semantic_hash": ""
   },
   "test/projects_gateway_client_test.dart": {
-    "mtime": 1787655923.4405854,
-    "ast_hash": "b21bc361289925be7fb6515264065689",
+    "mtime": 1788021298.1762936,
+    "ast_hash": "c2f8a58a8527a85cd6a39f4e295c153e",
     "semantic_hash": ""
   },
   "lib/core/theme/hermes_theme.dart": {
@@ -840,8 +840,8 @@
     "semantic_hash": ""
   },
   "lib/core/services/projects_repository.dart": {
-    "mtime": 1788007688.5073173,
-    "ast_hash": "ed287fb6116bfd8e428edaac7f5f3f9a",
+    "mtime": 1788020975.4075613,
+    "ast_hash": "1da313611d259275e3acad412dd96873",
     "semantic_hash": ""
   },
   "test/projects_repository_test.dart": {
@@ -850,13 +850,13 @@
     "semantic_hash": ""
   },
   "lib/core/widgets/projects_pane.dart": {
-    "mtime": 1787677908.1656585,
-    "ast_hash": "b89bbc7fcd4390bd8fc03834dd3f4b87",
+    "mtime": 1788022075.020238,
+    "ast_hash": "6374e5282dc3045d6ecc089ae562a4f4",
     "semantic_hash": ""
   },
   "test/projects_pane_test.dart": {
-    "mtime": 1787677836.7008483,
-    "ast_hash": "12682cc62baa90dc1502758a8b499607",
+    "mtime": 1788022037.6328106,
+    "ast_hash": "177188b726ef86c78df605f3bb5f20b7",
     "semantic_hash": ""
   },
   "lib/core/screens/workspace_screen.dart": {
@@ -870,13 +870,13 @@
     "semantic_hash": ""
   },
   "lib/core/widgets/space_migration_preview.dart": {
-    "mtime": 1787633590.466002,
-    "ast_hash": "ccd4f2b503e21466b1bf3231be79e7da",
+    "mtime": 1788021298.1022928,
+    "ast_hash": "cee601d186adf1cbc31b0bb58daaa859",
     "semantic_hash": ""
   },
   "test/space_migration_preview_test.dart": {
-    "mtime": 1787633544.5704813,
-    "ast_hash": "ee1a9db06496a3f92fac6f5cf3d5a993",
+    "mtime": 1788021298.194294,
+    "ast_hash": "83e9e87258bdc4a759bc24f9b62acdd8",
     "semantic_hash": ""
   },
   "lib/core/services/capability_registry.dart": {
@@ -1115,8 +1115,8 @@
     "semantic_hash": ""
   },
   "test/space_migration_write_test.dart": {
-    "mtime": 1788007920.846934,
-    "ast_hash": "5a705b4bac69956f2857555c068ce833",
+    "mtime": 1788021298.2112942,
+    "ast_hash": "e40fbd249fcdd06fbcf0b10ed1b53f87",
     "semantic_hash": ""
   },
   "lib/core/services/quick_chat_store.dart": {
