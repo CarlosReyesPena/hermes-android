@@ -21,6 +21,7 @@ library;
 
 import 'package:flutter/material.dart';
 
+import '../models/hermes_project.dart';
 import '../models/project_sessions_tree.dart';
 import '../models/session.dart';
 import '../services/projects_repository.dart';
@@ -31,6 +32,8 @@ import 'hermes_components.dart';
 /// the screen can be driven by a fake in tests without a gateway.
 typedef ProjectSessionsLoader =
     Future<ProjectSessionsView> Function({required bool refresh});
+typedef ProjectSessionMover =
+    Future<void> Function(Session session, String? projectId);
 
 const kProjectNewChatButtonKey = Key('project-detail-new-chat');
 
@@ -50,12 +53,18 @@ class ProjectDetailScreen extends StatefulWidget {
   /// Starts a chat already scoped to this Project.
   final VoidCallback? onNewChat;
 
+  /// Server Projects offered as move destinations for existing chats.
+  final List<HermesProject> projects;
+  final ProjectSessionMover? onMoveSession;
+
   const ProjectDetailScreen({
     required this.projectId,
     required this.projectName,
     required this.loadSessions,
     this.onOpenSession,
     this.onNewChat,
+    this.projects = const [],
+    this.onMoveSession,
     super.key,
   });
 
@@ -101,6 +110,72 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen>
         _view = ProjectSessionsView(projectId: widget.projectId, error: error);
         _loading = false;
       });
+    }
+  }
+
+  Future<void> _chooseMoveDestination(Session session) async {
+    final target = await showModalBottomSheet<_MoveTarget>(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Padding(
+              padding: EdgeInsets.fromLTRB(
+                HermesSpacing.lg,
+                HermesSpacing.lg,
+                HermesSpacing.lg,
+                HermesSpacing.sm,
+              ),
+              child: Text('Move conversation'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.inbox_outlined),
+              title: const Text('Unassigned'),
+              onTap: () => Navigator.pop(
+                context,
+                const _MoveTarget(projectId: null, label: 'Unassigned'),
+              ),
+            ),
+            for (final project in widget.projects)
+              if (!project.archived && project.id != widget.projectId)
+                ListTile(
+                  leading: const Icon(Icons.folder_outlined),
+                  title: Text(project.name),
+                  onTap: () => Navigator.pop(
+                    context,
+                    _MoveTarget(projectId: project.id, label: project.name),
+                  ),
+                ),
+          ],
+        ),
+      ),
+    );
+    if (target == null || !mounted) return;
+    await _moveSession(session, target);
+  }
+
+  Future<void> _moveSession(Session session, _MoveTarget target) async {
+    try {
+      await widget.onMoveSession!(session, target.projectId);
+      if (!mounted) return;
+      await _load(refresh: true);
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Moved to ${target.label}')));
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Couldn’t move conversation'),
+          action: SnackBarAction(
+            label: 'Retry',
+            onPressed: () => _moveSession(session, target),
+          ),
+        ),
+      );
     }
   }
 
@@ -205,6 +280,9 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen>
                     onTap: widget.onOpenSession == null
                         ? null
                         : () => widget.onOpenSession!(session),
+                    onMove: widget.onMoveSession == null
+                        ? null
+                        : () => _chooseMoveDestination(session),
                   ),
                 );
               },
@@ -315,11 +393,19 @@ class _OfflineNotice extends StatelessWidget {
   }
 }
 
+class _MoveTarget {
+  final String? projectId;
+  final String label;
+
+  const _MoveTarget({required this.projectId, required this.label});
+}
+
 class _SessionCard extends StatelessWidget {
   final Session session;
   final VoidCallback? onTap;
+  final VoidCallback? onMove;
 
-  const _SessionCard({required this.session, this.onTap});
+  const _SessionCard({required this.session, this.onTap, this.onMove});
 
   @override
   Widget build(BuildContext context) {
@@ -347,6 +433,15 @@ class _SessionCard extends StatelessWidget {
               if (session.isActive) ...[
                 const SizedBox(width: HermesSpacing.sm),
                 const StatusChip(status: HermesStatus.running),
+              ],
+              if (onMove != null) ...[
+                const SizedBox(width: HermesSpacing.xs),
+                IconButton(
+                  key: Key('move-session-${session.id}'),
+                  tooltip: 'Move conversation',
+                  onPressed: onMove,
+                  icon: const Icon(Icons.drive_file_move_outline, size: 20),
+                ),
               ],
             ],
           ),

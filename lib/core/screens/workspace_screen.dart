@@ -612,6 +612,9 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
               repository.projectSessions(projectId, refresh: refresh),
           onOpenSession: _openSession,
           onNewChat: () => unawaited(_startProjectChat(project)),
+          projects: repository.current.projects,
+          onMoveSession: (session, targetProjectId) =>
+              repository.assignSession(session.id, targetProjectId),
         ),
       ),
     );

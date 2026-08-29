@@ -23,6 +23,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hermes_android/core/models/hermes_project.dart';
 import 'package:hermes_android/core/models/project_sessions_tree.dart';
 import 'package:hermes_android/core/models/session.dart';
 import 'package:hermes_android/core/services/projects_repository.dart';
@@ -81,6 +82,8 @@ Future<void> _pump(
   String projectId = 'p1',
   String projectName = 'Hermes Android',
   ValueChanged<Session>? onOpenSession,
+  List<HermesProject> projects = const [],
+  ProjectSessionMover? onMoveSession,
 }) async {
   await tester.pumpWidget(
     MaterialApp(
@@ -90,6 +93,8 @@ Future<void> _pump(
         projectName: projectName,
         loadSessions: load,
         onOpenSession: onOpenSession,
+        projects: projects,
+        onMoveSession: onMoveSession,
       ),
     ),
   );
@@ -268,6 +273,49 @@ void main() {
     expect(opened!.id, 's-42');
   });
 
+  testWidgets('moves a chat to another Project and refreshes the list', (
+    tester,
+  ) async {
+    final moves = <String?>[];
+    final refreshes = <bool>[];
+    await _pump(
+      tester,
+      load: ({required refresh}) async {
+        refreshes.add(refresh);
+        return ProjectSessionsView(
+          projectId: 'p1',
+          tree: _tree(sessions: [_session(id: 's-42')]),
+          sessions: [_session(id: 's-42')],
+          support: ProjectsSupport.native,
+        );
+      },
+      projects: const [
+        HermesProject(id: 'p1', slug: 'android', name: 'Hermes Android'),
+        HermesProject(id: 'p2', slug: 'scripthive', name: 'ScriptHive'),
+      ],
+      onMoveSession: (session, projectId) async {
+        expect(session.id, 's-42');
+        moves.add(projectId);
+      },
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('move-session-s-42')));
+    await tester.pumpAndSettle();
+    expect(find.text('Move conversation'), findsOneWidget);
+    expect(find.text('Unassigned'), findsOneWidget);
+    expect(find.text('ScriptHive'), findsOneWidget);
+    // The current Project remains only in the app bar, never as a destination.
+    expect(find.text('Hermes Android'), findsOneWidget);
+
+    await tester.tap(find.text('ScriptHive'));
+    await tester.pumpAndSettle();
+
+    expect(moves, ['p2']);
+    expect(refreshes, [false, true]);
+    expect(find.text('Moved to ScriptHive'), findsOneWidget);
+  });
+
   testWidgets('pull to refresh forces a live read', (tester) async {
     final refreshes = <bool>[];
     await _pump(
@@ -286,7 +334,11 @@ void main() {
 
     expect(refreshes, [false]);
 
-    await tester.fling(find.byType(CustomScrollView), const Offset(0, 400), 800);
+    await tester.fling(
+      find.byType(CustomScrollView),
+      const Offset(0, 400),
+      800,
+    );
     await tester.pumpAndSettle();
 
     // The first open may use the cache; an explicit pull must not.

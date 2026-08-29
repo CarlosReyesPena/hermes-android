@@ -1192,6 +1192,13 @@ Projects.
     `New chat` action that skips the redundant mode/project pickers and reuses
     the exact same commit-before-open path.
 
+25. **Move conversation** — `test/project_detail_screen_test.dart`. Every chat
+    row inside a Project now offers a server-backed move sheet with
+    **Unassigned** plus every other non-archived Project. The current Project is
+    excluded, the write reuses idempotent `projects.assign_session`, success
+    refreshes the project from the Gateway and confirms its destination, and a
+    failed move leaves the chat in place with a Retry action.
+
 Phase 0 is **complete**. Step 7 (real Gateway smoke test on a device) passed on
 2026-08-29 against the live Miniserver gateway from a physical SM-S948B over
 wireless debugging, and the migration *write* path it gated is implemented and
