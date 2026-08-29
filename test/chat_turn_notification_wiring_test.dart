@@ -165,6 +165,9 @@ class _CallbackCapturingTurnSession implements GatewayTurnApplicationSession {
   }
 
   @override
+  set onSessionBound(GatewayTurnSessionBoundCallback? callback) {}
+
+  @override
   Future<List<GatewayTurnRecoveryState>> recoverPending(
     String localSessionId, {
     GatewayTurnStateCallback? onState,

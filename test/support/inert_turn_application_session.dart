@@ -18,6 +18,9 @@ class InertTurnApplicationSession implements GatewayTurnApplicationSession {
   set onTurnSettled(GatewayTurnSettledCallback? callback) {}
 
   @override
+  set onSessionBound(GatewayTurnSessionBoundCallback? callback) {}
+
+  @override
   Future<List<GatewayTurnRecoveryState>> recoverPending(
     String localSessionId, {
     GatewayTurnStateCallback? onState,

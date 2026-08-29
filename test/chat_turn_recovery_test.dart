@@ -452,6 +452,9 @@ class _FakeTurnSession implements GatewayTurnApplicationSession {
   set onTurnSettled(GatewayTurnSettledCallback? callback) {}
 
   @override
+  set onSessionBound(GatewayTurnSessionBoundCallback? callback) {}
+
+  @override
   Future<void> detachAttachments({
     required String localSessionId,
     required Iterable<GatewayTurnAttachmentReceipt> attachments,

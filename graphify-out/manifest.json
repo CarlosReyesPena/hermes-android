@@ -210,13 +210,13 @@
     "semantic_hash": ""
   },
   "lib/core/services/gateway_turn_application_controller.dart": {
-    "mtime": 1787513018.5068421,
-    "ast_hash": "a619fe31045340cc37487312a85d175b",
+    "mtime": 1788033169.4568303,
+    "ast_hash": "2a56fa3b00976521d3a56109993fb0b2",
     "semantic_hash": ""
   },
   "lib/core/services/gateway_turn_coordinator.dart": {
-    "mtime": 1787605188.2635045,
-    "ast_hash": "feead2bdd8b3f8f9065e607d0c7ef439",
+    "mtime": 1788033129.873374,
+    "ast_hash": "a256688c7917e0cd923b2bc8d5595ea9",
     "semantic_hash": ""
   },
   "lib/core/services/gateway_turn_journal.dart": {
@@ -365,8 +365,8 @@
     "semantic_hash": ""
   },
   "test/chat_turn_recovery_test.dart": {
-    "mtime": 1787513018.516088,
-    "ast_hash": "3a755fed0665fab3f2b1c99d2c65a86f",
+    "mtime": 1788033603.4090943,
+    "ast_hash": "c23e5c3d6787c4b7f27f0eb2c58f0598",
     "semantic_hash": ""
   },
   "test/chat_voice_composer_test.dart": {
@@ -410,13 +410,13 @@
     "semantic_hash": ""
   },
   "test/gateway_turn_application_controller_test.dart": {
-    "mtime": 1787513018.5188422,
-    "ast_hash": "eb4a62a5129cdc6d9f5c095709bb7da0",
+    "mtime": 1788033555.2113504,
+    "ast_hash": "eb639bdac55c45b03d49785081c10332",
     "semantic_hash": ""
   },
   "test/gateway_turn_coordinator_test.dart": {
-    "mtime": 1787513018.5198421,
-    "ast_hash": "42bcd82b4a6815c206c80632e833e0e6",
+    "mtime": 1788033837.9296749,
+    "ast_hash": "099df9afe68b174c9eceacb4a3c39b70",
     "semantic_hash": ""
   },
   "test/gateway_turn_journal_test.dart": {
@@ -790,8 +790,8 @@
     "semantic_hash": ""
   },
   "docs/ANDROID_DAILY_DRIVER_ROADMAP.md": {
-    "mtime": 1788029857.1302276,
-    "ast_hash": "1ca12c45e8071bc6e37f3f2a4f349f0e",
+    "mtime": 1788034058.2372656,
+    "ast_hash": "1a23910e6287aaada5448dccd91f0a08",
     "semantic_hash": ""
   },
   "lib/core/models/hermes_project.dart": {
@@ -860,13 +860,13 @@
     "semantic_hash": ""
   },
   "lib/core/screens/workspace_screen.dart": {
-    "mtime": 1788023186.1660168,
-    "ast_hash": "f50366e12e3e946921624db3c094ea78",
+    "mtime": 1788033241.569662,
+    "ast_hash": "e63d5e4e4140fbe00b87a4d351a9db32",
     "semantic_hash": ""
   },
   "test/workspace_screen_test.dart": {
-    "mtime": 1788022670.923051,
-    "ast_hash": "a55aae6b20e1c1dfb55f5189c89bab06",
+    "mtime": 1788033494.5766373,
+    "ast_hash": "f7df68b38e2366e873860cdd74472e58",
     "semantic_hash": ""
   },
   "lib/core/widgets/space_migration_preview.dart": {
@@ -920,8 +920,8 @@
     "semantic_hash": ""
   },
   "test/chat_turn_notification_wiring_test.dart": {
-    "mtime": 1787746209.7945457,
-    "ast_hash": "6f3b9bc8ab67bdb863cbd5d5cc0bd593",
+    "mtime": 1788033625.502177,
+    "ast_hash": "d0f9c08fef79eab851fa8dcde249c1c7",
     "semantic_hash": ""
   },
   "lib/core/utils/turn_recovery_fallback.dart": {
@@ -955,8 +955,8 @@
     "semantic_hash": ""
   },
   "test/support/inert_turn_application_session.dart": {
-    "mtime": 1787832092.4654517,
-    "ast_hash": "5d9c0a092298100894f4e7f687402c5f",
+    "mtime": 1788033187.2540357,
+    "ast_hash": "4853d587f0c77821e6975aeb1e85942d",
     "semantic_hash": ""
   },
   "test/workspace_entry_point_test.dart": {

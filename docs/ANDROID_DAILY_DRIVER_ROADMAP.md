@@ -1222,6 +1222,24 @@ Projects.
     does not exist; clearing restores the full list; and filtered rows keep
     their open and move actions.
 
+27. **stored-id Project assignment reconciliation** —
+    `test/gateway_turn_coordinator_test.dart`,
+    `test/workspace_screen_test.dart`, and server-side
+    `test_projects_rpc.py` / `test_project_tree.py`. Two halves of one fix
+    that make a brand-new Project chat actually appear inside its Project:
+
+    - **Server**: the project tree now resolves a session row's durable stored
+      id back through the turn-recovery mobile→stored binding before giving up,
+      so an assignment written under the mobile id (the only id that exists at
+      commit-before-open time) still places the chat. `project_id_for_session`
+      is the pure resolver, pinned by unit tests.
+    - **Android**: the workspace subscribes to `onSessionBound` — fired by the
+      turn coordinator exactly once, when `session.open` first binds a draft to
+      its stored id — and re-writes the assignment under that stored id. The
+      commit-before-open intent write is kept (it is what makes Retry safe and
+      never silently drops the user's choice); the reconciliation is
+      idempotent and scoped to the Project chats this workspace started.
+
 Phase 0 is **complete**. Step 7 (real Gateway smoke test on a device) passed on
 2026-08-29 against the live Miniserver gateway from a physical SM-S948B over
 wireless debugging, and the migration *write* path it gated is implemented and

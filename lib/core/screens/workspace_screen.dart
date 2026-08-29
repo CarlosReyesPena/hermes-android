@@ -207,6 +207,13 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
   /// untitled rather than being dropped or given a fabricated name.
   Map<String, String> _sessionTitles = const {};
 
+  /// Draft session ids of Project chats this workspace started, mapped to the
+  /// Project they were committed to. When `session.open` first binds such a
+  /// draft to a durable stored id, the binding is re-written under the stored
+  /// id so the server-owned Project actually shows the chat.
+  final Map<String, String> _projectChatBindings = {};
+  bool _projectReconcileInstalled = false;
+
   /// Read lazily so a connection that never opens Home never touches secure
   /// storage, and so tests that inject a loader never construct one at all.
   GatewayTurnJournal? _journal;
@@ -750,6 +757,10 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
   Future<void> _finishNewChat(NewChatDraft draft) async {
     final projectId = draft.projectId;
     if (projectId != null) {
+      // Remember the intent so the stored-id reconciliation below can re-write
+      // the assignment once this draft gains its durable server id.
+      _projectChatBindings[draft.session.id] = projectId;
+      _installProjectAssignmentReconcile();
       try {
         final repository = _repository;
         if (repository == null) {
@@ -780,6 +791,43 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
       return;
     }
     await _openSession(draft.session);
+  }
+
+  /// Re-writes a Project chat's assignment under its durable stored id.
+  ///
+  /// The commit-before-open write uses the draft id (`mob-...`) because the
+  /// stored id only exists once `session.open` runs. The Gateway binds the two
+  /// ids; this workspace subscribes once and, on the first binding, writes the
+  /// authoritative row the server-owned Project tree can resolve.
+  void _installProjectAssignmentReconcile() {
+    if (_projectReconcileInstalled) return;
+    final controller = widget.turnApplicationController;
+    if (controller == null) return;
+    _projectReconcileInstalled = true;
+    controller.sessionFor(widget.connection).onSessionBound =
+        (localSessionId, storedSessionId) {
+      final projectId = _projectChatBindings.remove(localSessionId);
+      if (projectId == null) return;
+      unawaited(_reconcileProjectAssignment(storedSessionId, projectId));
+    };
+  }
+
+  Future<void> _reconcileProjectAssignment(
+    String storedSessionId,
+    String projectId,
+  ) async {
+    final repository = _repository;
+    if (repository == null) return;
+    try {
+      await repository.assignSession(storedSessionId, projectId);
+    } catch (_) {
+      // Best-effort: the commit-before-open write already recorded the user's
+      // choice under the draft id, so the intent is never lost — this only
+      // makes the chat visible inside the Project one refresh sooner.
+      debugPrint(
+        'Could not reconcile Project assignment for $storedSessionId',
+      );
+    }
   }
 
   Future<void> _openFiles() async {

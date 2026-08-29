@@ -6,6 +6,7 @@ import 'package:hermes_android/core/screens/chat_screen.dart';
 import 'package:hermes_android/core/screens/workspace_screen.dart';
 import 'package:hermes_android/core/services/chat_space_store.dart';
 import 'package:hermes_android/core/services/gateway_turn_application_controller.dart';
+import 'package:hermes_android/core/services/gateway_turn_coordinator.dart';
 import 'package:hermes_android/core/services/projects_gateway_client.dart';
 import 'package:hermes_android/core/services/projects_repository.dart';
 import 'package:hermes_android/core/theme/hermes_theme.dart';
@@ -113,6 +114,7 @@ Future<void> _pump(
   WorkspaceActivityFeedLoader? activityFeedLoader,
   ValueChanged<NewChatDraft>? onNewChat,
   NewChatSessionIdFactory? newChatSessionIdFactory,
+  GatewayTurnApplicationController? turnApplicationController,
   Size size = const Size(400, 800),
 }) async {
   tester.view.physicalSize = size;
@@ -141,6 +143,7 @@ Future<void> _pump(
         activityFeedLoader: activityFeedLoader,
         onNewChat: onNewChat,
         newChatSessionIdFactory: newChatSessionIdFactory,
+        turnApplicationController: turnApplicationController,
         onOpenDashboard: openedDashboards == null
             ? null
             : (url) async => openedDashboards.add(url),
@@ -157,6 +160,22 @@ Future<void> _pump(
 Finder _sectionHeader(HomeSectionKind kind) => find.byWidgetPredicate(
   (widget) => widget is SectionHeader && widget.title == kind.title,
 );
+
+/// A turn session a widget test can drive: captures the workspace's
+/// onSessionBound handler and fires it on demand, like the real coordinator
+/// does when `session.open` first binds a draft id to a stored id.
+class _ControllableTurnSession extends InertTurnApplicationSession {
+  GatewayTurnSessionBoundCallback? boundCallback;
+
+  @override
+  set onSessionBound(GatewayTurnSessionBoundCallback? callback) {
+    boundCallback = callback;
+  }
+
+  void fireSessionBound(String localSessionId, String storedSessionId) {
+    boundCallback?.call(localSessionId, storedSessionId);
+  }
+}
 
 void main() {
   setUp(() => SharedPreferences.setMockInitialValues({}));
@@ -1335,6 +1354,99 @@ void main() {
       await tester.tap(find.text(HermesDestination.more.label).last);
       await tester.pumpAndSettle();
       expect(find.byType(MorePane), findsOneWidget);
+    });
+    testWidgets('a project chat is re-assigned with its stored id once the '
+        'turn binding exists', (tester) async {
+      // The server stores sessions under their durable id, but commit-before-
+      // open assigns the draft id (mob-...). Once session.open binds the draft
+      // to a stored id, the workspace must reconcile so the Project actually
+      // shows the chat.
+      final assignments = <Map<String, dynamic>>[];
+      final repository = await _repository([
+        _projectJson(id: 'p1', name: 'Hermes Android'),
+      ], assignments: assignments);
+      final turnSession = _ControllableTurnSession();
+      final controller = GatewayTurnApplicationController(
+        sessionFactory: (_) => turnSession,
+      );
+      addTearDown(controller.close);
+
+      await _pump(
+        tester,
+        connection: _connection(desktopGatewayUrl: 'https://host:8642'),
+        repository: repository,
+        sessions: const [],
+        turnApplicationController: controller,
+        newChatSessionIdFactory: () => 'new-project-chat',
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(kWorkspaceNewChatButtonKey));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(NewChatMode.projectChat.label));
+      await tester.pumpAndSettle();
+
+      // A single Project skips the picker and opens the chat directly.
+      expect(find.textContaining('New chat · Hermes Android'), findsOneWidget);
+
+      // Commit-before-open wrote the intent with the draft id.
+      expect(assignments, [
+        {'session_id': 'new-project-chat', 'project_id': 'p1'},
+      ]);
+
+      // The turn binding lands with the server's stored id.
+      turnSession.fireSessionBound('new-project-chat', '20260829_stored_42');
+      await tester.pumpAndSettle();
+
+      expect(
+        assignments.any(
+          (a) =>
+              a['session_id'] == '20260829_stored_42' &&
+              a['project_id'] == 'p1',
+        ),
+        isTrue,
+        reason: 'assignments: $assignments',
+      );
+    });
+
+    testWidgets('an unrelated turn binding never touches a project chat', (
+      tester,
+    ) async {
+      final assignments = <Map<String, dynamic>>[];
+      final repository = await _repository([
+        _projectJson(id: 'p1', name: 'Hermes Android'),
+      ], assignments: assignments);
+      final turnSession = _ControllableTurnSession();
+      final controller = GatewayTurnApplicationController(
+        sessionFactory: (_) => turnSession,
+      );
+      addTearDown(controller.close);
+
+      await _pump(
+        tester,
+        connection: _connection(desktopGatewayUrl: 'https://host:8642'),
+        repository: repository,
+        sessions: const [],
+        turnApplicationController: controller,
+        newChatSessionIdFactory: () => 'new-project-chat',
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(kWorkspaceNewChatButtonKey));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(NewChatMode.projectChat.label));
+      await tester.pumpAndSettle();
+
+      // A single Project skips the picker and opens the chat directly.
+      expect(find.textContaining('New chat · Hermes Android'), findsOneWidget);
+
+      turnSession.fireSessionBound('some-other-chat', 'other-stored');
+      await tester.pumpAndSettle();
+
+      expect(
+        assignments.where((a) => a['session_id'] != 'new-project-chat'),
+        isEmpty,
+      );
     });
   });
 }
