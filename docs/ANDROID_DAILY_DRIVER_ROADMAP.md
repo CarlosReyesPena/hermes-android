@@ -1175,6 +1175,23 @@ Projects.
     failure costs the archive rule for that refresh rather than the session
     list or the chat itself.
 
+24. the **Project-chat write path** —
+    `test/projects_gateway_client_test.dart`,
+    `test/space_migration_write_test.dart`, `test/projects_pane_test.dart`, and
+    `test/workspace_screen_test.dart`. Android now uses the Gateway's
+    `projects.assign_session` RPC as the single authoritative association for
+    both migrated Spaces chats and brand-new Project chats. The reviewed
+    migration action assigns every local conversation to the matching or newly
+    created server Project and reports partial results without deleting its
+    local rollback source.
+
+    New chat creation commits the association **before** navigation or the host
+    callback receives the draft, so selecting a Project can never silently
+    produce an Unassigned chat. A failed write opens nothing and offers an
+    idempotent Retry using the same session id. Project detail now owns a
+    `New chat` action that skips the redundant mode/project pickers and reuses
+    the exact same commit-before-open path.
+
 Phase 0 is **complete**. Step 7 (real Gateway smoke test on a device) passed on
 2026-08-29 against the live Miniserver gateway from a physical SM-S948B over
 wireless debugging, and the migration *write* path it gated is implemented and

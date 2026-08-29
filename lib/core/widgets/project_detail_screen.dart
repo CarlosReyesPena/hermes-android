@@ -32,6 +32,8 @@ import 'hermes_components.dart';
 typedef ProjectSessionsLoader =
     Future<ProjectSessionsView> Function({required bool refresh});
 
+const kProjectNewChatButtonKey = Key('project-detail-new-chat');
+
 class ProjectDetailScreen extends StatefulWidget {
   final String projectId;
 
@@ -45,11 +47,15 @@ class ProjectDetailScreen extends StatefulWidget {
   /// fake-tappable.
   final ValueChanged<Session>? onOpenSession;
 
+  /// Starts a chat already scoped to this Project.
+  final VoidCallback? onNewChat;
+
   const ProjectDetailScreen({
     required this.projectId,
     required this.projectName,
     required this.loadSessions,
     this.onOpenSession,
+    this.onNewChat,
     super.key,
   });
 
@@ -115,6 +121,14 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen>
         ),
       ),
       body: _buildBody(view),
+      floatingActionButton: widget.onNewChat == null
+          ? null
+          : FloatingActionButton.extended(
+              key: kProjectNewChatButtonKey,
+              onPressed: widget.onNewChat,
+              icon: const Icon(Icons.add_rounded),
+              label: const Text('New chat'),
+            ),
     );
   }
 

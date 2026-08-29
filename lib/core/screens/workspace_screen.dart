@@ -302,9 +302,7 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
     try {
       final store = await _quickChatStore();
       final now = DateTime.now();
-      await store.prune({
-        for (final session in sessions) session.id,
-      }, now: now);
+      await store.prune({for (final session in sessions) session.id}, now: now);
       archived = (await store.load()).archivedAt(now);
     } catch (_) {
       archived = const {};
@@ -602,14 +600,18 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
         .where((project) => project.id == projectId)
         .firstOrNull;
 
+    final project =
+        known ?? HermesProject(id: projectId, slug: projectId, name: 'Project');
+
     await Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (_) => ProjectDetailScreen(
           projectId: projectId,
-          projectName: known?.name ?? 'Project',
+          projectName: project.name,
           loadSessions: ({required bool refresh}) =>
               repository.projectSessions(projectId, refresh: refresh),
           onOpenSession: _openSession,
+          onNewChat: () => unawaited(_startProjectChat(project)),
         ),
       ),
     );
@@ -664,6 +666,21 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
     return repository.current;
   }
 
+  /// Starts directly inside a Project without asking the user to choose the
+  /// mode or Project again. The same commit-before-open path is reused.
+  Future<void> _startProjectChat(HermesProject project) async {
+    final draft = buildNewChatDraft(
+      mode: NewChatMode.projectChat,
+      sessionId:
+          (widget.newChatSessionIdFactory ??
+                  GatewayChatClient.generateSessionId)
+              .call(),
+      now: DateTime.now(),
+      project: project,
+    );
+    await _finishNewChat(draft);
+  }
+
   /// Runs Home's global New affordance.
   ///
   /// Every product rule it depends on lives in `new_chat_options.dart`; this
@@ -716,6 +733,41 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
         final store = await _quickChatStore();
         await store.record(draft.session.id, expiresAt: expiresAt);
       } catch (_) {}
+      if (!mounted) return;
+    }
+
+    await _finishNewChat(draft);
+  }
+
+  /// Commits a drafted Project chat before exposing it to navigation.
+  ///
+  /// `projects.assign_session` is idempotent, so Retry can safely reuse the
+  /// same session id. A failed write never opens an Unassigned chat under the
+  /// guise of the Project the user chose.
+  Future<void> _finishNewChat(NewChatDraft draft) async {
+    final projectId = draft.projectId;
+    if (projectId != null) {
+      try {
+        final repository = _repository;
+        if (repository == null) {
+          throw StateError('Projects are unavailable for this connection');
+        }
+        await repository.assignSession(draft.session.id, projectId);
+      } catch (_) {
+        if (!mounted) return;
+        final messenger = ScaffoldMessenger.of(context);
+        messenger.hideCurrentSnackBar();
+        messenger.showSnackBar(
+          SnackBar(
+            content: const Text('Couldn’t create Project chat'),
+            action: SnackBarAction(
+              label: 'Retry',
+              onPressed: () => unawaited(_finishNewChat(draft)),
+            ),
+          ),
+        );
+        return;
+      }
       if (!mounted) return;
     }
 

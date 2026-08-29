@@ -337,6 +337,16 @@ class ProjectsRepository {
     }
   }
 
+  /// Persists the authoritative server-side Project for one conversation.
+  ///
+  /// Callers must complete this before opening a newly drafted Project chat;
+  /// otherwise the chat would initially exist under Unassigned and the user's
+  /// selection would be silently lost.
+  Future<void> assignSession(String sessionId, String? projectId) async {
+    _requireSupported();
+    await client.assignSession(sessionId: sessionId, projectId: projectId);
+  }
+
   Future<void> setActive(String? id) async {
     _requireSupported();
     final previous = _current;

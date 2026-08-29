@@ -62,8 +62,11 @@ Map<String, dynamic> _projectJson({required String id, required String name}) =>
     };
 
 Future<ProjectsRepository> _repository(
-  List<Map<String, dynamic>> projects,
-) async {
+  List<Map<String, dynamic>> projects, {
+  List<Map<String, dynamic>>? assignments,
+  int assignmentFailures = 0,
+}) async {
+  var failuresLeft = assignmentFailures;
   return ProjectsRepository(
     client: ProjectsGatewayClient((method, params) async {
       if (method == 'projects.list') {
@@ -71,6 +74,21 @@ Future<ProjectsRepository> _repository(
           'jsonrpc': '2.0',
           'id': 1,
           'result': {'projects': projects, 'active_id': null},
+        };
+      }
+      if (method == 'projects.assign_session') {
+        if (failuresLeft > 0) {
+          failuresLeft--;
+          throw Exception('gateway offline');
+        }
+        assignments?.add(Map<String, dynamic>.from(params));
+        return {
+          'jsonrpc': '2.0',
+          'id': 1,
+          'result': {
+            'session_id': params['session_id'],
+            'project_id': params['project_id'],
+          },
         };
       }
       return {'jsonrpc': '2.0', 'id': 1, 'result': const {}};
@@ -94,6 +112,7 @@ Future<void> _pump(
   WorkspaceTurnSignalsLoader? turnSignalsLoader,
   WorkspaceActivityFeedLoader? activityFeedLoader,
   ValueChanged<NewChatDraft>? onNewChat,
+  NewChatSessionIdFactory? newChatSessionIdFactory,
   Size size = const Size(400, 800),
 }) async {
   tester.view.physicalSize = size;
@@ -121,6 +140,7 @@ Future<void> _pump(
         turnSignalsLoader: turnSignalsLoader,
         activityFeedLoader: activityFeedLoader,
         onNewChat: onNewChat,
+        newChatSessionIdFactory: newChatSessionIdFactory,
         onOpenDashboard: openedDashboards == null
             ? null
             : (url) async => openedDashboards.add(url),
@@ -254,6 +274,35 @@ void main() {
     // The name is carried, so the screen never opens on "Untitled".
     expect(find.text('Hermes Android'), findsWidgets);
     expect(find.text('Chats'), findsWidgets);
+  });
+
+  testWidgets('the Project detail plus creates inside that Project', (
+    tester,
+  ) async {
+    final opened = <NewChatDraft>[];
+    final assignments = <Map<String, dynamic>>[];
+    await _pump(
+      tester,
+      connection: _connection(desktopGatewayUrl: 'https://host:8642'),
+      repository: await _repository([
+        _projectJson(id: 'p1', name: 'Hermes Android'),
+      ], assignments: assignments),
+      onNewChat: opened.add,
+      newChatSessionIdFactory: () => 'project-detail-chat',
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Projects').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Hermes Android'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(kProjectNewChatButtonKey));
+    await tester.pumpAndSettle();
+
+    expect(assignments, [
+      {'session_id': 'project-detail-chat', 'project_id': 'p1'},
+    ]);
+    expect(opened.single.projectId, 'p1');
   });
 
   testWidgets('a host callback suppresses the built-in project route', (
@@ -919,13 +968,15 @@ void main() {
       tester,
     ) async {
       final opened = <NewChatDraft>[];
+      final assignments = <Map<String, dynamic>>[];
+      final repository = await _repository([
+        _projectJson(id: 'p1', name: 'Hermes Android'),
+        _projectJson(id: 'p2', name: 'ScriptHive'),
+      ], assignments: assignments);
       await _pump(
         tester,
         connection: _connection(desktopGatewayUrl: 'https://host:8642'),
-        repository: await _repository([
-          _projectJson(id: 'p1', name: 'Hermes Android'),
-          _projectJson(id: 'p2', name: 'ScriptHive'),
-        ]),
+        repository: repository,
         sessions: const [],
         onNewChat: opened.add,
       );
@@ -943,7 +994,49 @@ void main() {
       expect(opened, hasLength(1));
       expect(opened.single.isQuick, isFalse);
       expect(opened.single.projectId, 'p2');
+      expect(assignments, [
+        {'session_id': opened.single.session.id, 'project_id': 'p2'},
+      ]);
     });
+
+    testWidgets(
+      'a failed Project assignment offers a safe retry before opening',
+      (tester) async {
+        final opened = <NewChatDraft>[];
+        final assignments = <Map<String, dynamic>>[];
+        await _pump(
+          tester,
+          connection: _connection(desktopGatewayUrl: 'https://host:8642'),
+          repository: await _repository(
+            [_projectJson(id: 'p1', name: 'Hermes Android')],
+            assignments: assignments,
+            assignmentFailures: 1,
+          ),
+          sessions: const [],
+          onNewChat: opened.add,
+          newChatSessionIdFactory: () => 'new-project-chat',
+        );
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.byKey(kWorkspaceNewChatButtonKey));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(NewChatMode.projectChat.label));
+        await tester.pumpAndSettle();
+
+        expect(opened, isEmpty);
+        expect(find.text('Couldn’t create Project chat'), findsOneWidget);
+        expect(find.text('Retry'), findsOneWidget);
+
+        await tester.tap(find.text('Retry'));
+        await tester.pumpAndSettle();
+
+        expect(assignments, [
+          {'session_id': 'new-project-chat', 'project_id': 'p1'},
+        ]);
+        expect(opened.single.session.id, 'new-project-chat');
+        expect(opened.single.projectId, 'p1');
+      },
+    );
 
     testWidgets('a project chat with exactly one project skips the picker', (
       tester,
