@@ -65,16 +65,31 @@ Map<String, dynamic> _projectJson({required String id, required String name}) =>
 Future<ProjectsRepository> _repository(
   List<Map<String, dynamic>> projects, {
   List<Map<String, dynamic>>? assignments,
+  List<String>? deletions,
   int assignmentFailures = 0,
 }) async {
   var failuresLeft = assignmentFailures;
+  var serverProjects = [...projects];
   return ProjectsRepository(
     client: ProjectsGatewayClient((method, params) async {
       if (method == 'projects.list') {
         return {
           'jsonrpc': '2.0',
           'id': 1,
-          'result': {'projects': projects, 'active_id': null},
+          'result': {'projects': serverProjects, 'active_id': null},
+        };
+      }
+      if (method == 'projects.delete') {
+        final id = params['id'] as String;
+        deletions?.add(id);
+        serverProjects = [
+          for (final project in serverProjects)
+            if (project['id'] != id) project,
+        ];
+        return {
+          'jsonrpc': '2.0',
+          'id': 1,
+          'result': {'projects': serverProjects, 'active_id': null},
         };
       }
       if (method == 'projects.assign_session') {
@@ -293,6 +308,37 @@ void main() {
     // The name is carried, so the screen never opens on "Untitled".
     expect(find.text('Hermes Android'), findsWidgets);
     expect(find.text('Chats'), findsWidgets);
+  });
+
+  testWidgets('deleting a Project returns to the refreshed Projects list', (
+    tester,
+  ) async {
+    final deletions = <String>[];
+    await _pump(
+      tester,
+      connection: _connection(desktopGatewayUrl: 'https://host:8642'),
+      repository: await _repository([
+        _projectJson(id: 'p1', name: 'Delete me'),
+        _projectJson(id: 'p2', name: 'Keep me'),
+      ], deletions: deletions),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Projects').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Delete me'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Project actions'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Delete project'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(TextButton, 'Delete'));
+    await tester.pumpAndSettle();
+
+    expect(deletions, ['p1']);
+    expect(find.byType(ProjectDetailScreen), findsNothing);
+    expect(find.text('Delete me'), findsNothing);
+    expect(find.text('Keep me'), findsOneWidget);
   });
 
   testWidgets('the Project detail plus creates inside that Project', (

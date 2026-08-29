@@ -35,6 +35,7 @@ typedef ProjectSessionsLoader =
     Future<ProjectSessionsView> Function({required bool refresh});
 typedef ProjectSessionMover =
     Future<void> Function(Session session, String? projectId);
+typedef ProjectDeleter = Future<void> Function();
 
 const kProjectNewChatButtonKey = Key('project-detail-new-chat');
 const kProjectSearchFieldKey = Key('project-detail-search');
@@ -59,6 +60,10 @@ class ProjectDetailScreen extends StatefulWidget {
   final List<HermesProject> projects;
   final ProjectSessionMover? onMoveSession;
 
+  /// Permanently removes this server Project. Its chat sessions survive and
+  /// become Unassigned because the Gateway deletes only their assignments.
+  final ProjectDeleter? onDeleteProject;
+
   const ProjectDetailScreen({
     required this.projectId,
     required this.projectName,
@@ -67,6 +72,7 @@ class ProjectDetailScreen extends StatefulWidget {
     this.onNewChat,
     this.projects = const [],
     this.onMoveSession,
+    this.onDeleteProject,
     super.key,
   });
 
@@ -87,6 +93,7 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen>
   /// Per-Project search: filters the sessions the server already returned.
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
+  bool _deleting = false;
 
   @override
   void initState() {
@@ -190,6 +197,64 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen>
     }
   }
 
+  Future<void> _confirmDelete() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text('Delete ${_view?.tree?.label ?? widget.projectName}?'),
+        content: const Text(
+          'This permanently deletes the Project. Chats will not be deleted; '
+          'they’ll return to Unassigned.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            style: TextButton.styleFrom(
+              foregroundColor: Theme.of(context).colorScheme.error,
+            ),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true && mounted) await _deleteProject();
+  }
+
+  Future<void> _deleteProject() async {
+    final delete = widget.onDeleteProject;
+    if (delete == null || _deleting) return;
+    setState(() => _deleting = true);
+    try {
+      await delete();
+      if (!mounted) return;
+      final navigator = Navigator.of(context);
+      if (navigator.canPop()) {
+        navigator.pop(true);
+      } else {
+        // Embedders may mount the detail as their root rather than a route.
+        // There is nowhere to return in that case, but the action must still
+        // settle instead of leaving an infinite progress indicator.
+        setState(() => _deleting = false);
+      }
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _deleting = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Couldn’t delete project'),
+          action: SnackBarAction(
+            label: 'Retry',
+            onPressed: () => _deleteProject(),
+          ),
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final view = _view;
@@ -198,6 +263,44 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen>
     return Scaffold(
       appBar: AppBar(
         title: Text(title),
+        actions: [
+          if (widget.onDeleteProject != null)
+            if (_deleting)
+              const Padding(
+                padding: EdgeInsets.all(HermesSpacing.md),
+                child: SizedBox.square(
+                  dimension: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+              )
+            else
+              PopupMenuButton<String>(
+                tooltip: 'Project actions',
+                onSelected: (action) {
+                  if (action == 'delete') _confirmDelete();
+                },
+                itemBuilder: (context) => [
+                  PopupMenuItem<String>(
+                    value: 'delete',
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.delete_outline,
+                          color: Theme.of(context).colorScheme.error,
+                        ),
+                        const SizedBox(width: HermesSpacing.sm),
+                        Text(
+                          'Delete project',
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.error,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+        ],
         bottom: TabBar(
           controller: _tabs,
           tabs: const [
@@ -316,7 +419,8 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen>
               child: EmptyState(
                 icon: Icons.search_off,
                 title: 'No matches',
-                message: 'No chats in this project match '
+                message:
+                    'No chats in this project match '
                     '“${_searchQuery.trim()}”.',
               ),
             )

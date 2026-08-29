@@ -84,6 +84,7 @@ Future<void> _pump(
   ValueChanged<Session>? onOpenSession,
   List<HermesProject> projects = const [],
   ProjectSessionMover? onMoveSession,
+  Future<void> Function()? onDeleteProject,
 }) async {
   await tester.pumpWidget(
     MaterialApp(
@@ -95,6 +96,7 @@ Future<void> _pump(
         onOpenSession: onOpenSession,
         projects: projects,
         onMoveSession: onMoveSession,
+        onDeleteProject: onDeleteProject,
       ),
     ),
   );
@@ -316,6 +318,71 @@ void main() {
     expect(find.text('Moved to ScriptHive'), findsOneWidget);
   });
 
+  testWidgets('delete requires confirmation and preserves chats', (
+    tester,
+  ) async {
+    var deletions = 0;
+    await _pump(
+      tester,
+      load: ({required refresh}) async => ProjectSessionsView(
+        projectId: 'p1',
+        tree: _tree(sessions: [_session()]),
+        sessions: [_session()],
+        support: ProjectsSupport.native,
+      ),
+      onDeleteProject: () async => deletions++,
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Project actions'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Delete project'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Delete Hermes Android?'), findsOneWidget);
+    expect(find.textContaining('Chats will not be deleted'), findsOneWidget);
+    expect(find.textContaining('Unassigned'), findsOneWidget);
+
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+    expect(deletions, 0);
+
+    await tester.tap(find.byTooltip('Project actions'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Delete project'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(TextButton, 'Delete'));
+    await tester.pumpAndSettle();
+
+    expect(deletions, 1);
+  });
+
+  testWidgets('a failed delete keeps the project open with a retry action', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      load: ({required refresh}) async => ProjectSessionsView(
+        projectId: 'p1',
+        tree: _tree(),
+        support: ProjectsSupport.native,
+      ),
+      onDeleteProject: () async => throw Exception('offline'),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Project actions'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Delete project'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(TextButton, 'Delete'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(ProjectDetailScreen), findsOneWidget);
+    expect(find.text('Couldn’t delete project'), findsOneWidget);
+    expect(find.text('Retry'), findsOneWidget);
+  });
+
   testWidgets('pull to refresh forces a live read', (tester) async {
     final refreshes = <bool>[];
     await _pump(
@@ -356,11 +423,13 @@ void main() {
           tester,
           load: ({required refresh}) async => ProjectSessionsView(
             projectId: 'p1',
-            tree: _tree(sessions: [
-              _session(id: 's1', title: 'Ship the Files browser'),
-              _session(id: 's2', title: 'Review the draft'),
-              _session(id: 's3', title: 'Pushed the release tag'),
-            ]),
+            tree: _tree(
+              sessions: [
+                _session(id: 's1', title: 'Ship the Files browser'),
+                _session(id: 's2', title: 'Review the draft'),
+                _session(id: 's3', title: 'Pushed the release tag'),
+              ],
+            ),
             sessions: [
               _session(id: 's1', title: 'Ship the Files browser'),
               _session(id: 's2', title: 'Review the draft'),

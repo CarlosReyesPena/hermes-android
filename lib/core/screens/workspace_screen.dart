@@ -622,6 +622,7 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
           projects: repository.current.projects,
           onMoveSession: (session, targetProjectId) =>
               repository.assignSession(session.id, targetProjectId),
+          onDeleteProject: () => repository.delete(projectId),
         ),
       ),
     );
@@ -804,8 +805,9 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
     final controller = widget.turnApplicationController;
     if (controller == null) return;
     _projectReconcileInstalled = true;
-    controller.sessionFor(widget.connection).onSessionBound =
-        (localSessionId, storedSessionId) {
+    controller
+        .sessionFor(widget.connection)
+        .onSessionBound = (localSessionId, storedSessionId) {
       final projectId = _projectChatBindings.remove(localSessionId);
       if (projectId == null) return;
       unawaited(_reconcileProjectAssignment(storedSessionId, projectId));
@@ -824,9 +826,7 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
       // Best-effort: the commit-before-open write already recorded the user's
       // choice under the draft id, so the intent is never lost — this only
       // makes the chat visible inside the Project one refresh sooner.
-      debugPrint(
-        'Could not reconcile Project assignment for $storedSessionId',
-      );
+      debugPrint('Could not reconcile Project assignment for $storedSessionId');
     }
   }
 

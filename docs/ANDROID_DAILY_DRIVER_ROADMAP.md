@@ -1240,6 +1240,24 @@ Projects.
       never silently drops the user's choice); the reconciliation is
       idempotent and scoped to the Project chats this workspace started.
 
+28. **Project deletion and interface audit** —
+    `test/projects_repository_test.dart`, `test/project_detail_screen_test.dart`,
+    and `test/workspace_screen_test.dart`. A user-created Project can now be
+    deleted from the detail app-bar overflow through the existing
+    `projects.delete` contract. The confirmation names the Project and states
+    the exact consequence: the Project is permanently removed, while chat
+    sessions survive and return to **Unassigned** because the Gateway cascades
+    their assignment rows, not the sessions themselves. The repository removes
+    the Project optimistically from active and archived lists, clears the active
+    pointer when required, persists the authoritative snapshot, invalidates the
+    drill-in cache, and restores the exact prior view when the server rejects
+    the write. Success closes detail onto the already-updated Projects pane;
+    failure leaves detail open with Retry. The broader capability/coherence
+    review is recorded in `docs/ANDROID_FUNCTIONAL_UI_AUDIT.md`; its top finding
+    is the competing-root navigation (legacy All chats still launches while
+    Workspace is hidden behind the drawer), followed by rename/archive/restore
+    and a browsable Inbox/Unassigned surface.
+
 Phase 0 is **complete**. Step 7 (real Gateway smoke test on a device) passed on
 2026-08-29 against the live Miniserver gateway from a physical SM-S948B over
 wireless debugging, and the migration *write* path it gated is implemented and
@@ -1248,13 +1266,9 @@ covered (`ProjectsRepository.migrateSpaces`,
 (Home, Projects, Activity, More) is implemented, covered, and now validated on
 hardware, so *screen* slices may begin.
 
-Note for the next slice: `NewChatDraft.projectId` is currently *carried* rather
-than *persisted*. `expiresAt` is no longer — the 72 h Quick-chat archive is
-implemented and enforced (item 23). The Gateway now exposes
-`projects.assign_session`, and existing Spaces chats are migrated through it.
-The remaining write-path work is to call that same RPC for a newly-created
-Project chat before opening it, with failure/retry UX that never silently drops
-the user's chosen Project.
+Next slice: surface the existing rename/archive/restore contracts in the same
+Project actions menu, add an Archived section, then build the browsable
+Inbox/Unassigned recovery surface identified by the interface audit.
 
 ---
 

@@ -790,8 +790,8 @@
     "semantic_hash": ""
   },
   "docs/ANDROID_DAILY_DRIVER_ROADMAP.md": {
-    "mtime": 1788034058.2372656,
-    "ast_hash": "1a23910e6287aaada5448dccd91f0a08",
+    "mtime": 1788040929.3682597,
+    "ast_hash": "ba28ea5296a6603cbd43bab20b2163eb",
     "semantic_hash": ""
   },
   "lib/core/models/hermes_project.dart": {
@@ -840,13 +840,13 @@
     "semantic_hash": ""
   },
   "lib/core/services/projects_repository.dart": {
-    "mtime": 1788022421.5562,
-    "ast_hash": "78be1123cb58793e50b37345a87bf3db",
+    "mtime": 1788040295.118596,
+    "ast_hash": "51bac4f929cc0f4e66719c17232aa077",
     "semantic_hash": ""
   },
   "test/projects_repository_test.dart": {
-    "mtime": 1787615197.587198,
-    "ast_hash": "fa39dfc06e93e5b9dc79f0baefa905c8",
+    "mtime": 1788040182.585371,
+    "ast_hash": "5f79e02fb77903ef02b93dda7b6ca735",
     "semantic_hash": ""
   },
   "lib/core/widgets/projects_pane.dart": {
@@ -860,13 +860,13 @@
     "semantic_hash": ""
   },
   "lib/core/screens/workspace_screen.dart": {
-    "mtime": 1788033241.569662,
-    "ast_hash": "e63d5e4e4140fbe00b87a4d351a9db32",
+    "mtime": 1788040799.343918,
+    "ast_hash": "d0d668f09d019d21556d074d13592959",
     "semantic_hash": ""
   },
   "test/workspace_screen_test.dart": {
-    "mtime": 1788033494.5766373,
-    "ast_hash": "f7df68b38e2366e873860cdd74472e58",
+    "mtime": 1788040599.421855,
+    "ast_hash": "7050db191d89f899c4a87afcdbc7db19",
     "semantic_hash": ""
   },
   "lib/core/widgets/space_migration_preview.dart": {
@@ -1080,13 +1080,13 @@
     "semantic_hash": ""
   },
   "lib/core/widgets/project_detail_screen.dart": {
-    "mtime": 1788032110.9319527,
-    "ast_hash": "b65363a30aab16bbb289d5cc455c575a",
+    "mtime": 1788040799.2829173,
+    "ast_hash": "5e2399433b5aa5add6f1d301a4ccd13c",
     "semantic_hash": ""
   },
   "test/project_detail_screen_test.dart": {
-    "mtime": 1788032213.753789,
-    "ast_hash": "5a16f589cf20a652e1ae946cde4731f2",
+    "mtime": 1788040799.436919,
+    "ast_hash": "5a80e2d3c6bdb9c250cfb5bbf52bbb91",
     "semantic_hash": ""
   },
   "lib/core/screens/files_screen.dart": {
@@ -1142,6 +1142,11 @@
   "test/project_session_filter_test.dart": {
     "mtime": 1788031988.3045406,
     "ast_hash": "e7c6d551011f214176739bb8255ca56f",
+    "semantic_hash": ""
+  },
+  "docs/ANDROID_FUNCTIONAL_UI_AUDIT.md": {
+    "mtime": 1788040779.1987102,
+    "ast_hash": "c5afffca8e047f07ee96a896639cbb24",
     "semantic_hash": ""
   }
 }

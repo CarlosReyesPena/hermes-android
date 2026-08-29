@@ -337,6 +337,46 @@ class ProjectsRepository {
     }
   }
 
+  /// Hard-deletes one Project while preserving its conversations.
+  ///
+  /// The Gateway cascades only Project metadata and assignment rows; chat
+  /// sessions remain stored and therefore fall back to Unassigned. The list is
+  /// updated optimistically and fully restored if the server rejects the write.
+  Future<void> delete(String id) async {
+    _requireSupported();
+    final previous = _current;
+    final optimistic = previous.copyWith(
+      projects: [
+        for (final project in previous.projects)
+          if (project.id != id) project,
+      ],
+      archived: [
+        for (final project in previous.archived)
+          if (project.id != id) project,
+      ],
+      clearActiveId: previous.activeId == id,
+      clearError: true,
+    );
+    _emit(optimistic);
+
+    try {
+      final snapshot = await client.delete(id);
+      final view = previous.copyWith(
+        projects: snapshot.active,
+        archived: snapshot.archived,
+        activeId: snapshot.activeId,
+        clearActiveId: snapshot.activeId == null,
+        clearError: true,
+      );
+      _sessionsCache.remove(id);
+      await _writeCache(view);
+      _emit(view);
+    } catch (_) {
+      _emit(previous);
+      rethrow;
+    }
+  }
+
   /// Persists the authoritative server-side Project for one conversation.
   ///
   /// Callers must complete this before opening a newly drafted Project chat;

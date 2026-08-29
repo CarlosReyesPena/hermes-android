@@ -72,6 +72,13 @@ class _FakeGateway {
               project,
         ];
         return _ok({'projects': projects, 'active_id': activeId});
+      case 'projects.delete':
+        projects = [
+          for (final project in projects)
+            if (project['id'] != params['id']) project,
+        ];
+        if (activeId == params['id']) activeId = null;
+        return _ok({'projects': projects, 'active_id': activeId});
       case 'projects.set_active':
         activeId = params['id'] as String?;
         return _ok({'active_id': activeId});
@@ -330,6 +337,39 @@ void main() {
 
       await expectLater(repo.archive('p1'), throwsA(isA<JsonRpcError>()));
       expect(repo.current.projects.map((p) => p.id), ['p1']);
+    });
+
+    test('delete removes the project and clears it as active', () async {
+      final gateway = _FakeGateway(
+        projects: [
+          _projectJson(id: 'p1', name: 'Delete me'),
+          _projectJson(id: 'p2', name: 'Keep'),
+        ],
+        activeId: 'p1',
+      );
+      final repo = _repository(gateway, await SharedPreferences.getInstance());
+      await repo.refresh();
+
+      await repo.delete('p1');
+
+      expect(gateway.calls.last, 'projects.delete');
+      expect(repo.current.projects.map((p) => p.id), ['p2']);
+      expect(repo.current.activeId, isNull);
+    });
+
+    test('a failed delete restores the project and active selection', () async {
+      final gateway = _FakeGateway(
+        projects: [_projectJson(id: 'p1', name: 'Keep')],
+        activeId: 'p1',
+      );
+      final repo = _repository(gateway, await SharedPreferences.getInstance());
+      await repo.refresh();
+
+      gateway.failNext = JsonRpcError('projects.delete', 'nope');
+
+      await expectLater(repo.delete('p1'), throwsA(isA<JsonRpcError>()));
+      expect(repo.current.projects.map((p) => p.id), ['p1']);
+      expect(repo.current.activeId, 'p1');
     });
 
     test('selecting a project updates the active id', () async {
