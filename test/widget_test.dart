@@ -47,9 +47,12 @@ void main() {
       ),
     );
 
-    expect(find.byTooltip('Copy message'), findsOneWidget);
-    expect(find.byType(SelectableText), findsWidgets);
+    expect(find.byTooltip('Copy message'), findsNothing);
+    expect(find.byKey(const Key('message-bubble')), findsOneWidget);
 
+    await tester.longPress(find.byKey(const Key('message-bubble')));
+    await tester.pumpAndSettle();
+    expect(find.text('Message actions'), findsOneWidget);
     await tester.tap(find.byTooltip('Copy message'));
     await tester.pump();
 
@@ -77,6 +80,9 @@ void main() {
       ),
     );
 
+    expect(find.byTooltip('Read aloud'), findsNothing);
+    await tester.longPress(find.byKey(const Key('message-bubble')));
+    await tester.pumpAndSettle();
     expect(find.byTooltip('Read aloud'), findsOneWidget);
     await tester.tap(find.byTooltip('Read aloud'));
     await tester.pump();
@@ -94,6 +100,10 @@ void main() {
       ),
     );
 
+    expect(find.byTooltip('Copy message'), findsNothing);
+    expect(find.byTooltip('Read aloud'), findsNothing);
+    await tester.longPress(find.byKey(const Key('message-bubble')));
+    await tester.pumpAndSettle();
     expect(find.byTooltip('Copy message'), findsOneWidget);
     expect(find.byTooltip('Read aloud'), findsNothing);
   });
@@ -128,28 +138,84 @@ void main() {
         ),
       );
 
+      await tester.longPress(find.byKey(const Key('message-bubble')));
+      await tester.pumpAndSettle();
       for (final label in const [
         'Copy message',
         'Read aloud',
         'Edit and resend',
         'Regenerate response',
       ]) {
-        expect(find.bySemanticsLabel(label), findsOneWidget);
-      }
-      for (final icon in [
-        Icons.copy_outlined,
-        Icons.volume_up_outlined,
-        Icons.edit_outlined,
-        Icons.refresh,
-      ]) {
-        expect(
-          tester.getSize(find.widgetWithIcon(IconButton, icon)),
-          const Size(48, 48),
-        );
+        final action = find.bySemanticsLabel(label);
+        expect(action, findsOneWidget);
+        expect(tester.getRect(action).height, greaterThanOrEqualTo(48));
       }
       expect(tester.takeException(), isNull);
+
+      // Dismiss through the barrier so the next width starts from a closed
+      // sheet: a modal route outlives pumpWidget and would obscure the bubble.
+      await tester.tapAt(const Offset(5, 5));
+      await tester.pumpAndSettle();
     }
     semantics.dispose();
+  });
+
+  testWidgets('message hierarchy labels user and assistant prose', (tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: Column(
+            children: [
+              MessageBubble(content: 'Question', isUser: true),
+              MessageBubble(content: 'Answer', isUser: false),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('You'), findsOneWidget);
+    expect(find.text('Hermes'), findsOneWidget);
+  });
+
+  testWidgets('fenced code has language, copy, and wrap controls', (tester) async {
+    String? clipboardText;
+    final messenger =
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+    messenger.setMockMethodCallHandler(SystemChannels.platform, (call) async {
+      if (call.method == 'Clipboard.setData') {
+        clipboardText =
+            (call.arguments as Map<Object?, Object?>)['text'] as String?;
+      }
+      return null;
+    });
+    addTearDown(
+      () => messenger.setMockMethodCallHandler(SystemChannels.platform, null),
+    );
+
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: MessageBubble(
+            content: '```dart\nvoid main() => print("Hermes");\n```',
+            isUser: false,
+          ),
+        ),
+      ),
+    );
+
+    expect(find.byKey(const Key('markdown-code-block')), findsOneWidget);
+    expect(find.text('dart'), findsOneWidget);
+    expect(find.byTooltip('Copy code'), findsOneWidget);
+    expect(find.byTooltip('Wrap lines'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Copy code'));
+    await tester.pump();
+    expect(clipboardText, 'void main() => print("Hermes");\n');
+
+    await tester.tap(find.byTooltip('Wrap lines'));
+    await tester.pump();
+    expect(find.byTooltip('Scroll horizontally'), findsOneWidget);
   });
 }
 

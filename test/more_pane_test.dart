@@ -122,9 +122,21 @@ void main() {
           for (final entry in section.entries) entry.id: entry,
       };
 
-      for (final id in ['files', 'assets', 'search']) {
+      // Files is built and dashboard-backed; Assets and Search are not yet.
+      expect(entries['files']!.availability, MoreEntryAvailability.available);
+      for (final id in ['assets', 'search']) {
         expect(entries[id]!.availability, MoreEntryAvailability.comingSoon);
       }
+    });
+
+    test('Files follows the dashboard it depends on', () {
+      final entries = {
+        for (final section in buildMoreSections(dashboardReachable: false))
+          for (final entry in section.entries) entry.id: entry,
+      };
+
+      expect(entries['files']!.availability, MoreEntryAvailability.unavailable);
+      expect(entries['files']!.unavailableReason, isNotNull);
     });
   });
 
@@ -194,7 +206,9 @@ void main() {
 
       expect(find.text('Coming next'), findsWidgets);
 
-      await tester.tap(find.text('Files'), warnIfMissed: false);
+      // Assets is still unbuilt; Files now opens a real screen and must not
+      // be asserted inert here.
+      await tester.tap(find.text('Assets'), warnIfMissed: false);
       await tester.pumpAndSettle();
 
       expect(picked, isEmpty);

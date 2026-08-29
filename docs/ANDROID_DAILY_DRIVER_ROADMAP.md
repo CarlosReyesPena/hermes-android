@@ -1076,6 +1076,41 @@ preview has been validated against a real gateway.
     compatibility mode — plus a call-count assertion that a method already
     proven missing costs zero further requests on every pane build.
 
+22. the **first Phase 1.5 chat slice: message hierarchy, long-press actions,
+    and code blocks** — `test/widget_test.dart`, `test/gateway_activity_test.dart`.
+    Three of the Phase 1.5 deliverables land together because they share the
+    same widget. Prose is now attributed by a `You`/`Hermes` role label, so a
+    user turn and an assistant turn are distinguishable without relying on
+    bubble colour alone. The four per-message actions moved out of a permanent
+    inline icon row into a long-press action sheet, which is what the phase
+    specifies and which also returns the horizontal space the icons consumed;
+    the row is gone, so `Copy message` is asserted *absent* until the bubble is
+    long-pressed. Fenced code is no longer rendered by `flutter_markdown`'s
+    inline `code` style: `splitMarkdownCodeBlocks` in
+    `lib/core/widgets/markdown_code_block.dart` lifts each fenced block out of
+    the surrounding markdown and renders it as a real `MarkdownCodeBlock` with
+    its language label, a copy button, and a wrap/horizontal-scroll toggle,
+    while the prose either side still renders as markdown. Tool cards gained
+    the other half of "duration and status": an expanded card stops truncating
+    its output at three lines, because a tool result the user deliberately
+    expanded and still cannot read is not an expansion.
+
+    One real accessibility regression was found by this slice rather than
+    shipped. At 200 % text scale on a 320 dp phone the new action sheet
+    overflowed its `Column` by 376 px, so the last actions were unreachable —
+    exactly the failure the phase's text-scale acceptance rule exists to
+    catch. The sheet now scrolls. The pinned test drives both 320 dp and
+    360 dp and dismisses the modal between widths, since a modal route
+    outlives `pumpWidget` and would otherwise obscure the bubble on the
+    second pass.
+
+    This slice also repaired two tests that were **already red at HEAD**:
+    `more_pane_test.dart` still asserted `Files` was `Coming next` after the
+    previous slice made it a real dashboard-backed screen. The expectations
+    now state the shipped truth — Files is available when the dashboard is
+    reachable and *unavailable with a reason* when it is not, while Assets and
+    Search remain the announced unbuilt surfaces.
+
 Still open in Phase 0: step 7 (real Gateway smoke test on a device). It cannot
 run unattended — no device is attached in the automated environment — and it
 remains the only item blocking the migration *write* path. Every Phase 1 shell

@@ -160,5 +160,35 @@ void main() {
       expect(find.text('Failed'), findsOneWidget);
       expect(find.text('Synthetic command failed'), findsOneWidget);
     });
+    testWidgets('expanded tool card exposes duration and full safe output', (
+      tester,
+    ) async {
+      const detail =
+          'Line one with a detailed result that must remain readable. '
+          'Line two with additional context. Line three. Line four.';
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: GatewayActivityCard(
+              verbose: true,
+              activities: [
+                GatewayToolActivity(
+                  toolId: 'tool-duration',
+                  name: 'read_file',
+                  phase: GatewayToolActivityPhase.completed,
+                  durationSeconds: 1.25,
+                  detail: detail,
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Completed in 1.3 s'), findsOneWidget);
+      final detailWidget = tester.widget<Text>(find.text(detail));
+      expect(detailWidget.maxLines, isNull);
+    });
   });
 }

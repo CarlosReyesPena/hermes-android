@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../models/gateway_activity.dart';
 
-class GatewayActivityCard extends StatelessWidget {
+class GatewayActivityCard extends StatefulWidget {
   final List<GatewayToolActivity> activities;
   final bool verbose;
 
@@ -13,7 +13,23 @@ class GatewayActivityCard extends StatelessWidget {
   });
 
   @override
+  State<GatewayActivityCard> createState() => _GatewayActivityCardState();
+}
+
+class _GatewayActivityCardState extends State<GatewayActivityCard> {
+  late bool _expanded;
+
+  @override
+  void initState() {
+    super.initState();
+    _expanded =
+        widget.activities.any((activity) => !activity.isTerminal) ||
+        widget.verbose;
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final activities = widget.activities;
     final active = activities.any((activity) => !activity.isTerminal);
     final failures = activities.where((activity) => activity.isFailed).length;
     final subtitle = active
@@ -29,7 +45,8 @@ class GatewayActivityCard extends StatelessWidget {
         key: PageStorageKey<String>(
           'gateway-activity-${activities.map((item) => item.toolId ?? item.name).join('-')}',
         ),
-        initiallyExpanded: active || verbose,
+        initiallyExpanded: active || widget.verbose,
+        onExpansionChanged: (expanded) => setState(() => _expanded = expanded),
         leading: active
             ? const SizedBox.square(
                 dimension: 22,
@@ -46,7 +63,7 @@ class GatewayActivityCard extends StatelessWidget {
         children: [
           const Divider(height: 1),
           for (final activity in activities)
-            _GatewayActivityRow(activity: activity),
+            _GatewayActivityRow(activity: activity, expanded: _expanded),
         ],
       ),
     );
@@ -55,8 +72,9 @@ class GatewayActivityCard extends StatelessWidget {
 
 class _GatewayActivityRow extends StatelessWidget {
   final GatewayToolActivity activity;
+  final bool expanded;
 
-  const _GatewayActivityRow({required this.activity});
+  const _GatewayActivityRow({required this.activity, this.expanded = false});
 
   @override
   Widget build(BuildContext context) {
@@ -114,8 +132,8 @@ class _GatewayActivityRow extends StatelessWidget {
                     const SizedBox(height: 4),
                     Text(
                       activity.detail!,
-                      maxLines: 3,
-                      overflow: TextOverflow.ellipsis,
+                      maxLines: expanded ? null : 3,
+                      overflow: expanded ? null : TextOverflow.ellipsis,
                       style: Theme.of(context).textTheme.bodySmall,
                     ),
                   ],

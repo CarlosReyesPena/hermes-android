@@ -39,6 +39,7 @@ import '../utils/responsive.dart';
 import '../utils/turn_recovery_fallback.dart';
 import 'files_screen.dart';
 import '../widgets/gateway_activity_card.dart';
+import '../widgets/markdown_code_block.dart';
 import '../widgets/attachment_draft_tile.dart';
 import '../widgets/chat_end_affordance.dart';
 import '../widgets/gateway_approval_dialog.dart';
@@ -3115,6 +3116,165 @@ class MessageBubble extends StatelessWidget {
       );
   }
 
+  MarkdownStyleSheet _messageStyleSheet(
+    ThemeData theme, {
+    required bool isUser,
+    required Color assistantTextColor,
+  }) {
+    return MarkdownStyleSheet(
+      p: (isUser
+          ? theme.textTheme.bodyMedium?.copyWith(
+              color: hermesUserMessageForeground,
+            )
+          : theme.textTheme.bodyMedium?.copyWith(color: assistantTextColor)),
+      code: TextStyle(
+        backgroundColor: (isUser ? Colors.white : Colors.black).withValues(
+          alpha: 0.12,
+        ),
+        fontFamily: 'monospace',
+        color: isUser ? hermesUserMessageForeground : null,
+      ),
+      a: TextStyle(
+        color: isUser ? hermesUserMessageForeground : theme.colorScheme.primary,
+      ),
+      h1: isUser
+          ? theme.textTheme.headlineSmall?.copyWith(
+              color: hermesUserMessageForeground,
+            )
+          : theme.textTheme.headlineSmall,
+      h2: isUser
+          ? theme.textTheme.titleLarge?.copyWith(
+              color: hermesUserMessageForeground,
+            )
+          : theme.textTheme.titleLarge,
+      h3: isUser
+          ? theme.textTheme.titleMedium?.copyWith(
+              color: hermesUserMessageForeground,
+            )
+          : theme.textTheme.titleMedium,
+      blockquote: TextStyle(
+        color: isUser ? hermesUserMessageForeground : Colors.grey,
+        fontStyle: FontStyle.italic,
+      ),
+      blockquoteDecoration: BoxDecoration(
+        border: Border(
+          left: BorderSide(
+            color: isUser
+                ? hermesUserMessageForeground.withValues(alpha: 0.65)
+                : theme.colorScheme.primary,
+            width: 3,
+          ),
+        ),
+      ),
+      em: isUser
+          ? theme.textTheme.bodyMedium?.copyWith(
+              fontStyle: FontStyle.italic,
+              color: hermesUserMessageForeground,
+            )
+          : theme.textTheme.bodyMedium?.copyWith(fontStyle: FontStyle.italic),
+      strong: isUser
+          ? theme.textTheme.bodyMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+              color: hermesUserMessageForeground,
+            )
+          : theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold),
+    );
+  }
+
+  Future<void> _showActions(BuildContext context) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      // The sheet scrolls: at large text scales four 48 dp tiles plus the
+      // header exceed the default sheet height, and an action a user cannot
+      // reach is worse than one that scrolls.
+      builder: (sheetContext) => SafeArea(
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
+                child: Text(
+                  'Message actions',
+                  style: Theme.of(sheetContext).textTheme.titleSmall,
+                ),
+              ),
+              _actionTile(
+                sheetContext,
+                label: 'Copy message',
+                tooltip: 'Copy message',
+                icon: Icons.copy_outlined,
+                onTap: () {
+                  Navigator.of(sheetContext).pop();
+                  unawaited(_copyMessage(context));
+                },
+              ),
+              if (onReadAloud != null)
+                _actionTile(
+                  sheetContext,
+                  label: 'Read aloud',
+                  tooltip: 'Read aloud',
+                  icon: Icons.volume_up_outlined,
+                  onTap: () {
+                    Navigator.of(sheetContext).pop();
+                    unawaited(onReadAloud!());
+                  },
+                ),
+              if (onEdit != null)
+                _actionTile(
+                  sheetContext,
+                  label: 'Edit and resend',
+                  tooltip: 'Edit and resend',
+                  icon: Icons.edit_outlined,
+                  onTap: () {
+                    Navigator.of(sheetContext).pop();
+                    onEdit!();
+                  },
+                ),
+              if (onRetry != null)
+                _actionTile(
+                  sheetContext,
+                  label: 'Regenerate response',
+                  tooltip: 'Regenerate response',
+                  icon: Icons.refresh,
+                  onTap: () {
+                    Navigator.of(sheetContext).pop();
+                    unawaited(onRetry!());
+                  },
+                ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _actionTile(
+    BuildContext context, {
+    required String label,
+    required String tooltip,
+    required IconData icon,
+    required VoidCallback onTap,
+  }) {
+    return Semantics(
+      label: label,
+      button: true,
+      excludeSemantics: true,
+      child: Tooltip(
+        message: tooltip,
+        child: ListTile(
+          leading: Icon(icon),
+          title: Text(label),
+          minTileHeight: 48,
+          onTap: onTap,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -3144,191 +3304,89 @@ class MessageBubble extends StatelessWidget {
       }
     }
 
-    final bubble = Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      constraints: BoxConstraints(
-        maxWidth: MediaQuery.of(context).size.width - 80,
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: isUser ? userBubbleColor : assistantBubbleColor,
-        borderRadius: BorderRadius.circular(18),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Verbose metadata header
-          if (metaLines.isNotEmpty) ...[
-            Container(
-              margin: const EdgeInsets.only(bottom: 8),
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: (isUser ? Colors.white : Colors.black).withValues(
-                  alpha: 0.1,
+    final bubble = GestureDetector(
+      key: const Key('message-bubble'),
+      onLongPress: () => _showActions(context),
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        constraints: BoxConstraints(
+          maxWidth: MediaQuery.of(context).size.width - 80,
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: isUser ? userBubbleColor : assistantBubbleColor,
+          borderRadius: BorderRadius.circular(18),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Role header keeps user and assistant prose clearly separated.
+            Padding(
+              padding: const EdgeInsets.only(bottom: 6),
+              child: Text(
+                isUser ? 'You' : 'Hermes',
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: isUser
+                      ? hermesUserMessageForeground.withValues(alpha: 0.75)
+                      : theme.colorScheme.onSurfaceVariant,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.4,
                 ),
-                borderRadius: BorderRadius.circular(6),
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: metaLines
-                    .map(
-                      (line) => Text(
-                        line,
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontFamily: 'monospace',
-                          color: isUser
-                              ? hermesUserMessageForeground
-                              : (isDark ? Colors.grey[400] : Colors.grey[600]),
+            ),
+            // Verbose metadata header
+            if (metaLines.isNotEmpty) ...[
+              Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: (isUser ? Colors.white : Colors.black).withValues(
+                    alpha: 0.1,
+                  ),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: metaLines
+                      .map(
+                        (line) => Text(
+                          line,
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontFamily: 'monospace',
+                            color: isUser
+                                ? hermesUserMessageForeground
+                                : (isDark
+                                      ? Colors.grey[400]
+                                      : Colors.grey[600]),
+                          ),
                         ),
-                      ),
-                    )
-                    .toList(),
+                      )
+                      .toList(),
+                ),
               ),
+            ],
+            // Message content: prose renders as markdown; fenced code
+            // blocks render with language, copy, and wrap controls.
+            ...splitMarkdownCodeBlocks(content).map(
+              (segment) => segment is MarkdownCodeBlock
+                  ? segment
+                  : MarkdownBody(
+                      data: segment as String,
+                      selectable: false,
+                      styleSheet: _messageStyleSheet(
+                        theme,
+                        isUser: isUser,
+                        assistantTextColor: assistantTextColor,
+                      ),
+                    ),
             ),
+            const SizedBox(height: 4),
           ],
-          // Message content
-          MarkdownBody(
-            data: content,
-            selectable: true,
-            styleSheet: MarkdownStyleSheet(
-              p: (isUser
-                  ? theme.textTheme.bodyMedium?.copyWith(
-                      color: hermesUserMessageForeground,
-                    )
-                  : theme.textTheme.bodyMedium?.copyWith(
-                      color: assistantTextColor,
-                    )),
-              code: TextStyle(
-                backgroundColor: (isUser ? Colors.white : Colors.black)
-                    .withValues(alpha: 0.12),
-                fontFamily: 'monospace',
-                color: isUser ? hermesUserMessageForeground : null,
-              ),
-              a: TextStyle(
-                color: isUser
-                    ? hermesUserMessageForeground
-                    : theme.colorScheme.primary,
-              ),
-              h1: isUser
-                  ? theme.textTheme.headlineSmall?.copyWith(
-                      color: hermesUserMessageForeground,
-                    )
-                  : theme.textTheme.headlineSmall,
-              h2: isUser
-                  ? theme.textTheme.titleLarge?.copyWith(
-                      color: hermesUserMessageForeground,
-                    )
-                  : theme.textTheme.titleLarge,
-              h3: isUser
-                  ? theme.textTheme.titleMedium?.copyWith(
-                      color: hermesUserMessageForeground,
-                    )
-                  : theme.textTheme.titleMedium,
-              blockquote: TextStyle(
-                color: isUser ? hermesUserMessageForeground : Colors.grey,
-                fontStyle: FontStyle.italic,
-              ),
-              blockquoteDecoration: BoxDecoration(
-                border: Border(
-                  left: BorderSide(
-                    color: isUser
-                        ? hermesUserMessageForeground.withValues(alpha: 0.65)
-                        : theme.colorScheme.primary,
-                    width: 3,
-                  ),
-                ),
-              ),
-              em: isUser
-                  ? theme.textTheme.bodyMedium?.copyWith(
-                      fontStyle: FontStyle.italic,
-                      color: hermesUserMessageForeground,
-                    )
-                  : theme.textTheme.bodyMedium?.copyWith(
-                      fontStyle: FontStyle.italic,
-                    ),
-              strong: isUser
-                  ? theme.textTheme.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: hermesUserMessageForeground,
-                    )
-                  : theme.textTheme.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-            ),
-          ),
-          const SizedBox(height: 4),
-          Align(
-            alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
-            child: Wrap(
-              spacing: 0,
-              runSpacing: 0,
-              children: [
-                Semantics(
-                  label: 'Copy message',
-                  button: true,
-                  excludeSemantics: true,
-                  child: IconButton(
-                    icon: const Icon(Icons.copy_outlined, size: 19),
-                    tooltip: 'Copy message',
-                    onPressed: () => _copyMessage(context),
-                    constraints: const BoxConstraints.tightFor(
-                      width: 48,
-                      height: 48,
-                    ),
-                  ),
-                ),
-                if (onReadAloud != null)
-                  Semantics(
-                    label: 'Read aloud',
-                    button: true,
-                    excludeSemantics: true,
-                    child: IconButton(
-                      icon: const Icon(Icons.volume_up_outlined, size: 20),
-                      tooltip: 'Read aloud',
-                      onPressed: onReadAloud,
-                      constraints: const BoxConstraints.tightFor(
-                        width: 48,
-                        height: 48,
-                      ),
-                    ),
-                  ),
-                if (onEdit != null)
-                  Semantics(
-                    label: 'Edit and resend',
-                    button: true,
-                    excludeSemantics: true,
-                    child: IconButton(
-                      icon: const Icon(Icons.edit_outlined, size: 20),
-                      tooltip: 'Edit and resend',
-                      onPressed: onEdit,
-                      constraints: const BoxConstraints.tightFor(
-                        width: 48,
-                        height: 48,
-                      ),
-                    ),
-                  ),
-                if (onRetry != null)
-                  Semantics(
-                    label: 'Regenerate response',
-                    button: true,
-                    excludeSemantics: true,
-                    child: IconButton(
-                      icon: const Icon(Icons.refresh, size: 20),
-                      tooltip: 'Regenerate from the preceding prompt',
-                      onPressed: onRetry,
-                      constraints: const BoxConstraints.tightFor(
-                        width: 48,
-                        height: 48,
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-        ],
+        ),
       ),
     );
 
