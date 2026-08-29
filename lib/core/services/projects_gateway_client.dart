@@ -1,5 +1,6 @@
 import '../models/hermes_project.dart';
 import '../models/project_sessions_tree.dart';
+import '../models/projects_tree_overview.dart';
 import 'capability_registry.dart';
 import 'ws_client.dart';
 
@@ -83,6 +84,26 @@ class ProjectsGatewayClient {
   Future<HermesProject> get(String id) async {
     final result = await _request('projects.get', {'id': _requireId(id)});
     return _requireProject('projects.get', result);
+  }
+
+  /// Every project with its repo/lane structure, counts, and preview chats.
+  ///
+  /// The cheap overview tier: lanes carry no session rows, so entering the
+  /// Projects pane costs one call regardless of how many chats exist. The
+  /// hydrated rows for a single project come from [projectSessions].
+  ///
+  /// [previewLimit] and [sessionLimit] are only sent when given, so the
+  /// server's own defaults stay authoritative instead of being frozen into
+  /// the app by an echoed copy.
+  Future<ProjectsTreeOverview> tree({
+    int? previewLimit,
+    int? sessionLimit,
+  }) async {
+    final params = <String, dynamic>{};
+    if (previewLimit != null) params['preview_limit'] = previewLimit;
+    if (sessionLimit != null) params['session_limit'] = sessionLimit;
+    final result = await _request('projects.tree', params);
+    return ProjectsTreeOverview.fromJson(result);
   }
 
   /// The hydrated contents of one project: repos, lanes, and their chats.

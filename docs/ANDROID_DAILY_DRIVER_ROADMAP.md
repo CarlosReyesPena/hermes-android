@@ -1028,6 +1028,54 @@ preview has been validated against a real gateway.
     perfectly well. And a gateway already proven to lack the whole family
     spends **zero** requests here — asserted by call count, not by comment.
 
+21. the **`projects.tree` overview contract** —
+    `test/projects_tree_overview_test.dart`. This was the last method of the
+    `projects.list/create/update/archive/delete/set_active/tree/
+    project_sessions` family with no Android reader, and it is the one that
+    answers what a Projects *list* needs on entry. `projects.list` returns
+    projects-database records only, so it knows nothing about chats: it cannot
+    say how many chats a project holds, what repos and lanes it contains, or
+    which chats are already claimed. `ProjectsGatewayClient.tree` now calls the
+    RPC and parses it into `ProjectsTreeOverview`
+    (`lib/core/models/projects_tree_overview.dart`), which reuses the drill-in's
+    own `ProjectRepo`/`ProjectLane` types rather than defining a second shape —
+    both tiers come from the same server builder, so a parallel Android model
+    could only drift from it.
+
+    The overview is deliberately the *cheap* tier: the server empties lane
+    session rows (`hydrate=False`) while preserving every count, so entering
+    the pane costs one call regardless of how many chats exist and the
+    hydrated rows are fetched only when a project is actually opened. Pinned by
+    test: counts come from the server and are never derived from the empty
+    lanes (deriving them would make every card read zero chats), the
+    `previewSessions` list — the only real chats the overview ships — survives
+    parsing, explicit/auto/`Home` projects are distinguished so the pane never
+    offers rename/archive/delete on a discovered repo that has no database
+    record to edit, server order is preserved verbatim across all three tiers
+    so Android cannot rank projects differently from Desktop, an `active_id`
+    naming no listed project is ignored exactly as `ProjectsSnapshot` already
+    does, and an empty profile reads as an empty overview rather than a
+    failure.
+
+    `scoped_session_ids` is carried because it is the server's own answer to
+    "which chats are already filed": subtracting it from a flat session list is
+    how Desktop avoids listing a chat twice, and recomputing membership on
+    device is precisely the duplicated-authority mistake this phase exists to
+    avoid. Its cleaning rules are pinned in both directions — blanks and
+    duplicates are dropped without reordering, and a *missing* list claims
+    **nothing** rather than everything, since the failure of guessing wrong
+    there would empty the unfiled view instead of degrading it.
+
+    Two robustness rules differ from the drill-in on purpose. One malformed
+    project node is dropped instead of thrown: the drill-in parses a single
+    project, where a failure is one screen, but the overview parses the whole
+    pane, where one id-less node would otherwise blank every other project.
+    And the compatibility guard is re-asserted independently for this method —
+    a gateway serving `projects.list` but predating `projects.tree` keeps its
+    server projects instead of falling into permanent device-local
+    compatibility mode — plus a call-count assertion that a method already
+    proven missing costs zero further requests on every pane build.
+
 Still open in Phase 0: step 7 (real Gateway smoke test on a device). It cannot
 run unattended — no device is attached in the automated environment — and it
 remains the only item blocking the migration *write* path. Every Phase 1 shell
