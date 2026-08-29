@@ -145,8 +145,8 @@
     "semantic_hash": ""
   },
   "lib/core/screens/chat_screen.dart": {
-    "mtime": 1787972768.8527532,
-    "ast_hash": "54f8f9d8ca35dae034d2bbfaa18e4660",
+    "mtime": 1787987782.2145529,
+    "ast_hash": "98401216790ef65380cc4ba5bee0d3b0",
     "semantic_hash": ""
   },
   "lib/core/screens/cron_screen.dart": {
@@ -290,8 +290,8 @@
     "semantic_hash": ""
   },
   "lib/core/widgets/gateway_activity_card.dart": {
-    "mtime": 1787513018.5121331,
-    "ast_hash": "12628ea46bc34a61e4681acd5f7fa930",
+    "mtime": 1787987782.2145529,
+    "ast_hash": "155862d6da11a1b501728c55655d670f",
     "semantic_hash": ""
   },
   "lib/core/widgets/gateway_approval_dialog.dart": {
@@ -385,8 +385,8 @@
     "semantic_hash": ""
   },
   "test/gateway_activity_test.dart": {
-    "mtime": 1787513018.517842,
-    "ast_hash": "93acdf72efec47018123a44b7fb1422c",
+    "mtime": 1787987782.2155528,
+    "ast_hash": "4e97b41b3c2ca03199c0476e277a06c3",
     "semantic_hash": ""
   },
   "test/gateway_approval_test.dart": {
@@ -485,8 +485,8 @@
     "semantic_hash": ""
   },
   "test/widget_test.dart": {
-    "mtime": 1787513018.5228422,
-    "ast_hash": "e25413ee1778fd7358257addb3584530",
+    "mtime": 1787987782.2155528,
+    "ast_hash": "0217451a929a2a299ccd1f5182637260",
     "semantic_hash": ""
   },
   "tools/fake_gateway/fake_gateway.py": {
@@ -790,8 +790,8 @@
     "semantic_hash": ""
   },
   "docs/ANDROID_DAILY_DRIVER_ROADMAP.md": {
-    "mtime": 1787965910.2913349,
-    "ast_hash": "e5e5adb372bc01f0337c3b1cc8bc9acc",
+    "mtime": 1787987906.0409384,
+    "ast_hash": "3821e0725a0938b4e07bb04335a7b1f4",
     "semantic_hash": ""
   },
   "lib/core/models/hermes_project.dart": {
@@ -895,8 +895,8 @@
     "semantic_hash": ""
   },
   "test/more_pane_test.dart": {
-    "mtime": 1787699854.687196,
-    "ast_hash": "52c18334bef8e59ec38c5bcc47d28794",
+    "mtime": 1787987820.0539763,
+    "ast_hash": "da976557bdcb45fc1f67f4daa0052f59",
     "semantic_hash": ""
   },
   "test/support/recording_turn_notification_sink.dart": {
@@ -1107,6 +1107,11 @@
   "test/remote_files_client_test.dart": {
     "mtime": 1787973053.1640608,
     "ast_hash": "bb65b0a679710fdb6021d444dbbbe1f4",
+    "semantic_hash": ""
+  },
+  "lib/core/widgets/markdown_code_block.dart": {
+    "mtime": 1787974302.0952623,
+    "ast_hash": "476f1b447715ec47112ae6be5c6cbf6c",
     "semantic_hash": ""
   }
 }
