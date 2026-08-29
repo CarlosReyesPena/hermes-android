@@ -913,6 +913,17 @@ with live data, Projects listed the server's own project (no "unavailable"
 state), and the migration preview reported "1 space · 0 chats · 1 project to
 create" for a real local Space, stating that nothing had moved yet.
 
+The **live write path was then verified end-to-end on the same device**: the
+migration action created server Project `SmokeTestPhase0` (`p_b07521e0`,
+confirmed via `projects.db`), the Project detail screen's New chat opened a
+real chat titled `New chat · SmokeTestPhase0` against the live gateway, and
+`project_session_assignments` recorded the binding
+`mob-1788027191027-1433e529-73a9-41f1-9fed-9eaf7095e355 → p_b07521e0`
+(assigned 2026-08-29 17:33 UTC). ADB connectivity: the phone's wireless
+debugging port rotates across reconnects; current session reached via
+Tailscale `100.114.1.14:33689`, and the LAN `.13:38661` port no longer
+answers after the phone's IP/port change.
+
 That unblocked the migration *write* path, now implemented end-to-end with
 Gateway RPC `projects.assign_session`, `ProjectsRepository.migrateSpaces`, and
 the reviewed migration action in `SpaceMigrationPreview`. It is covered by
