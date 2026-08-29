@@ -43,6 +43,11 @@ class HomePane extends StatefulWidget {
   /// Session ids with live work.
   final Set<String> running;
 
+  /// Session ids that have left the resumable views — the Quick chats past
+  /// their retention deadline. Blocked and running work is exempt inside
+  /// [buildHomeDigest], so this can never hide something that needs the user.
+  final Set<String> archived;
+
   /// Session id to its owning project's name.
   final Map<String, String> projectNames;
 
@@ -54,6 +59,7 @@ class HomePane extends StatefulWidget {
     required this.loadSessions,
     this.attention = const {},
     this.running = const {},
+    this.archived = const {},
     this.projectNames = const {},
     this.onOpenSession,
     this.clock,
@@ -135,6 +141,7 @@ class HomePaneState extends State<HomePane> {
       now: _now,
       attention: widget.attention,
       running: widget.running,
+      archived: widget.archived,
       projectNames: widget.projectNames,
     );
 

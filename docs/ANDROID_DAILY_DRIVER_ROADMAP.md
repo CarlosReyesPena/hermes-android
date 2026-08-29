@@ -1124,6 +1124,55 @@ reported as migrated).
     reachable and *unavailable with a reason* when it is not, while Assets and
     Search remain the announced unbuilt surfaces.
 
+23. the **Quick chat 72 h lifecycle** — `test/quick_chat_store_test.dart`,
+    `test/quick_chat_lifecycle_test.dart`. `buildNewChatDraft` already
+    *computed* a `kQuickChatRetention` deadline, but nothing kept it: the
+    draft was carried into a chat screen and forgotten, so no Quick chat ever
+    archived and the validated product decision was a comment. The missing
+    persistence is `QuickChatStore` in
+    `lib/core/services/quick_chat_store.dart`, and the missing enforcement is
+    a new `archived` input to `buildHomeDigest`.
+
+    It is deliberately device-local and needs **no gateway contract** — the
+    gateway exposes no way to mark a session ephemeral, so a legacy REST-only
+    connection keeps working and an unrecorded chat is simply durable. Records
+    are scoped per connection like every other preferences-backed store.
+
+    Pinned by test on the store side: archiving is a *state* and never a
+    deletion (a chat past its deadline still loads, keeps its deadline, and
+    stays searchable), the clock starts **once** so re-recording an existing
+    Quick chat cannot extend it into an immortal one, the deadline instant
+    itself has not passed yet (boundary, not `>=`), promotion is terminal so a
+    replayed draft can never put a chat the user deliberately kept back on an
+    archive timer, promoting an untracked chat is a no-op, a blank id is
+    rejected without a write, a corrupt store degrades to empty *and stays
+    writable*, and a record whose deadline cannot be parsed is **dropped
+    rather than treated as expired** — archiving on a guess would hide work
+    the user never agreed to make ephemeral.
+
+    On the digest side the exemptions matter more than the rule: an archived
+    chat leaves `Continue working` and `Recently completed`, but blocked and
+    running work is **never** hidden by it. A Quick chat whose deadline passes
+    while it is waiting on an approval, or mid-turn, stays on Home — applying
+    an organization rule to a chat that needs the user would suppress exactly
+    what Home exists to surface. An archived id matching no session invents
+    nothing, and archiving everything yields the calm empty state rather than
+    a blank list.
+
+    One real bug was found by this slice rather than shipped. Pruning the
+    store against the live session list would have deleted a Quick chat
+    created seconds earlier — a brand-new chat is not in the gateway's list
+    until its first turn — silently making it durable, the exact opposite of
+    the feature. `prune` now requires `now` and may only forget an absent
+    record whose deadline has already passed; both directions are pinned.
+
+    Wiring is asserted at the real call site in `WorkspaceScreen`: starting a
+    Quick chat records it with its deadline *before* the chat opens (and even
+    when a host owns navigation, because the lifecycle belongs to the chat,
+    not to whoever displays it), a Project chat records nothing, and a store
+    failure costs the archive rule for that refresh rather than the session
+    list or the chat itself.
+
 Phase 0 is **complete**. Step 7 (real Gateway smoke test on a device) passed on
 2026-08-29 against the live Miniserver gateway from a physical SM-S948B over
 wireless debugging, and the migration *write* path it gated is implemented and
@@ -1132,13 +1181,13 @@ covered (`ProjectsRepository.migrateSpaces`,
 (Home, Projects, Activity, More) is implemented, covered, and now validated on
 hardware, so *screen* slices may begin.
 
-Note for a later slice: `NewChatDraft.projectId` and `expiresAt` are currently
-*carried* rather than *persisted*. Associating a new chat with its server
-Project, and enforcing the 72 h Quick-chat archive, are the remaining write-path
-work. They are no longer blocked by the smoke test — they are blocked on the
-gateway itself, which exposes no `projects.*` RPC binding an existing session to
-a project. `migrateSpaces` reports those chats as `unlinkedSessions` rather than
-pretending they moved.
+Note for a later slice: `NewChatDraft.projectId` is currently *carried* rather
+than *persisted*. `expiresAt` is no longer — the 72 h Quick-chat archive is
+implemented and enforced (item 23). Associating a new chat with its server
+Project remains the outstanding write-path work, and it is not blocked by the
+smoke test — it is blocked on the gateway itself, which exposes no `projects.*`
+RPC binding an existing session to a project. `migrateSpaces` reports those
+chats as `unlinkedSessions` rather than pretending they moved.
 
 ---
 

@@ -21,6 +21,7 @@ import '../services/desktop_gateway_client.dart';
 import '../services/gateway_turn_application_controller.dart';
 import '../services/gateway_turn_journal.dart';
 import '../services/projects_repository.dart';
+import '../services/quick_chat_store.dart';
 import '../services/remote_files_client.dart';
 import '../theme/hermes_theme.dart';
 import '../utils/activity_feed.dart';
@@ -169,9 +170,15 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
   ProjectsRepository? _repository;
   DesktopGatewayClient? _ownedGateway;
   ChatSpaceStore? _spaceStore;
+  QuickChatStore? _quickChats;
   ApiClient? _sessionsApi;
   bool _ownsRepository = false;
   bool _initialized = false;
+
+  /// Quick chats past their retention deadline, recomputed on every session
+  /// read. Held here rather than derived inside [HomePane] so the store is
+  /// touched once per refresh instead of once per build.
+  Set<String> _archivedQuickChats = const {};
 
   /// Reaches the live Home pane so it can be refreshed after a chat closes.
   final _homeKey = GlobalKey<HomePaneState>();
@@ -259,12 +266,55 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
       // request: the journal knows what ran, the session list knows what it
       // was called, and only one of the two costs a round trip.
       _cacheSessionTitles(sessions);
+      // Which quick chats have aged out. Recomputed from the session list
+      // rather than on a timer, so the retention rule is applied whenever
+      // Home is read and never fires while the app is closed.
+      unawaited(_refreshQuickChats(sessions));
       // The Activity badge is the only signal of blocked work visible while
       // the user is on another destination, so it cannot wait for the pane
       // to be mounted for the first time.
       unawaited(_refreshActivityBadge());
       return sessions;
     });
+  }
+
+  /// Opens the Quick chat lifecycle store for this connection.
+  ///
+  /// Lazy so a connection that never starts a Quick chat never touches
+  /// SharedPreferences for one.
+  Future<QuickChatStore> _quickChatStore() async {
+    final existing = _quickChats;
+    if (existing != null) return existing;
+    final preferences = await SharedPreferences.getInstance();
+    return _quickChats ??= QuickChatStore(
+      preferences,
+      connectionId: widget.connection.id,
+    );
+  }
+
+  /// Recomputes which quick chats have passed their 72 h deadline.
+  ///
+  /// Also prunes records for chats the gateway no longer lists, so the store
+  /// cannot grow without bound. A failure costs the archive rule for this
+  /// refresh — never the session list itself.
+  Future<void> _refreshQuickChats(List<Session> sessions) async {
+    Set<String> archived;
+    try {
+      final store = await _quickChatStore();
+      final now = DateTime.now();
+      await store.prune({
+        for (final session in sessions) session.id,
+      }, now: now);
+      archived = (await store.load()).archivedAt(now);
+    } catch (_) {
+      archived = const {};
+    }
+    if (!mounted) return;
+    if (archived.length == _archivedQuickChats.length &&
+        archived.every(_archivedQuickChats.contains)) {
+      return;
+    }
+    setState(() => _archivedQuickChats = Set.unmodifiable(archived));
   }
 
   /// Reads the timeline purely to keep the shell badge honest.
@@ -449,6 +499,7 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
           loadSessions: _loadHome,
           attention: _turnSignals.attention,
           running: _turnSignals.running,
+          archived: _archivedQuickChats,
           onOpenSession: _openSession,
         );
       case HermesDestination.activity:
@@ -654,6 +705,19 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
       now: DateTime.now(),
       project: project,
     );
+
+    // Start the retention clock now, before the chat opens. Recorded even
+    // when a host owns navigation: the lifecycle belongs to the chat, not to
+    // whoever displays it. A failure costs the archive rule for this chat,
+    // never the chat itself.
+    final expiresAt = draft.expiresAt;
+    if (draft.isQuick && expiresAt != null) {
+      try {
+        final store = await _quickChatStore();
+        await store.record(draft.session.id, expiresAt: expiresAt);
+      } catch (_) {}
+      if (!mounted) return;
+    }
 
     final report = widget.onNewChat;
     if (report != null) {

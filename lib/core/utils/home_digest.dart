@@ -123,11 +123,19 @@ const int kHomeSectionLimit = 5;
 /// [attention] maps a session id to the reason it is blocked; [running] holds
 /// the ids with live work. Ids that match no session are ignored rather than
 /// invented, so a stale event can never conjure a phantom row.
+///
+/// [archived] holds the ids that have left the resumable views — in practice
+/// the Quick chats past their 72 h deadline, per
+/// [QuickChatState.archivedAt]. They are dropped from `Continue working` and
+/// `Recently completed` only: a chat that is blocked or running is still
+/// live work, and hiding it would suppress exactly what Home exists to
+/// surface. Nothing is deleted; the chat remains readable in Archived.
 HomeDigest buildHomeDigest({
   required Iterable<Session> sessions,
   required DateTime now,
   Map<String, String> attention = const {},
   Set<String> running = const {},
+  Set<String> archived = const {},
   Map<String, String> projectNames = const {},
   Duration continueWindow = kHomeContinueWindow,
   Duration completedWindow = kHomeCompletedWindow,
@@ -184,6 +192,8 @@ HomeDigest buildHomeDigest({
     }
 
     if (finished) {
+      // An archived quick chat has left the resumable views by design.
+      if (archived.contains(session.id)) continue;
       if (activityAt < completedFloor) continue;
       buckets[HomeSectionKind.completedRecently]!.add(
         HomeItem(
@@ -196,6 +206,7 @@ HomeDigest buildHomeDigest({
       continue;
     }
 
+    if (archived.contains(session.id)) continue;
     if (activityAt < continueFloor) continue;
     buckets[HomeSectionKind.continueWorking]!.add(
       HomeItem(

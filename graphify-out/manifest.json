@@ -790,8 +790,8 @@
     "semantic_hash": ""
   },
   "docs/ANDROID_DAILY_DRIVER_ROADMAP.md": {
-    "mtime": 1787987906.0409384,
-    "ast_hash": "3821e0725a0938b4e07bb04335a7b1f4",
+    "mtime": 1788010184.9157693,
+    "ast_hash": "bcb311b0f8f9b271314addb7d6d672e7",
     "semantic_hash": ""
   },
   "lib/core/models/hermes_project.dart": {
@@ -860,8 +860,8 @@
     "semantic_hash": ""
   },
   "lib/core/screens/workspace_screen.dart": {
-    "mtime": 1787973053.1510608,
-    "ast_hash": "0d4b38485913464c7263822c3ecde76a",
+    "mtime": 1788010010.6127298,
+    "ast_hash": "5389e374d52510b000e9db12405789e0",
     "semantic_hash": ""
   },
   "test/workspace_screen_test.dart": {
@@ -935,8 +935,8 @@
     "semantic_hash": ""
   },
   "lib/core/utils/home_digest.dart": {
-    "mtime": 1787787874.9890304,
-    "ast_hash": "598b4b95945f7d8e95c50fc6cf04fce2",
+    "mtime": 1788009917.047635,
+    "ast_hash": "b85a24e78a5dfea3e4eefe8c7144aebe",
     "semantic_hash": ""
   },
   "test/home_digest_test.dart": {
@@ -945,8 +945,8 @@
     "semantic_hash": ""
   },
   "lib/core/widgets/home_pane.dart": {
-    "mtime": 1787831950.353852,
-    "ast_hash": "70ecf533724dfa7ffbfaabe5db1fed3d",
+    "mtime": 1788009930.546793,
+    "ast_hash": "fe13b3210fd63efa61a744d119ad6dcd",
     "semantic_hash": ""
   },
   "test/home_pane_test.dart": {
@@ -1117,6 +1117,21 @@
   "test/space_migration_write_test.dart": {
     "mtime": 1788007920.846934,
     "ast_hash": "5a705b4bac69956f2857555c068ce833",
+    "semantic_hash": ""
+  },
+  "lib/core/services/quick_chat_store.dart": {
+    "mtime": 1788009998.5125883,
+    "ast_hash": "1df38a398c09a74cd48749584adc3989",
+    "semantic_hash": ""
+  },
+  "test/quick_chat_lifecycle_test.dart": {
+    "mtime": 1788010083.5705836,
+    "ast_hash": "8d5e95e4cb62facbad69bec4c7db6cfc",
+    "semantic_hash": ""
+  },
+  "test/quick_chat_store_test.dart": {
+    "mtime": 1788009979.8673701,
+    "ast_hash": "05e741ef401b9f37a5da0581a7333707",
     "semantic_hash": ""
   }
 }
