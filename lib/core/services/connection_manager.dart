@@ -205,7 +205,9 @@ class ConnectionManager {
     final connections = _connectionsFromMaps(_readConnectionMaps());
     final hydrated = <SavedConnection>[];
     for (final connection in connections) {
-      final encoded = await _credentialStore.read(_credentialKey(connection.id));
+      final encoded = await _credentialStore.read(
+        _credentialKey(connection.id),
+      );
       if (encoded == null) {
         hydrated.add(connection);
         continue;
@@ -1156,19 +1158,42 @@ class DashboardClient {
 
   Future<Map<String, dynamic>> apiGet(
     String endpoint, {
+    Map<String, String>? queryParameters,
     bool retried = false,
   }) async {
     final headers = await _authHeaders();
-    final res = await _http.get(
-      Uri.parse('$_baseUrl/api/$endpoint'),
-      headers: headers,
-    );
+    final uri = Uri.parse(
+      '$_baseUrl/api/$endpoint',
+    ).replace(queryParameters: queryParameters);
+    final res = await _http.get(uri, headers: headers);
     if (res.statusCode == 401 && !retried) {
       _resetAuth();
-      return apiGet(endpoint, retried: true);
+      return apiGet(endpoint, queryParameters: queryParameters, retried: true);
     }
     if (res.statusCode != 200) throw Exception('HTTP ${res.statusCode}');
     return _decodeMapResponse(res);
+  }
+
+  Future<http.Response> apiGetBytes(
+    String endpoint, {
+    Map<String, String>? queryParameters,
+    bool retried = false,
+  }) async {
+    final headers = await _authHeaders();
+    final uri = Uri.parse(
+      '$_baseUrl/api/$endpoint',
+    ).replace(queryParameters: queryParameters);
+    final res = await _http.get(uri, headers: headers);
+    if (res.statusCode == 401 && !retried) {
+      _resetAuth();
+      return apiGetBytes(
+        endpoint,
+        queryParameters: queryParameters,
+        retried: true,
+      );
+    }
+    if (res.statusCode != 200) throw Exception('HTTP ${res.statusCode}');
+    return res;
   }
 
   Future<List<dynamic>> apiGetList(

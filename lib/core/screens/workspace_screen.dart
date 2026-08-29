@@ -21,6 +21,7 @@ import '../services/desktop_gateway_client.dart';
 import '../services/gateway_turn_application_controller.dart';
 import '../services/gateway_turn_journal.dart';
 import '../services/projects_repository.dart';
+import '../services/remote_files_client.dart';
 import '../theme/hermes_theme.dart';
 import '../utils/activity_feed.dart';
 import '../utils/home_turn_signals.dart';
@@ -34,6 +35,7 @@ import '../widgets/new_chat_sheet.dart';
 import '../widgets/project_detail_screen.dart';
 import '../widgets/projects_pane.dart';
 import 'chat_screen.dart';
+import 'files_screen.dart';
 import 'cron_screen.dart';
 import 'memory_screen.dart';
 import 'settings_screen.dart';
@@ -50,6 +52,10 @@ typedef DashboardLauncher = Future<void> Function(String url);
 /// Builds the screen a Home row opens. Injectable so the navigation contract
 /// can be asserted without constructing a live chat transport.
 typedef WorkspaceSessionScreenBuilder = Widget Function(Session session);
+
+/// Builds the native remote Files destination. Injectable for navigation tests.
+typedef WorkspaceFilesScreenBuilder =
+    Widget Function(SavedConnection connection);
 
 /// Reads the attention/running signals Home ranks by. Injectable so the
 /// ranking can be asserted without a real recovery journal.
@@ -119,6 +125,9 @@ class WorkspaceScreen extends StatefulWidget {
   /// Overrides the screen a Home row opens.
   final WorkspaceSessionScreenBuilder? sessionScreenBuilder;
 
+  /// Overrides the native Files screen.
+  final WorkspaceFilesScreenBuilder? filesScreenBuilder;
+
   /// Overrides how Home reads its attention and running signals.
   final WorkspaceTurnSignalsLoader? turnSignalsLoader;
 
@@ -143,6 +152,7 @@ class WorkspaceScreen extends StatefulWidget {
     this.turnApplicationController,
     this.sessionsLoader,
     this.sessionScreenBuilder,
+    this.filesScreenBuilder,
     this.turnSignalsLoader,
     this.activityFeedLoader,
     this.onNewChat,
@@ -204,12 +214,11 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
 
   Future<List<Session>> _loadSessionsFromGateway() {
     final connection = widget.connection;
-    final api =
-        _sessionsApi ??= ApiClient(
-          baseUrl: connection.baseUrl,
-          apiKey: connection.apiKey,
-          pathPrefix: connection.gatewayPrefix ?? '',
-        );
+    final api = _sessionsApi ??= ApiClient(
+      baseUrl: connection.baseUrl,
+      apiKey: connection.apiKey,
+      pathPrefix: connection.gatewayPrefix ?? '',
+    );
     return api.getSessions();
   }
 
@@ -305,8 +314,7 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
 
   /// Reads the feed and keeps the shell badge in step with it.
   Future<ActivityFeed> _loadActivity() async {
-    final loader =
-        widget.activityFeedLoader ?? _loadActivityFeedFromJournal;
+    final loader = widget.activityFeedLoader ?? _loadActivityFeedFromJournal;
     // Titles may not be cached yet when Activity is the first destination the
     // user opens; read the sessions once so rows are not all untitled. A
     // failed read degrades a row's title, never the timeline itself.
@@ -489,9 +497,7 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
   }
 
   void _push(Widget screen) {
-    Navigator.of(
-      context,
-    ).push(MaterialPageRoute<void>(builder: (_) => screen));
+    Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => screen));
   }
 
   /// Opens a chat from the Home digest.
@@ -657,9 +663,27 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
     await _openSession(draft.session);
   }
 
+  Future<void> _openFiles() async {
+    final builder = widget.filesScreenBuilder;
+    if (builder != null) {
+      _push(builder(widget.connection));
+      return;
+    }
+    final files = RemoteFilesClient.fromConnection(widget.connection);
+    try {
+      await Navigator.of(context).push(
+        MaterialPageRoute<void>(builder: (_) => FilesScreen(files: files)),
+      );
+    } finally {
+      files.close();
+    }
+  }
+
   void _openMoreEntry(MoreEntry entry) {
     final connection = widget.connection;
     switch (entry.id) {
+      case 'files':
+        unawaited(_openFiles());
       case 'cron':
         _push(CronScreen(connection: connection));
       case 'skills':

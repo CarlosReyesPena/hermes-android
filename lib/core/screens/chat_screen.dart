@@ -21,6 +21,7 @@ import '../services/gateway_turn_application_controller.dart';
 import '../services/gateway_turn_coordinator.dart';
 import '../services/gateway_turn_recovery.dart';
 import '../services/gateway_turn_ui_projection.dart';
+import '../services/remote_files_client.dart';
 import '../services/turn_notification_service.dart';
 import '../services/voice_composer_adapter.dart';
 import '../services/ws_client.dart';
@@ -36,6 +37,7 @@ import '../utils/chat_history_scroll.dart';
 import '../utils/message_content.dart';
 import '../utils/responsive.dart';
 import '../utils/turn_recovery_fallback.dart';
+import 'files_screen.dart';
 import '../widgets/gateway_activity_card.dart';
 import '../widgets/attachment_draft_tile.dart';
 import '../widgets/chat_end_affordance.dart';
@@ -127,6 +129,9 @@ class ChatScreen extends StatefulWidget {
   final TestRemotePromptSubmit? testRemotePromptSubmit;
 
   @visibleForTesting
+  final Future<String?> Function()? testServerFilePicker;
+
+  @visibleForTesting
   final TestRemoteAttachmentUpload? testRemoteAttachmentUpload;
 
   @visibleForTesting
@@ -148,6 +153,7 @@ class ChatScreen extends StatefulWidget {
     this.testApiClient,
     this.testAttachmentDraftService,
     this.testRemotePromptSubmit,
+    this.testServerFilePicker,
     this.testRemoteAttachmentUpload,
     this.testInitialAttachmentDrafts = const [],
     this.testVoiceComposerAdapter,
@@ -917,6 +923,15 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                 _pickCameraImage();
               },
             ),
+            ListTile(
+              leading: const Icon(Icons.cloud_outlined),
+              title: const Text('Browse server files'),
+              subtitle: const Text('Insert a remote @file reference'),
+              onTap: () {
+                Navigator.pop(sheetContext);
+                unawaited(_pickServerFile());
+              },
+            ),
             if (_desktopGateway != null)
               ListTile(
                 leading: const Icon(Icons.description_outlined),
@@ -932,6 +947,38 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
           ],
         ),
       ),
+    );
+  }
+
+  Future<void> _pickServerFile() async {
+    String? path;
+    final testPicker = widget.testServerFilePicker;
+    if (testPicker != null) {
+      path = await testPicker();
+    } else {
+      final files = RemoteFilesClient.fromConnection(widget.connection);
+      try {
+        if (!mounted) return;
+        path = await Navigator.of(context).push<String>(
+          MaterialPageRoute<String>(
+            builder: (_) => FilesScreen(
+              files: files,
+              onAddToChat: (selectedPath) =>
+                  Navigator.of(context).pop(selectedPath),
+            ),
+          ),
+        );
+      } finally {
+        files.close();
+      }
+    }
+    if (!mounted || path == null || path.trim().isEmpty) return;
+    final current = _textController.text.trimRight();
+    final reference = '@file ${path.trim()} ';
+    final next = current.isEmpty ? reference : '$current\n$reference';
+    _textController.value = TextEditingValue(
+      text: next,
+      selection: TextSelection.collapsed(offset: next.length),
     );
   }
 

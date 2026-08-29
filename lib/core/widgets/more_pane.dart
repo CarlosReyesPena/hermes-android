@@ -92,12 +92,13 @@ List<MoreSection> buildMoreSections({required bool dashboardReachable}) {
     MoreSection(
       title: 'Workspace',
       entries: [
-        const MoreEntry(
+        MoreEntry(
           id: 'files',
           title: 'Files',
           subtitle: 'Browse the miniserver folders behind your projects',
           icon: Icons.folder_open_outlined,
-          availability: MoreEntryAvailability.comingSoon,
+          availability: dashboardBacked(),
+          unavailableReason: dashboardReason(),
         ),
         const MoreEntry(
           id: 'assets',

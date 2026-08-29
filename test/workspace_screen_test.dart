@@ -90,6 +90,7 @@ Future<void> _pump(
   List<Session>? sessions,
   Object? sessionsError,
   WorkspaceSessionScreenBuilder? sessionScreenBuilder,
+  WorkspaceFilesScreenBuilder? filesScreenBuilder,
   WorkspaceTurnSignalsLoader? turnSignalsLoader,
   WorkspaceActivityFeedLoader? activityFeedLoader,
   ValueChanged<NewChatDraft>? onNewChat,
@@ -116,6 +117,7 @@ Future<void> _pump(
                 return sessions ?? const <Session>[];
               },
         sessionScreenBuilder: sessionScreenBuilder,
+        filesScreenBuilder: filesScreenBuilder,
         turnSignalsLoader: turnSignalsLoader,
         activityFeedLoader: activityFeedLoader,
         onNewChat: onNewChat,
@@ -320,9 +322,7 @@ void main() {
       tester,
       connection: _connection(desktopGatewayUrl: 'https://host:8642'),
       repository: await _repository([]),
-      sessions: [
-        _session(id: 's1', title: 'Roadmap slice'),
-      ],
+      sessions: [_session(id: 's1', title: 'Roadmap slice')],
     );
     await tester.pumpAndSettle();
 
@@ -546,6 +546,24 @@ void main() {
     expect(find.text('Settings'), findsOneWidget);
   });
 
+  testWidgets('More opens the native Files screen', (tester) async {
+    await _pump(
+      tester,
+      connection: _connection(desktopGatewayUrl: 'https://host:8642'),
+      repository: await _repository([]),
+      filesScreenBuilder: (_) =>
+          const Scaffold(body: Text('Native files ready')),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text(HermesDestination.more.label).last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Files'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Native files ready'), findsOneWidget);
+  });
+
   testWidgets('More offers the embedded dashboard fallback', (tester) async {
     final opened = <String>[];
     await _pump(
@@ -589,8 +607,10 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(opened, isEmpty);
-    expect(find.textContaining('Needs a reachable Hermes dashboard'),
-        findsWidgets);
+    expect(
+      find.textContaining('Needs a reachable Hermes dashboard'),
+      findsWidgets,
+    );
   });
 
   testWidgets('switching destinations keeps the projects state alive', (
@@ -848,11 +868,7 @@ void main() {
         'hosts none, and keeps Quick chat usable', (tester) async {
       // Capability-discovery rule: never hide, always explain. And a legacy
       // gateway must still be able to start work from Home.
-      await _pump(
-        tester,
-        connection: _connection(),
-        sessions: const [],
-      );
+      await _pump(tester, connection: _connection(), sessions: const []);
       await tester.pumpAndSettle();
 
       await tester.tap(find.byKey(kWorkspaceNewChatButtonKey));
@@ -967,7 +983,9 @@ void main() {
 
       await tester.tap(find.byKey(kWorkspaceNewChatButtonKey));
       await tester.pumpAndSettle();
-      Navigator.of(tester.element(find.text(NewChatMode.quickChat.label))).pop();
+      Navigator.of(
+        tester.element(find.text(NewChatMode.quickChat.label)),
+      ).pop();
       await tester.pumpAndSettle();
 
       expect(opened, isEmpty);
@@ -998,11 +1016,7 @@ void main() {
     testWidgets('the shipped default opens a real chat screen', (tester) async {
       // Without a host callback the shell must open the chat itself, exactly
       // like the Home rows do — otherwise New is an inert button.
-      await _pump(
-        tester,
-        connection: _connection(),
-        sessions: const [],
-      );
+      await _pump(tester, connection: _connection(), sessions: const []);
       await tester.pumpAndSettle();
 
       await tester.tap(find.byKey(kWorkspaceNewChatButtonKey));
