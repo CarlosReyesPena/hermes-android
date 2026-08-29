@@ -31,6 +31,7 @@ import '../widgets/hermes_shell.dart';
 import '../widgets/home_pane.dart';
 import '../widgets/more_pane.dart';
 import '../widgets/new_chat_sheet.dart';
+import '../widgets/project_detail_screen.dart';
 import '../widgets/projects_pane.dart';
 import 'chat_screen.dart';
 import 'cron_screen.dart';
@@ -431,7 +432,7 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
         }
         return ProjectsPane(
           repository: repository,
-          onProjectSelected: widget.onOpenProject,
+          onProjectSelected: (projectId) => _openProject(repository, projectId),
           spaceStore: _spaceStore,
         );
       case HermesDestination.home:
@@ -520,6 +521,41 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
     );
     if (!mounted) return;
     unawaited(_homeKey.currentState?.refresh() ?? Future<void>.value());
+  }
+
+  /// Opens one project's detail screen.
+  ///
+  /// A host that supplied [WorkspaceScreen.onOpenProject] owns navigation, so
+  /// this screen must not also push a route underneath it — the same rule
+  /// [_openSession] follows. Otherwise it opens the project itself, because a
+  /// project card that does nothing is a dead end in the shell.
+  Future<void> _openProject(
+    ProjectsRepository repository,
+    String projectId,
+  ) async {
+    final report = widget.onOpenProject;
+    if (report != null) {
+      report(projectId);
+      return;
+    }
+
+    // The name is read from the list we already hold, so the screen opens with
+    // the real title instead of "Untitled" until the drill-in lands.
+    final known = repository.current.projects
+        .where((project) => project.id == projectId)
+        .firstOrNull;
+
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => ProjectDetailScreen(
+          projectId: projectId,
+          projectName: known?.name ?? 'Project',
+          loadSessions: ({required bool refresh}) =>
+              repository.projectSessions(projectId, refresh: refresh),
+          onOpenSession: _openSession,
+        ),
+      ),
+    );
   }
 
   /// Opens the chat an Activity row belongs to.

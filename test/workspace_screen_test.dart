@@ -19,6 +19,7 @@ import 'package:hermes_android/core/widgets/hermes_shell.dart';
 import 'package:hermes_android/core/widgets/home_pane.dart';
 import 'package:hermes_android/core/widgets/more_pane.dart';
 import 'package:hermes_android/core/widgets/projects_pane.dart';
+import 'package:hermes_android/core/widgets/project_detail_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'support/inert_turn_application_session.dart';
@@ -226,6 +227,56 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(opened, ['p1']);
+  });
+
+  testWidgets('the shipped default opens the real project detail screen', (
+    tester,
+  ) async {
+    // No host callback: the shell must not be a dead end. Before this, a
+    // project card with no `onOpenProject` did nothing at all.
+    await _pump(
+      tester,
+      connection: _connection(desktopGatewayUrl: 'https://host:8642'),
+      repository: await _repository([
+        _projectJson(id: 'p1', name: 'Hermes Android'),
+      ]),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Projects').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Hermes Android'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(ProjectDetailScreen), findsOneWidget);
+    // The name is carried, so the screen never opens on "Untitled".
+    expect(find.text('Hermes Android'), findsWidgets);
+    expect(find.text('Chats'), findsWidgets);
+  });
+
+  testWidgets('a host callback suppresses the built-in project route', (
+    tester,
+  ) async {
+    // A host that owns navigation must not get a second screen pushed under
+    // its own — the same rule the Home chat route already follows.
+    final opened = <String>[];
+    await _pump(
+      tester,
+      connection: _connection(desktopGatewayUrl: 'https://host:8642'),
+      repository: await _repository([
+        _projectJson(id: 'p1', name: 'Hermes Android'),
+      ]),
+      openedProjects: opened,
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Projects').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Hermes Android'));
+    await tester.pumpAndSettle();
+
+    expect(opened, ['p1']);
+    expect(find.byType(ProjectDetailScreen), findsNothing);
   });
 
   testWidgets('a legacy connection explains why projects are unavailable', (
