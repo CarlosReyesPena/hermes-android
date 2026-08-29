@@ -1210,6 +1210,18 @@ Projects.
     refreshes the project from the Gateway and confirms its destination, and a
     failed move leaves the chat in place with a Retry action.
 
+26. **per-Project search** — `test/project_session_filter_test.dart`,
+    `test/project_detail_screen_test.dart`. The Chats tab of a Project now has
+    a search field that narrows the sessions the server already returned,
+    matching title, preview, id, or model case-insensitively through the pure
+    `filterProjectSessions` helper. Filtering is deliberately a *view-layer*
+    operation: the Gateway stays the source of truth for membership, so no new
+    RPC or desktop change is needed. An empty project keeps its honest
+    "No chats yet" state and shows no search field; a query that matches
+    nothing shows a distinct "No matches" state instead of claiming the chat
+    does not exist; clearing restores the full list; and filtered rows keep
+    their open and move actions.
+
 Phase 0 is **complete**. Step 7 (real Gateway smoke test on a device) passed on
 2026-08-29 against the live Miniserver gateway from a physical SM-S948B over
 wireless debugging, and the migration *write* path it gated is implemented and

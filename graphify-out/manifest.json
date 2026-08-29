@@ -790,8 +790,8 @@
     "semantic_hash": ""
   },
   "docs/ANDROID_DAILY_DRIVER_ROADMAP.md": {
-    "mtime": 1788023209.5632892,
-    "ast_hash": "b7528bbd3bdb92cf86aa9f524d4e8951",
+    "mtime": 1788029857.1302276,
+    "ast_hash": "1ca12c45e8071bc6e37f3f2a4f349f0e",
     "semantic_hash": ""
   },
   "lib/core/models/hermes_project.dart": {
@@ -1080,13 +1080,13 @@
     "semantic_hash": ""
   },
   "lib/core/widgets/project_detail_screen.dart": {
-    "mtime": 1788023119.0822365,
-    "ast_hash": "dc906ebc477c54a881f9e1f74c88e45a",
+    "mtime": 1788032110.9319527,
+    "ast_hash": "b65363a30aab16bbb289d5cc455c575a",
     "semantic_hash": ""
   },
   "test/project_detail_screen_test.dart": {
-    "mtime": 1788023151.3826122,
-    "ast_hash": "8adc185059a31582657460ff01cdf144",
+    "mtime": 1788032213.753789,
+    "ast_hash": "5a16f589cf20a652e1ae946cde4731f2",
     "semantic_hash": ""
   },
   "lib/core/screens/files_screen.dart": {
@@ -1132,6 +1132,16 @@
   "test/quick_chat_store_test.dart": {
     "mtime": 1788009979.8673701,
     "ast_hash": "05e741ef401b9f37a5da0581a7333707",
+    "semantic_hash": ""
+  },
+  "lib/core/utils/project_session_filter.dart": {
+    "mtime": 1788032007.623763,
+    "ast_hash": "9113aec34c6923a63df79c772da70efb",
+    "semantic_hash": ""
+  },
+  "test/project_session_filter_test.dart": {
+    "mtime": 1788031988.3045406,
+    "ast_hash": "e7c6d551011f214176739bb8255ca56f",
     "semantic_hash": ""
   }
 }

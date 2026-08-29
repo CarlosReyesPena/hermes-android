@@ -26,6 +26,7 @@ import '../models/project_sessions_tree.dart';
 import '../models/session.dart';
 import '../services/projects_repository.dart';
 import '../theme/hermes_theme.dart';
+import '../utils/project_session_filter.dart';
 import 'hermes_components.dart';
 
 /// Reads one project's chats. Mirrors `ProjectsRepository.projectSessions` so
@@ -36,6 +37,7 @@ typedef ProjectSessionMover =
     Future<void> Function(Session session, String? projectId);
 
 const kProjectNewChatButtonKey = Key('project-detail-new-chat');
+const kProjectSearchFieldKey = Key('project-detail-search');
 
 class ProjectDetailScreen extends StatefulWidget {
   final String projectId;
@@ -82,6 +84,10 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen>
   /// first failure from a refresh failure over content.
   bool _loading = true;
 
+  /// Per-Project search: filters the sessions the server already returned.
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+
   @override
   void initState() {
     super.initState();
@@ -90,8 +96,13 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen>
 
   @override
   void dispose() {
+    _searchController.dispose();
     _tabs.dispose();
     super.dispose();
+  }
+
+  void _onSearchChanged(String value) {
+    setState(() => _searchQuery = value);
   }
 
   Future<void> _load({required bool refresh}) async {
@@ -244,6 +255,8 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen>
 
   Widget _buildChats(ProjectSessionsView view) {
     final sessions = view.sessions;
+    final filtered = filterProjectSessions(sessions, _searchQuery);
+    final querying = _searchQuery.trim().isNotEmpty;
 
     return RefreshIndicator(
       onRefresh: () => _load(refresh: true),
@@ -252,6 +265,37 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen>
         physics: const AlwaysScrollableScrollPhysics(),
         slivers: [
           if (view.isStale) const SliverToBoxAdapter(child: _OfflineNotice()),
+          // The search field exists only when there is something to search.
+          // An empty project keeps its honest "No chats yet" state.
+          if (sessions.isNotEmpty)
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  HermesSpacing.lg,
+                  HermesSpacing.md,
+                  HermesSpacing.lg,
+                  HermesSpacing.sm,
+                ),
+                child: SearchBar(
+                  key: kProjectSearchFieldKey,
+                  controller: _searchController,
+                  onChanged: _onSearchChanged,
+                  hintText: 'Search chats',
+                  leading: const Icon(Icons.search),
+                  trailing: [
+                    if (querying)
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        tooltip: 'Clear search',
+                        onPressed: () {
+                          _searchController.clear();
+                          _onSearchChanged('');
+                        },
+                      ),
+                  ],
+                ),
+              ),
+            ),
           if (sessions.isEmpty)
             SliverFillRemaining(
               hasScrollBody: false,
@@ -263,11 +307,24 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen>
                     'every device signed in to this Hermes.',
               ),
             )
+          else if (filtered.isEmpty)
+            // A query that matches nothing is not the same as an empty
+            // project: saying "No chats yet" would tell the user the chat
+            // they are looking for does not exist.
+            SliverFillRemaining(
+              hasScrollBody: false,
+              child: EmptyState(
+                icon: Icons.search_off,
+                title: 'No matches',
+                message: 'No chats in this project match '
+                    '“${_searchQuery.trim()}”.',
+              ),
+            )
           else
             SliverList.builder(
-              itemCount: sessions.length,
+              itemCount: filtered.length,
               itemBuilder: (context, index) {
-                final session = sessions[index];
+                final session = filtered[index];
                 return Padding(
                   padding: const EdgeInsets.fromLTRB(
                     HermesSpacing.lg,

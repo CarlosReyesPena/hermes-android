@@ -344,4 +344,114 @@ void main() {
     // The first open may use the cache; an explicit pull must not.
     expect(refreshes, [false, true]);
   });
+
+  group('per-Project search', () {
+    Finder searchField() => find.descendant(
+      of: find.byKey(kProjectSearchFieldKey),
+      matching: find.byType(TextField),
+    );
+
+    Future<void> pumpThree(tester, {ValueChanged<Session>? onOpenSession}) =>
+        _pump(
+          tester,
+          load: ({required refresh}) async => ProjectSessionsView(
+            projectId: 'p1',
+            tree: _tree(sessions: [
+              _session(id: 's1', title: 'Ship the Files browser'),
+              _session(id: 's2', title: 'Review the draft'),
+              _session(id: 's3', title: 'Pushed the release tag'),
+            ]),
+            sessions: [
+              _session(id: 's1', title: 'Ship the Files browser'),
+              _session(id: 's2', title: 'Review the draft'),
+              _session(id: 's3', title: 'Pushed the release tag'),
+            ],
+            support: ProjectsSupport.native,
+          ),
+          onOpenSession: onOpenSession,
+        );
+
+    testWidgets('typing narrows the chats to the matches', (tester) async {
+      await pumpThree(tester);
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(kProjectSearchFieldKey), findsOneWidget);
+      expect(find.text('Ship the Files browser'), findsOneWidget);
+      expect(find.text('Review the draft'), findsOneWidget);
+      expect(find.text('Pushed the release tag'), findsOneWidget);
+
+      await tester.enterText(searchField(), 'ship');
+      await tester.pumpAndSettle();
+
+      expect(find.text('Ship the Files browser'), findsOneWidget);
+      expect(find.text('Review the draft'), findsNothing);
+      expect(find.text('Pushed the release tag'), findsNothing);
+      expect(find.byType(EmptyState), findsNothing);
+    });
+
+    testWidgets('clearing the search restores every chat', (tester) async {
+      await pumpThree(tester);
+      await tester.pumpAndSettle();
+
+      await tester.enterText(searchField(), 'draft');
+      await tester.pumpAndSettle();
+      expect(find.text('Review the draft'), findsOneWidget);
+      expect(find.text('Ship the Files browser'), findsNothing);
+
+      await tester.tap(find.byTooltip('Clear search'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Ship the Files browser'), findsOneWidget);
+      expect(find.text('Review the draft'), findsOneWidget);
+      expect(find.text('Pushed the release tag'), findsOneWidget);
+    });
+
+    testWidgets('an empty project shows no search field and keeps its state', (
+      tester,
+    ) async {
+      await _pump(
+        tester,
+        load: ({required refresh}) async => ProjectSessionsView(
+          projectId: 'p1',
+          tree: _tree(),
+          support: ProjectsSupport.native,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(kProjectSearchFieldKey), findsNothing);
+      expect(find.byType(EmptyState), findsOneWidget);
+      expect(find.textContaining('No chats'), findsOneWidget);
+    });
+
+    testWidgets('a query with no match shows a distinct no-match state', (
+      tester,
+    ) async {
+      await pumpThree(tester);
+      await tester.pumpAndSettle();
+
+      await tester.enterText(searchField(), 'zzz-no-such-chat');
+      await tester.pumpAndSettle();
+
+      expect(find.byType(EmptyState), findsOneWidget);
+      expect(find.text('No matches'), findsOneWidget);
+      // Never the "empty project" claim: the chat may exist elsewhere.
+      expect(find.textContaining('No chats yet'), findsNothing);
+    });
+
+    testWidgets('a filtered row still opens its chat', (tester) async {
+      Session? opened;
+      await pumpThree(tester, onOpenSession: (session) => opened = session);
+      await tester.pumpAndSettle();
+
+      await tester.enterText(searchField(), 'release');
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Pushed the release tag'));
+      await tester.pumpAndSettle();
+
+      expect(opened, isNotNull);
+      expect(opened!.id, 's3');
+    });
+  });
 }
