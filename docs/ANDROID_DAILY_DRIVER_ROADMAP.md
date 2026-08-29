@@ -1,6 +1,6 @@
 # Hermes Android Daily Driver — product architecture and roadmap
 
-Status: `[product direction validated; Phase 0 in progress]`
+Status: `[product direction validated; Phase 0 complete]`
 
 Date: 2026-08-25
 
@@ -906,9 +906,22 @@ Steps 1–6 of the slice above are implemented and covered by passing tests:
     owns `floatingActionButton` for both the bar and the rail layout, and
     `hermes_shell_test.dart` pins that navigation still works underneath one.
 
-Still open in Phase 0: step 7 of the slice above (real Gateway smoke test on a
-device). The migration *write* path stays unimplemented on purpose until the
-preview has been validated against a real gateway.
+Step 7 of Phase 0 (real Gateway smoke test on a device) **passed on
+2026-08-29**, on a physical SM-S948B over wireless debugging against the live
+Miniserver gateway: the Workspace shell rendered Home/Projects/Activity/More
+with live data, Projects listed the server's own project (no "unavailable"
+state), and the migration preview reported "1 space · 0 chats · 1 project to
+create" for a real local Space, stating that nothing had moved yet.
+
+That unblocked the migration *write* path, now implemented as
+`ProjectsRepository.migrateSpaces` and covered by
+`test/space_migration_write_test.dart`. It is idempotent (matching by
+normalized name, so a second run creates nothing), non-destructive (the local
+Spaces store is never cleared — it is the only record of the grouping until
+the server can hold chat → project links), and honest (a partial failure keeps
+the successful writes and reports the rest instead of claiming a clean run;
+chats that cannot be linked are counted in `unlinkedSessions` rather than
+reported as migrated).
 
 18. the **Activity destination** — `test/activity_feed_test.dart`,
     `test/activity_pane_test.dart`, `test/workspace_screen_test.dart`. The
@@ -1111,19 +1124,21 @@ preview has been validated against a real gateway.
     reachable and *unavailable with a reason* when it is not, while Assets and
     Search remain the announced unbuilt surfaces.
 
-Still open in Phase 0: step 7 (real Gateway smoke test on a device). It cannot
-run unattended — no device is attached in the automated environment — and it
-remains the only item blocking the migration *write* path. Every Phase 1 shell
-destination (Home, Projects, Activity, More) is implemented and covered, so no
-*screen* slice should begin until the shell has been validated against a real
-gateway on hardware; the data layer above is contract-level work that the
-device test does not gate.
+Phase 0 is **complete**. Step 7 (real Gateway smoke test on a device) passed on
+2026-08-29 against the live Miniserver gateway from a physical SM-S948B over
+wireless debugging, and the migration *write* path it gated is implemented and
+covered (`ProjectsRepository.migrateSpaces`,
+`test/space_migration_write_test.dart`). Every Phase 1 shell destination
+(Home, Projects, Activity, More) is implemented, covered, and now validated on
+hardware, so *screen* slices may begin.
 
 Note for a later slice: `NewChatDraft.projectId` and `expiresAt` are currently
 *carried* rather than *persisted*. Associating a new chat with its server
-Project, and enforcing the 72 h Quick-chat archive, both belong to the write
-path that Phase 0 deliberately leaves unimplemented until the migration
-preview is validated against a real gateway.
+Project, and enforcing the 72 h Quick-chat archive, are the remaining write-path
+work. They are no longer blocked by the smoke test — they are blocked on the
+gateway itself, which exposes no `projects.*` RPC binding an existing session to
+a project. `migrateSpaces` reports those chats as `unlinkedSessions` rather than
+pretending they moved.
 
 ---
 

@@ -108,6 +108,35 @@ class SpaceMigrationEntry {
   bool get needsCreation => matchedProject == null;
 }
 
+/// What a completed migration actually did.
+///
+/// Deliberately honest about its limits. No `projects.*` RPC binds an existing
+/// session to a project, so chats stay where they are and are counted in
+/// [unlinkedSessions] rather than silently reported as migrated.
+class SpaceMigrationResult {
+  /// Spaces turned into new server Projects.
+  final int createdProjects;
+
+  /// Spaces the server already carried under the same (normalized) name.
+  final int alreadyLinked;
+
+  /// Chats whose grouping the server cannot hold yet.
+  final int unlinkedSessions;
+
+  /// Space name → the error that stopped it. Empty on a clean run.
+  final Map<String, Object> failures;
+
+  const SpaceMigrationResult({
+    required this.createdProjects,
+    required this.alreadyLinked,
+    required this.unlinkedSessions,
+    required this.failures,
+  });
+
+  /// True when every space in the plan was accounted for.
+  bool get isComplete => failures.isEmpty;
+}
+
 /// A read-only description of what a Spaces migration *would* do.
 class SpaceMigrationPlan {
   final List<SpaceMigrationEntry> entries;
@@ -355,6 +384,58 @@ class ProjectsRepository {
           sessionCount: counts[space.id] ?? 0,
         ),
     ]);
+  }
+
+  /// Executes the plan described by [planMigration].
+  ///
+  /// Gated behind step 7 of Phase 0 (real Gateway smoke test on a device),
+  /// which passed once the preview rendered correctly against a live gateway.
+  ///
+  /// Three properties this must keep:
+  ///
+  /// * **Idempotent.** Matching is by normalized name, so a second run creates
+  ///   nothing. A user who taps twice must not end up with duplicate projects.
+  /// * **Non-destructive.** The local Spaces store is never cleared. It is the
+  ///   only record of the user's grouping until the server can hold chat →
+  ///   project links, and a partial migration that wiped it would lose data
+  ///   that cannot be reconstructed.
+  /// * **Honest.** A failure part-way keeps what already succeeded and reports
+  ///   the rest in [SpaceMigrationResult.failures] rather than throwing away
+  ///   the successful writes or claiming a clean run.
+  Future<SpaceMigrationResult> migrateSpaces(ChatSpaceState state) async {
+    // A legacy gateway must fail loudly: silently no-opping would let the UI
+    // report a migration that never happened.
+    _requireSupported();
+
+    final plan = planMigration(state);
+    var created = 0;
+    var linked = 0;
+    var unlinked = 0;
+    final failures = <String, Object>{};
+
+    for (final entry in plan.entries) {
+      unlinked += entry.sessionCount;
+      if (!entry.needsCreation) {
+        linked++;
+        continue;
+      }
+      try {
+        // `use: false` — migrating is bookkeeping, not navigation. Stealing
+        // the active project would move the user somewhere they didn't ask
+        // to go.
+        await create(entry.space.name, select: false);
+        created++;
+      } catch (error) {
+        failures[entry.space.name] = error;
+      }
+    }
+
+    return SpaceMigrationResult(
+      createdProjects: created,
+      alreadyLinked: linked,
+      unlinkedSessions: unlinked,
+      failures: failures,
+    );
   }
 
   /// The chats inside one project, as the server groups them.

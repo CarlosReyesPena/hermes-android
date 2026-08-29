@@ -840,8 +840,8 @@
     "semantic_hash": ""
   },
   "lib/core/services/projects_repository.dart": {
-    "mtime": 1787943820.1018622,
-    "ast_hash": "b83f182cf80151b44218f12fb3c88fa2",
+    "mtime": 1788007688.5073173,
+    "ast_hash": "ed287fb6116bfd8e428edaac7f5f3f9a",
     "semantic_hash": ""
   },
   "test/projects_repository_test.dart": {
@@ -1112,6 +1112,11 @@
   "lib/core/widgets/markdown_code_block.dart": {
     "mtime": 1787974302.0952623,
     "ast_hash": "476f1b447715ec47112ae6be5c6cbf6c",
+    "semantic_hash": ""
+  },
+  "test/space_migration_write_test.dart": {
+    "mtime": 1788007920.846934,
+    "ast_hash": "5a705b4bac69956f2857555c068ce833",
     "semantic_hash": ""
   }
 }
