@@ -2,8 +2,10 @@
 
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
+import 'package:http/io_client.dart' show IOClient;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 import '../models/connection.dart';
@@ -572,6 +574,13 @@ class ApiClient {
   final String baseUrl;
   final String _apiKey;
 
+  /// How long a single request may take before the UI may surface an error.
+  ///
+  /// A gateway on a dead keep-alive socket can otherwise hang forever while
+  /// the server already answered or closed the connection; every read path
+  /// uses this bound so the user always gets a loadable error state.
+  static const Duration requestTimeout = Duration(seconds: 20);
+
   // Keep the public parameter name `apiKey` while storing it privately.
   ApiClient({
     required String baseUrl,
@@ -580,7 +589,19 @@ class ApiClient {
     http.Client? httpClient,
   }) : _apiKey = apiKey,
        baseUrl = SavedConnection.joinBaseUrl(baseUrl, pathPrefix),
-       _http = httpClient ?? http.Client();
+       _http = httpClient ?? _freshClient();
+
+  /// Builds a client that does not pool keep-alive sockets.
+  ///
+  /// dart:io's pooled connections go stale silently (the server closed an
+  /// idle connection; the client only notices on the *next* request, which
+  /// then hangs). Home/tablet/LAN gateways are cheap to reconnect to, so a
+  /// fresh TCP connection per request is a fair price for never wedging the
+  /// session list on a stale socket.
+  static http.Client _freshClient() {
+    final io = HttpClient()..idleTimeout = Duration.zero;
+    return IOClient(io);
+  }
 
   Map<String, String> get _headers => {
     'Authorization': 'Bearer $_apiKey',
@@ -589,11 +610,10 @@ class ApiClient {
 
   // ── Session listing ──────────────────────────────────────────────────
 
-  Future<List<Session>> getSessions() async {
-    final res = await _http.get(
-      Uri.parse('$baseUrl/api/sessions'),
-      headers: _headers,
-    );
+  Future<List<Session>> getSessions({Duration timeout = requestTimeout}) async {
+    final res = await _http
+        .get(Uri.parse('$baseUrl/api/sessions'), headers: _headers)
+        .timeout(timeout);
     if (res.statusCode != 200) {
       throw Exception('HTTP ${res.statusCode}: ${res.body}');
     }

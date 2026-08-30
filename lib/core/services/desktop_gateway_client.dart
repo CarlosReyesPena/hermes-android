@@ -69,7 +69,9 @@ class DesktopGatewayClient {
     final override = connection.desktopGatewayUrl?.trim() ?? '';
     final overrideUri = override.isEmpty
         ? null
-        : Uri.tryParse(override.contains('://') ? override : 'https://$override');
+        : Uri.tryParse(
+            override.contains('://') ? override : 'https://$override',
+          );
     final isDistinctOverride =
         overrideUri != null &&
         overrideUri.host.isNotEmpty &&

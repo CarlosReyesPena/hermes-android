@@ -113,19 +113,22 @@ void main() {
       expect(projectChat.disabledReason, isNot(contains('gateway')));
     });
 
-    test('an unprobed gateway is described as loading, never as unsupported', () {
-      // The capability registry treats an absent advertisement as `unknown`;
-      // telling the user Projects are missing before probing would be a lie.
-      final options = buildNewChatOptions(
-        support: ProjectsSupport.unknown,
-        projects: const [],
-      );
+    test(
+      'an unprobed gateway is described as loading, never as unsupported',
+      () {
+        // The capability registry treats an absent advertisement as `unknown`;
+        // telling the user Projects are missing before probing would be a lie.
+        final options = buildNewChatOptions(
+          support: ProjectsSupport.unknown,
+          projects: const [],
+        );
 
-      final projectChat = _option(options, NewChatMode.projectChat);
-      expect(projectChat.enabled, isFalse);
-      expect(projectChat.disabledReason, isNot(contains('gateway')));
-      expect(projectChat.disabledReason?.toLowerCase(), contains('loading'));
-    });
+        final projectChat = _option(options, NewChatMode.projectChat);
+        expect(projectChat.enabled, isFalse);
+        expect(projectChat.disabledReason, isNot(contains('gateway')));
+        expect(projectChat.disabledReason?.toLowerCase(), contains('loading'));
+      },
+    );
 
     test('an archived project cannot enable Project chat', () {
       final options = buildNewChatOptions(
@@ -148,18 +151,21 @@ void main() {
       expect(_option(options, NewChatMode.projectChat).enabled, isTrue);
     });
 
-    test('reads a ProjectsView directly so the caller cannot drift from it', () {
-      final view = ProjectsView(
-        projects: [_project()],
-        archived: [_project(id: 'p2', name: 'Old', archived: true)],
-        support: ProjectsSupport.native,
-      );
+    test(
+      'reads a ProjectsView directly so the caller cannot drift from it',
+      () {
+        final view = ProjectsView(
+          projects: [_project()],
+          archived: [_project(id: 'p2', name: 'Old', archived: true)],
+          support: ProjectsSupport.native,
+        );
 
-      final options = buildNewChatOptionsFor(view);
+        final options = buildNewChatOptionsFor(view);
 
-      expect(_option(options, NewChatMode.projectChat).enabled, isTrue);
-      expect(_option(options, NewChatMode.quickChat).enabled, isTrue);
-    });
+        expect(_option(options, NewChatMode.projectChat).enabled, isTrue);
+        expect(_option(options, NewChatMode.quickChat).enabled, isTrue);
+      },
+    );
   });
 
   group('buildNewChatDraft', () {

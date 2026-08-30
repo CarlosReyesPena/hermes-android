@@ -26,10 +26,7 @@ Future<void> _pumpPane(
             context,
           ).copyWith(textScaler: TextScaler.linear(textScale)),
           child: Scaffold(
-            body: MorePane(
-              sections: sections,
-              onSelect: onSelect ?? (_) {},
-            ),
+            body: MorePane(sections: sections, onSelect: onSelect ?? (_) {}),
           ),
         ),
       ),
@@ -53,7 +50,8 @@ void main() {
         containsAll(<String>[
           'files',
           'assets',
-          'search',
+          'unassigned',
+          'archived-quick',
           'cron',
           'skills',
           'memory',
@@ -113,21 +111,38 @@ void main() {
           for (final entry in section.entries) entry.id: entry,
       };
 
-      expect(entries['settings']!.availability, MoreEntryAvailability.available);
+      expect(
+        entries['settings']!.availability,
+        MoreEntryAvailability.available,
+      );
     });
 
-    test('unbuilt surfaces are announced, never silently dropped', () {
+    test('contract-gated organization stays visible with exact reasons', () {
       final entries = {
         for (final section in buildMoreSections(dashboardReachable: true))
           for (final entry in section.entries) entry.id: entry,
       };
 
-      // Files is built and dashboard-backed; Assets and Search are not yet.
-      expect(entries['files']!.availability, MoreEntryAvailability.available);
-      for (final id in ['assets', 'search']) {
-        expect(entries[id]!.availability, MoreEntryAvailability.comingSoon);
+      for (final id in ['assets', 'pin-batch-undo', 'ai-filing']) {
+        expect(entries[id]!.availability, MoreEntryAvailability.unavailable);
+        expect(entries[id]!.unavailableReason, contains('Gateway'));
       }
     });
+
+    test(
+      'native Smart Views are available and only contract gaps are disabled',
+      () {
+        final entries = {
+          for (final section in buildMoreSections(dashboardReachable: true))
+            for (final entry in section.entries) entry.id: entry,
+        };
+
+        expect(entries['files']!.availability, MoreEntryAvailability.available);
+        for (final id in ['unassigned', 'archived-quick']) {
+          expect(entries[id]!.availability, MoreEntryAvailability.available);
+        }
+      },
+    );
 
     test('Files follows the dashboard it depends on', () {
       final entries = {
@@ -149,9 +164,24 @@ void main() {
       await _pumpPane(tester, sections: built);
 
       for (final section in built) {
+        await tester.scrollUntilVisible(
+          find.text(section.title),
+          160,
+          scrollable: find.byType(Scrollable).first,
+        );
         expect(find.text(section.title), findsOneWidget);
       }
+      await tester.scrollUntilVisible(
+        find.text('Cron'),
+        160,
+        scrollable: find.byType(Scrollable).first,
+      );
       expect(find.text('Cron'), findsOneWidget);
+      await tester.scrollUntilVisible(
+        find.text('Settings'),
+        160,
+        scrollable: find.byType(Scrollable).first,
+      );
       expect(find.text('Settings'), findsOneWidget);
     });
 
@@ -163,6 +193,8 @@ void main() {
         onSelect: (entry) => picked.add(entry.id),
       );
 
+      await tester.ensureVisible(find.text('Cron'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Cron'));
       await tester.pumpAndSettle();
 
@@ -177,6 +209,11 @@ void main() {
         onSelect: (entry) => picked.add(entry.id),
       );
 
+      await tester.scrollUntilVisible(
+        find.text('Cron'),
+        160,
+        scrollable: find.byType(Scrollable).first,
+      );
       await tester.tap(find.text('Cron'), warnIfMissed: false);
       await tester.pumpAndSettle();
 
@@ -194,25 +231,26 @@ void main() {
       expect(find.text(cron.unavailableReason!), findsWidgets);
     });
 
-    testWidgets('a coming-soon entry is labelled and not selectable', (
-      tester,
-    ) async {
-      final picked = <String>[];
-      await _pumpPane(
-        tester,
-        sections: sections(),
-        onSelect: (entry) => picked.add(entry.id),
-      );
+    testWidgets(
+      'a contract-gated entry explains itself and is not selectable',
+      (tester) async {
+        final picked = <String>[];
+        await _pumpPane(
+          tester,
+          sections: sections(),
+          onSelect: (entry) => picked.add(entry.id),
+        );
 
-      expect(find.text('Coming next'), findsWidgets);
+        await tester.tap(find.text('Assets'), warnIfMissed: false);
+        await tester.pumpAndSettle();
 
-      // Assets is still unbuilt; Files now opens a real screen and must not
-      // be asserted inert here.
-      await tester.tap(find.text('Assets'), warnIfMissed: false);
-      await tester.pumpAndSettle();
-
-      expect(picked, isEmpty);
-    });
+        expect(
+          find.textContaining('server-authoritative Assets index'),
+          findsOneWidget,
+        );
+        expect(picked, isEmpty);
+      },
+    );
 
     testWidgets('survives a large text scale on a narrow phone', (
       tester,
@@ -225,7 +263,7 @@ void main() {
       );
 
       expect(tester.takeException(), isNull);
-      expect(find.text('Files'), findsOneWidget);
+      expect(find.text('Inbox / Unassigned'), findsOneWidget);
     });
 
     testWidgets('scrolls to the last entry on a real phone height', (
@@ -250,6 +288,11 @@ void main() {
         brightness: Brightness.light,
       );
 
+      await tester.scrollUntilVisible(
+        find.text('Settings'),
+        160,
+        scrollable: find.byType(Scrollable).first,
+      );
       expect(tester.takeException(), isNull);
       expect(find.text('Settings'), findsOneWidget);
     });

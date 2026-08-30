@@ -5,7 +5,9 @@ import 'package:hermes_android/core/services/config_backup_service.dart';
 import 'package:hermes_android/core/widgets/config_backup_card.dart';
 
 Widget wrap(Widget child) {
-  return MaterialApp(home: Scaffold(body: SingleChildScrollView(child: child)));
+  return MaterialApp(
+    home: Scaffold(body: SingleChildScrollView(child: child)),
+  );
 }
 
 const ConfigImportResult _noopResult = ConfigImportResult(
@@ -302,7 +304,10 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(imported, isFalse);
-      expect(find.text('Enter the passphrase for this backup.'), findsOneWidget);
+      expect(
+        find.text('Enter the passphrase for this backup.'),
+        findsOneWidget,
+      );
     });
   });
 }

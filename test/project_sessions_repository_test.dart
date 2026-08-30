@@ -39,17 +39,15 @@ Map<String, dynamic> _rpcError(int code, String message) => {
   'error': {'code': code, 'message': message},
 };
 
-Map<String, dynamic> _projectJson({
-  required String id,
-  required String name,
-}) => {
-  'id': id,
-  'slug': name.toLowerCase().replaceAll(' ', '-'),
-  'name': name,
-  'archived': false,
-  'created_at': 1750000000,
-  'folders': const [],
-};
+Map<String, dynamic> _projectJson({required String id, required String name}) =>
+    {
+      'id': id,
+      'slug': name.toLowerCase().replaceAll(' ', '-'),
+      'name': name,
+      'archived': false,
+      'created_at': 1750000000,
+      'folders': const [],
+    };
 
 /// One session row exactly as the gateway project tree emits it.
 Map<String, dynamic> _sessionRow({String id = 's1', String title = 'Chat'}) => {
@@ -277,8 +275,14 @@ void main() {
   test('caches each project separately', () async {
     final gateway = _FakeGateway(
       trees: {
-        'p1': _projectNode(id: 'p1', sessions: [_sessionRow(id: 'a')]),
-        'p2': _projectNode(id: 'p2', sessions: [_sessionRow(id: 'b')]),
+        'p1': _projectNode(
+          id: 'p1',
+          sessions: [_sessionRow(id: 'a')],
+        ),
+        'p2': _projectNode(
+          id: 'p2',
+          sessions: [_sessionRow(id: 'b')],
+        ),
       },
     );
     final repo = await _repository(gateway);
@@ -312,46 +316,50 @@ void main() {
     expect(view.error, isA<JsonRpcError>());
   });
 
-  test('reports a failed first read instead of pretending it is empty',
-      () async {
-    final gateway = _FakeGateway(trees: {'p1': _projectNode()});
-    final repo = await _repository(gateway);
-    await repo.refresh();
+  test(
+    'reports a failed first read instead of pretending it is empty',
+    () async {
+      final gateway = _FakeGateway(trees: {'p1': _projectNode()});
+      final repo = await _repository(gateway);
+      await repo.refresh();
 
-    gateway.failNextSessions = StateError('socket died');
-    final view = await repo.projectSessions('p1');
+      gateway.failNextSessions = StateError('socket died');
+      final view = await repo.projectSessions('p1');
 
-    expect(view.sessions, isEmpty);
-    expect(view.error, isA<StateError>());
-    // Nothing was ever shown, so there is no stale content to preserve: the
-    // UI must draw a retryable error, not an "offline" banner over a blank.
-    expect(view.isStale, isFalse);
-  });
+      expect(view.sessions, isEmpty);
+      expect(view.error, isA<StateError>());
+      // Nothing was ever shown, so there is no stale content to preserve: the
+      // UI must draw a retryable error, not an "offline" banner over a blank.
+      expect(view.isStale, isFalse);
+    },
+  );
 
-  test('disables only this call when the gateway predates the drill-in',
-      () async {
-    // A gateway can serve `projects.list` perfectly and predate
-    // `projects.project_sessions`. Dropping the whole pane into local-only
-    // compatibility mode for that would be a regression the cached verdict
-    // never undoes.
-    final gateway = _FakeGateway(
-      projects: [_projectJson(id: 'p1', name: 'Hermes Android')],
-    );
-    final repo = await _repository(gateway);
-    await repo.refresh();
+  test(
+    'disables only this call when the gateway predates the drill-in',
+    () async {
+      // A gateway can serve `projects.list` perfectly and predate
+      // `projects.project_sessions`. Dropping the whole pane into local-only
+      // compatibility mode for that would be a regression the cached verdict
+      // never undoes.
+      final gateway = _FakeGateway(
+        projects: [_projectJson(id: 'p1', name: 'Hermes Android')],
+      );
+      final repo = await _repository(gateway);
+      await repo.refresh();
 
-    gateway.sessionsEnvelope = _rpcError(
-      -32601,
-      'unknown method: projects.project_sessions',
-    );
-    final view = await repo.projectSessions('p1');
+      gateway.sessionsEnvelope = _rpcError(
+        -32601,
+        'unknown method: projects.project_sessions',
+      );
+      final view = await repo.projectSessions('p1');
 
-    expect(view.support, ProjectsSupport.unsupported);
-    expect(view.error, isNull);
-    expect(view.sessions, isEmpty);
-    expect(repo.current.support, ProjectsSupport.native);
-    expect(repo.current.projects.single.name, 'Hermes Android');
-  });
+      expect(view.support, ProjectsSupport.unsupported);
+      expect(view.error, isNull);
+      expect(view.sessions, isEmpty);
+      expect(repo.current.support, ProjectsSupport.native);
+      expect(repo.current.projects.single.name, 'Hermes Android');
+    },
+  );
 
   test('spends no request on a gateway without the projects family', () async {
     final gateway = _FakeGateway(listSupported: false);

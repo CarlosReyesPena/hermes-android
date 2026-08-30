@@ -182,11 +182,9 @@ void main() {
     await _pump(
       tester,
       loadFeed: () async => _feed([
-        _group(
-          ActivityGroupKind.completed,
-          [_item(title: 'One', status: HermesStatus.completed)],
-          totalCount: 4,
-        ),
+        _group(ActivityGroupKind.completed, [
+          _item(title: 'One', status: HermesStatus.completed),
+        ], totalCount: 4),
       ]),
     );
     await tester.pumpAndSettle();
@@ -253,10 +251,7 @@ void main() {
 
     expect(find.byType(ErrorState), findsNothing);
     expect(find.text('Still shown'), findsOneWidget);
-    expect(
-      find.textContaining('Offline', findRichText: true),
-      findsOneWidget,
-    );
+    expect(find.textContaining('Offline', findRichText: true), findsOneWidget);
   });
 
   testWidgets('tapping a row reports the item it belongs to', (tester) async {

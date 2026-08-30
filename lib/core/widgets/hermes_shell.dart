@@ -15,6 +15,9 @@ enum HermesDestination {
   /// Attention-first dashboard: what needs you, what is running.
   home,
 
+  /// Every conversation, with recent, unassigned, archived, and search views.
+  chats,
+
   /// Server-owned Projects and their chats, files, assets, and activity.
   projects,
 
@@ -28,6 +31,8 @@ enum HermesDestination {
     switch (this) {
       case HermesDestination.home:
         return 'Home';
+      case HermesDestination.chats:
+        return 'Chats';
       case HermesDestination.projects:
         return 'Projects';
       case HermesDestination.activity:
@@ -41,6 +46,8 @@ enum HermesDestination {
     switch (this) {
       case HermesDestination.home:
         return Icons.home_outlined;
+      case HermesDestination.chats:
+        return Icons.chat_bubble_outline;
       case HermesDestination.projects:
         return Icons.folder_outlined;
       case HermesDestination.activity:
@@ -54,6 +61,8 @@ enum HermesDestination {
     switch (this) {
       case HermesDestination.home:
         return Icons.home_rounded;
+      case HermesDestination.chats:
+        return Icons.chat_bubble_rounded;
       case HermesDestination.projects:
         return Icons.folder_rounded;
       case HermesDestination.activity:

@@ -67,7 +67,9 @@ SavedConnection _connection({String? desktopGatewayUrl}) => SavedConnection(
   desktopGatewayUrl: desktopGatewayUrl,
 );
 
-Future<ProjectsRepository> _repository(List<Map<String, dynamic>> projects) async {
+Future<ProjectsRepository> _repository(
+  List<Map<String, dynamic>> projects,
+) async {
   return ProjectsRepository(
     client: ProjectsGatewayClient((method, params) async {
       if (method == 'projects.list') {

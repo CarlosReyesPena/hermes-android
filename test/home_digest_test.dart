@@ -296,7 +296,10 @@ void main() {
       final digest = buildHomeDigest(
         sessions: [
           for (var index = 0; index < 9; index++)
-            _session(id: 's$index', startedAgo: Duration(minutes: index)),
+            _session(
+              id: 's$index',
+              startedAgo: Duration(minutes: index),
+            ),
         ],
         now: _now,
         sectionLimit: 4,
@@ -315,7 +318,10 @@ void main() {
 
     test('reports no overflow when everything fits', () {
       final digest = buildHomeDigest(
-        sessions: [_session(id: 'a'), _session(id: 'b')],
+        sessions: [
+          _session(id: 'a'),
+          _session(id: 'b'),
+        ],
         now: _now,
         sectionLimit: 5,
       );
@@ -327,28 +333,35 @@ void main() {
 
     test('attaches the project name when the session belongs to one', () {
       final digest = buildHomeDigest(
-        sessions: [_session(id: 'a'), _session(id: 'b')],
+        sessions: [
+          _session(id: 'a'),
+          _session(id: 'b'),
+        ],
         now: _now,
         projectNames: const {'a': 'Hermes Android'},
       );
 
       final items = _section(digest, HomeSectionKind.continueWorking)!.items;
-      expect(items.firstWhere((i) => i.session.id == 'a').projectName,
-          'Hermes Android');
+      expect(
+        items.firstWhere((i) => i.session.id == 'a').projectName,
+        'Hermes Android',
+      );
       expect(items.firstWhere((i) => i.session.id == 'b').projectName, isNull);
     });
 
-    test('rejects a non-positive section limit instead of hiding everything',
-        () {
-      expect(
-        () => buildHomeDigest(
-          sessions: [_session(id: 'a')],
-          now: _now,
-          sectionLimit: 0,
-        ),
-        throwsA(isA<ArgumentError>()),
-      );
-    });
+    test(
+      'rejects a non-positive section limit instead of hiding everything',
+      () {
+        expect(
+          () => buildHomeDigest(
+            sessions: [_session(id: 'a')],
+            now: _now,
+            sectionLimit: 0,
+          ),
+          throwsA(isA<ArgumentError>()),
+        );
+      },
+    );
 
     test('does not mutate the caller list', () {
       final sessions = [

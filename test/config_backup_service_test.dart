@@ -34,9 +34,8 @@ class _MemoryCredentialStore implements CredentialStore {
   }
 }
 
-Future<(ConfigBackupService, ConnectionManager, SharedPreferences)> buildService(
-  Map<String, Object> initialPrefs,
-) async {
+Future<(ConfigBackupService, ConnectionManager, SharedPreferences)>
+buildService(Map<String, Object> initialPrefs) async {
   SharedPreferences.setMockInitialValues(initialPrefs);
   final prefs = await SharedPreferences.getInstance();
   final manager = await ConnectionManager.create(
@@ -107,7 +106,10 @@ void main() {
       // list would resurrect stale metadata alongside it.
       expect(backup.preferences.containsKey('saved_connections'), isFalse);
       expect(backup.preferences.containsKey('last_connection_id'), isFalse);
-      expect(backup.preferences.containsKey('gateway_turn_journal_v2'), isFalse);
+      expect(
+        backup.preferences.containsKey('gateway_turn_journal_v2'),
+        isFalse,
+      );
       expect(prefs.getStringList('saved_connections'), isNotNull);
     });
   });
@@ -224,10 +226,7 @@ void main() {
       );
 
       final (service, _, prefs) = await buildService(<String, Object>{});
-      final result = await service.import(
-        backup,
-        mode: ConfigImportMode.merge,
-      );
+      final result = await service.import(backup, mode: ConfigImportMode.merge);
 
       expect(prefs.getString('theme_mode'), 'dark');
       // saved_connections is owned by ConnectionManager. It may legitimately be

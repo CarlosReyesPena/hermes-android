@@ -87,8 +87,16 @@ void main() {
     await _pump(
       tester,
       loadSessions: () async => [
-        _session(id: 'done', title: 'Finished work', endedAgo: const Duration(hours: 2)),
-        _session(id: 'idle', title: 'Resume this', startedAgo: const Duration(hours: 3)),
+        _session(
+          id: 'done',
+          title: 'Finished work',
+          endedAgo: const Duration(hours: 2),
+        ),
+        _session(
+          id: 'idle',
+          title: 'Resume this',
+          startedAgo: const Duration(hours: 3),
+        ),
         _session(id: 'live', title: 'Working now'),
         _session(id: 'blocked', title: 'Waiting on you'),
       ],
@@ -97,8 +105,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    double topOf(String text) =>
-        tester.getTopLeft(find.text(text).first).dy;
+    double topOf(String text) => tester.getTopLeft(find.text(text).first).dy;
 
     expect(
       topOf(HomeSectionKind.needsYou.title),
@@ -114,22 +121,25 @@ void main() {
     );
   });
 
-  testWidgets('a blocked session states its reason and never doubles as running', (
-    tester,
-  ) async {
-    await _pump(
-      tester,
-      loadSessions: () async => [_session(id: 'blocked', title: 'Waiting on you')],
-      attention: const {'blocked': 'Approval needed'},
-      // The same session is reported as running by a stale event.
-      running: const {'blocked'},
-    );
-    await tester.pumpAndSettle();
+  testWidgets(
+    'a blocked session states its reason and never doubles as running',
+    (tester) async {
+      await _pump(
+        tester,
+        loadSessions: () async => [
+          _session(id: 'blocked', title: 'Waiting on you'),
+        ],
+        attention: const {'blocked': 'Approval needed'},
+        // The same session is reported as running by a stale event.
+        running: const {'blocked'},
+      );
+      await tester.pumpAndSettle();
 
-    expect(find.text('Approval needed'), findsOneWidget);
-    expect(find.text('Waiting on you'), findsOneWidget);
-    expect(find.text(HomeSectionKind.running.title), findsNothing);
-  });
+      expect(find.text('Approval needed'), findsOneWidget);
+      expect(find.text('Waiting on you'), findsOneWidget);
+      expect(find.text(HomeSectionKind.running.title), findsNothing);
+    },
+  );
 
   testWidgets('shows the owning project so a row says where it happened', (
     tester,
@@ -179,30 +189,35 @@ void main() {
     expect(find.text('Roadmap'), findsOneWidget);
   });
 
-  testWidgets('a later failure keeps the last known Home behind an offline notice', (
-    tester,
-  ) async {
-    var calls = 0;
-    await _pump(
-      tester,
-      loadSessions: () async {
-        calls++;
-        if (calls == 1) return [_session(id: 's1', title: 'Roadmap')];
-        throw Exception('offline');
-      },
-    );
-    await tester.pumpAndSettle();
-    expect(find.text('Roadmap'), findsOneWidget);
+  testWidgets(
+    'a later failure keeps the last known Home behind an offline notice',
+    (tester) async {
+      var calls = 0;
+      await _pump(
+        tester,
+        loadSessions: () async {
+          calls++;
+          if (calls == 1) return [_session(id: 's1', title: 'Roadmap')];
+          throw Exception('offline');
+        },
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Roadmap'), findsOneWidget);
 
-    await tester.fling(find.byType(RefreshIndicator), const Offset(0, 320), 1000);
-    await tester.pumpAndSettle();
+      await tester.fling(
+        find.byType(RefreshIndicator),
+        const Offset(0, 320),
+        1000,
+      );
+      await tester.pumpAndSettle();
 
-    expect(calls, greaterThan(1));
-    // Losing the network must never blank the screen the user relies on.
-    expect(find.text('Roadmap'), findsOneWidget);
-    expect(find.byType(ErrorState), findsNothing);
-    expect(find.textContaining('Offline'), findsOneWidget);
-  });
+      expect(calls, greaterThan(1));
+      // Losing the network must never blank the screen the user relies on.
+      expect(find.text('Roadmap'), findsOneWidget);
+      expect(find.byType(ErrorState), findsNothing);
+      expect(find.textContaining('Offline'), findsOneWidget);
+    },
+  );
 
   testWidgets('a capped section reports what it hid', (tester) async {
     await _pump(

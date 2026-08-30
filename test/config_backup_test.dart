@@ -63,8 +63,14 @@ void main() {
       // int must not degrade into double across the JSON boundary.
       expect(restored.preferences['some_counter'], isA<int>());
       expect(restored.preferences['some_counter'], 7);
-      expect(restored.preferences['excluded_session_sources_conn-1'], isA<List<String>>());
-      expect(restored.preferences['excluded_session_sources_conn-1'], ['discord', 'local']);
+      expect(
+        restored.preferences['excluded_session_sources_conn-1'],
+        isA<List<String>>(),
+      );
+      expect(restored.preferences['excluded_session_sources_conn-1'], [
+        'discord',
+        'local',
+      ]);
     });
 
     test('rejects a payload whose format marker is wrong', () {
@@ -87,16 +93,18 @@ void main() {
       );
     });
 
-    test('rejects a structurally corrupt payload instead of half-importing',
-        () {
-      final json = sampleBackup().toJson();
-      json['connections'] = <dynamic>['not-a-map'];
+    test(
+      'rejects a structurally corrupt payload instead of half-importing',
+      () {
+        final json = sampleBackup().toJson();
+        json['connections'] = <dynamic>['not-a-map'];
 
-      expect(
-        () => ConfigBackup.fromJson(json),
-        throwsA(isA<ConfigBackupException>()),
-      );
-    });
+        expect(
+          () => ConfigBackup.fromJson(json),
+          throwsA(isA<ConfigBackupException>()),
+        );
+      },
+    );
   });
 
   group('ConfigBackupCodec', () {
@@ -117,24 +125,26 @@ void main() {
       expect(envelope['cipher'], isA<Map<String, dynamic>>());
     });
 
-    test('decrypts back to the original backup with the right passphrase',
-        () async {
-      final armored = await ConfigBackupCodec.encrypt(
-        sampleBackup(),
-        passphrase: 'correct horse battery staple',
-        iterations: fastIterations,
-      );
+    test(
+      'decrypts back to the original backup with the right passphrase',
+      () async {
+        final armored = await ConfigBackupCodec.encrypt(
+          sampleBackup(),
+          passphrase: 'correct horse battery staple',
+          iterations: fastIterations,
+        );
 
-      final restored = await ConfigBackupCodec.decrypt(
-        armored,
-        passphrase: 'correct horse battery staple',
-      );
+        final restored = await ConfigBackupCodec.decrypt(
+          armored,
+          passphrase: 'correct horse battery staple',
+        );
 
-      expect(restored.connections.single.apiKey, 'sk-secret-key');
-      expect(restored.connections.single.dashboardPassword, 'dash-secret');
-      expect(restored.preferences['verbose_mode'], true);
-      expect(restored.appVersion, '2.0.1+2131');
-    });
+        expect(restored.connections.single.apiKey, 'sk-secret-key');
+        expect(restored.connections.single.dashboardPassword, 'dash-secret');
+        expect(restored.preferences['verbose_mode'], true);
+        expect(restored.appVersion, '2.0.1+2131');
+      },
+    );
 
     test('fails closed on a wrong passphrase', () async {
       final armored = await ConfigBackupCodec.encrypt(
@@ -162,21 +172,31 @@ void main() {
       cipher['ciphertext'] = base64Encode(bytes);
 
       expect(
-        () => ConfigBackupCodec.decrypt(jsonEncode(envelope),
-            passphrase: 'pass'),
+        () =>
+            ConfigBackupCodec.decrypt(jsonEncode(envelope), passphrase: 'pass'),
         throwsA(isA<ConfigBackupException>()),
       );
     });
 
     test('uses a fresh salt and nonce for every export', () async {
-      final first = jsonDecode(
-        await ConfigBackupCodec.encrypt(sampleBackup(),
-            passphrase: 'pass', iterations: fastIterations),
-      ) as Map<String, dynamic>;
-      final second = jsonDecode(
-        await ConfigBackupCodec.encrypt(sampleBackup(),
-            passphrase: 'pass', iterations: fastIterations),
-      ) as Map<String, dynamic>;
+      final first =
+          jsonDecode(
+                await ConfigBackupCodec.encrypt(
+                  sampleBackup(),
+                  passphrase: 'pass',
+                  iterations: fastIterations,
+                ),
+              )
+              as Map<String, dynamic>;
+      final second =
+          jsonDecode(
+                await ConfigBackupCodec.encrypt(
+                  sampleBackup(),
+                  passphrase: 'pass',
+                  iterations: fastIterations,
+                ),
+              )
+              as Map<String, dynamic>;
 
       expect(
         (first['kdf'] as Map)['salt'],
@@ -190,16 +210,19 @@ void main() {
 
     test('rejects an empty passphrase rather than encrypting weakly', () {
       expect(
-        () => ConfigBackupCodec.encrypt(sampleBackup(),
-            passphrase: '   ', iterations: fastIterations),
+        () => ConfigBackupCodec.encrypt(
+          sampleBackup(),
+          passphrase: '   ',
+          iterations: fastIterations,
+        ),
         throwsA(isA<ConfigBackupException>()),
       );
     });
 
     test('rejects a file that is not a Hermes backup envelope', () {
       expect(
-        () => ConfigBackupCodec.decrypt('{"hello":"world"}',
-            passphrase: 'pass'),
+        () =>
+            ConfigBackupCodec.decrypt('{"hello":"world"}', passphrase: 'pass'),
         throwsA(isA<ConfigBackupException>()),
       );
       expect(
@@ -221,8 +244,8 @@ void main() {
       // different key that decrypts anyway.
       (envelope['kdf'] as Map)['iterations'] = fastIterations + 1;
       expect(
-        () => ConfigBackupCodec.decrypt(jsonEncode(envelope),
-            passphrase: 'pass'),
+        () =>
+            ConfigBackupCodec.decrypt(jsonEncode(envelope), passphrase: 'pass'),
         throwsA(isA<ConfigBackupException>()),
       );
     });

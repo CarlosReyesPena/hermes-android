@@ -12,6 +12,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../models/hermes_project.dart';
+import '../models/projects_tree_overview.dart';
 import '../services/chat_space_store.dart';
 import '../services/projects_repository.dart';
 import '../theme/hermes_theme.dart';
@@ -42,6 +43,7 @@ class ProjectsPane extends StatefulWidget {
 class _ProjectsPaneState extends State<ProjectsPane> {
   StreamSubscription<ProjectsView>? _subscription;
   ProjectsView? _view;
+  ProjectsTreeOverview _overview = ProjectsTreeOverview.empty;
   ChatSpaceState? _spaces;
 
   @override
@@ -66,8 +68,18 @@ class _ProjectsPaneState extends State<ProjectsPane> {
       // Nothing worth showing: keep the skeleton until the live read lands.
       if (mounted) setState(() => _view = null);
     }
-    await widget.repository.refresh();
+    await _refresh();
     await _loadSpaces();
+  }
+
+  Future<void> _refresh() async {
+    await widget.repository.refresh();
+    try {
+      final overview = await widget.repository.overview(refresh: true);
+      if (mounted) setState(() => _overview = overview);
+    } catch (_) {
+      // Counts and previews are progressive enhancement. Keep the list usable.
+    }
   }
 
   /// Reads the legacy local Spaces so the migration preview can be offered.
@@ -111,8 +123,6 @@ class _ProjectsPaneState extends State<ProjectsPane> {
     );
   }
 
-  Future<void> _refresh() => widget.repository.refresh();
-
   /// Only offer the migration when there is something real to migrate.
   bool get _hasLocalSpaces => _spaces?.spaces.isNotEmpty ?? false;
 
@@ -127,10 +137,71 @@ class _ProjectsPaneState extends State<ProjectsPane> {
       await widget.repository.create(name);
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not create the project: $error')),
-      );
+      _showMutationError('create', error);
     }
+  }
+
+  Future<void> _renameProject(HermesProject project) async {
+    final name = await showDialog<String>(
+      context: context,
+      builder: (_) => _RenameProjectDialog(project: project),
+    );
+    if (name == null || !mounted || name == project.name) return;
+    try {
+      await widget.repository.rename(project.id, name);
+    } catch (error) {
+      if (mounted) _showMutationError('rename', error);
+    }
+  }
+
+  Future<void> _archiveProject(HermesProject project) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text('Archive ${project.name}?'),
+        content: const Text(
+          'The Project will move to Archived. Its chats and files stay intact, '
+          'and you can restore it at any time.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Archive'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    try {
+      await widget.repository.archive(project.id);
+    } catch (error) {
+      if (mounted) _showMutationError('archive', error);
+    }
+  }
+
+  Future<void> _restoreProject(HermesProject project) async {
+    try {
+      await widget.repository.archive(project.id, restore: true);
+    } catch (error) {
+      if (mounted) _showMutationError('restore', error);
+    }
+  }
+
+  void _showMutationError(String action, Object error) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Could not $action the project: $error')),
+    );
+  }
+
+  ProjectOverviewNode? _overviewFor(String projectId) {
+    for (final project in _overview.projects) {
+      if (project.id == projectId) return project;
+    }
+    return null;
   }
 
   @override
@@ -158,7 +229,7 @@ class _ProjectsPaneState extends State<ProjectsPane> {
       );
     }
 
-    if (view.projects.isEmpty) {
+    if (view.isEmpty) {
       return RefreshIndicator(
         onRefresh: _refresh,
         child: ListView(
@@ -209,8 +280,29 @@ class _ProjectsPaneState extends State<ProjectsPane> {
                   project: project,
                   isActive: project.id == view.activeId,
                   onTap: () => widget.onProjectSelected?.call(project.id),
+                  overview: _overviewFor(project.id),
+                  onRename: () => _renameProject(project),
+                  onArchive: () => _archiveProject(project),
                 ),
               ),
+            if (view.archived.isNotEmpty) ...[
+              SectionHeader(title: 'Archived', count: view.archived.length),
+              for (final project in view.archived)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    HermesSpacing.lg,
+                    0,
+                    HermesSpacing.lg,
+                    HermesSpacing.md,
+                  ),
+                  child: _ProjectCard(
+                    project: project,
+                    isActive: false,
+                    onTap: () {},
+                    onRestore: () => _restoreProject(project),
+                  ),
+                ),
+            ],
           ],
         ),
       ),
@@ -404,11 +496,19 @@ class _ProjectCard extends StatelessWidget {
   final HermesProject project;
   final bool isActive;
   final VoidCallback onTap;
+  final ProjectOverviewNode? overview;
+  final VoidCallback? onRename;
+  final VoidCallback? onArchive;
+  final VoidCallback? onRestore;
 
   const _ProjectCard({
     required this.project,
     required this.isActive,
     required this.onTap,
+    this.overview,
+    this.onRename,
+    this.onArchive,
+    this.onRestore,
   });
 
   @override
@@ -443,6 +543,17 @@ class _ProjectCard extends StatelessWidget {
                     color: tokens.onSurface,
                   ),
                 ),
+                if (overview != null) ...[
+                  const SizedBox(height: HermesSpacing.xs),
+                  Text(
+                    overview!.sessionCount == 1
+                        ? '1 chat'
+                        : '${overview!.sessionCount} chats',
+                    style: tokens.typography.label.copyWith(
+                      color: tokens.muted,
+                    ),
+                  ),
+                ],
                 if (project.description != null) ...[
                   const SizedBox(height: HermesSpacing.xs),
                   Text(
@@ -468,8 +579,86 @@ class _ProjectCard extends StatelessWidget {
             const SizedBox(width: HermesSpacing.sm),
             const StatusChip(status: HermesStatus.running, label: 'Active'),
           ],
+          PopupMenuButton<String>(
+            key: Key('project-actions-${project.id}'),
+            tooltip: 'Project actions',
+            onSelected: (action) {
+              switch (action) {
+                case 'rename':
+                  onRename?.call();
+                case 'archive':
+                  onArchive?.call();
+                case 'restore':
+                  onRestore?.call();
+              }
+            },
+            itemBuilder: (_) => [
+              if (onRename != null)
+                const PopupMenuItem(
+                  value: 'rename',
+                  child: Text('Rename project'),
+                ),
+              if (onArchive != null)
+                const PopupMenuItem(
+                  value: 'archive',
+                  child: Text('Archive project'),
+                ),
+              if (onRestore != null)
+                const PopupMenuItem(
+                  value: 'restore',
+                  child: Text('Restore project'),
+                ),
+            ],
+          ),
         ],
       ),
+    );
+  }
+}
+
+class _RenameProjectDialog extends StatefulWidget {
+  final HermesProject project;
+
+  const _RenameProjectDialog({required this.project});
+
+  @override
+  State<_RenameProjectDialog> createState() => _RenameProjectDialogState();
+}
+
+class _RenameProjectDialogState extends State<_RenameProjectDialog> {
+  late String _draft = widget.project.name;
+  String? _error;
+
+  void _submit() {
+    final name = _draft.trim();
+    if (name.isEmpty) {
+      setState(() => _error = 'Enter a name');
+      return;
+    }
+    Navigator.pop(context, name);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text('Rename ${widget.project.name}'),
+      content: TextFormField(
+        key: const Key('rename-project-name'),
+        initialValue: widget.project.name,
+        autofocus: true,
+        maxLength: 80,
+        textCapitalization: TextCapitalization.sentences,
+        decoration: InputDecoration(labelText: 'Name', errorText: _error),
+        onChanged: (value) => _draft = value,
+        onFieldSubmitted: (_) => _submit(),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(onPressed: _submit, child: const Text('Rename')),
+      ],
     );
   }
 }

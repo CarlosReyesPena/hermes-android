@@ -115,7 +115,12 @@ void main() {
     final binding = _binding();
     final signals = _signals(
       [binding],
-      [_entry(binding: binding, status: GatewayRecoveryTurnStatus.waitingInput)],
+      [
+        _entry(
+          binding: binding,
+          status: GatewayRecoveryTurnStatus.waitingInput,
+        ),
+      ],
     );
 
     expect(signals.attention, {'session-a': 'Waiting for your input'});
@@ -159,10 +164,7 @@ void main() {
       [done, stopped],
       [
         _entry(binding: done, status: GatewayRecoveryTurnStatus.completed),
-        _entry(
-          binding: stopped,
-          status: GatewayRecoveryTurnStatus.interrupted,
-        ),
+        _entry(binding: stopped, status: GatewayRecoveryTurnStatus.interrupted),
       ],
     );
 
@@ -274,7 +276,11 @@ void main() {
       [mine, other],
       [
         _entry(binding: other, status: GatewayRecoveryTurnStatus.running),
-        _entry(binding: other, clientTurnId: _clientB, status: GatewayRecoveryTurnStatus.failed),
+        _entry(
+          binding: other,
+          clientTurnId: _clientB,
+          status: GatewayRecoveryTurnStatus.failed,
+        ),
       ],
     );
 
@@ -318,10 +324,9 @@ void main() {
 
   test('an entry with no matching binding is ignored, not invented', () {
     final orphan = _binding(localSessionId: 'session-orphan');
-    final signals = _signals(
-      const [],
-      [_entry(binding: orphan, status: GatewayRecoveryTurnStatus.running)],
-    );
+    final signals = _signals(const [], [
+      _entry(binding: orphan, status: GatewayRecoveryTurnStatus.running),
+    ]);
 
     expect(signals.isEmpty, isTrue);
   });
@@ -426,7 +431,9 @@ void main() {
           endpointDigest: _digestA,
           now: _now,
         ),
-        completion(isA<HomeTurnSignals>().having((s) => s.isEmpty, 'isEmpty', isTrue)),
+        completion(
+          isA<HomeTurnSignals>().having((s) => s.isEmpty, 'isEmpty', isTrue),
+        ),
       );
     });
   });

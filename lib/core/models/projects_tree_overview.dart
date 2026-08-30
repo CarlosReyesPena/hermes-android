@@ -111,7 +111,8 @@ class ProjectOverviewNode {
           ? rawRepos
                 .whereType<Map>()
                 .map(
-                  (repo) => ProjectRepo.fromJson(Map<String, dynamic>.from(repo)),
+                  (repo) =>
+                      ProjectRepo.fromJson(Map<String, dynamic>.from(repo)),
                 )
                 .toList(growable: false)
           : const <ProjectRepo>[],

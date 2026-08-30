@@ -15,16 +15,14 @@ typedef GatewayTurnIdFactory = String Function();
 typedef GatewayTurnClock = DateTime Function();
 typedef GatewayTurnStateCallback =
     void Function(GatewayTurnRecoveryState state);
-typedef GatewayTurnSettledCallback = void Function(
-  GatewayTurnRecoveryState state,
-);
+typedef GatewayTurnSettledCallback =
+    void Function(GatewayTurnRecoveryState state);
+
 /// Fired when `session.open` first binds a draft (local) session id to the
 /// server's durable stored id. Lets an owning layer reconcile server-side
 /// records that were keyed by the draft id before the binding existed.
-typedef GatewayTurnSessionBoundCallback = void Function(
-  String localSessionId,
-  String storedSessionId,
-);
+typedef GatewayTurnSessionBoundCallback =
+    void Function(String localSessionId, String storedSessionId);
 
 enum GatewayTurnCoordinatorFailure {
   closed,
@@ -162,16 +160,18 @@ class GatewayTurnCoordinatorRegistry {
       );
       final coordinator = _coordinators.putIfAbsent(
         localSessionId,
-        () => GatewayTurnCoordinator(
-          connectionId: connectionId,
-          endpointDigest: endpointDigest,
-          localSessionId: localSessionId,
-          journal: journal,
-          freshSocketFactory: _leaseFreshSocket,
-          uuidFactory: uuidFactory,
-          clock: clock,
-        )..onTurnSettled = onTurnSettled
-          ..onSessionBound = onSessionBound,
+        () =>
+            GatewayTurnCoordinator(
+                connectionId: connectionId,
+                endpointDigest: endpointDigest,
+                localSessionId: localSessionId,
+                journal: journal,
+                freshSocketFactory: _leaseFreshSocket,
+                uuidFactory: uuidFactory,
+                clock: clock,
+              )
+              ..onTurnSettled = onTurnSettled
+              ..onSessionBound = onSessionBound,
       );
       Object? firstError;
       StackTrace? firstStack;

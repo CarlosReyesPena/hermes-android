@@ -23,16 +23,19 @@ http.Response jsonOk(Object body) => http.Response(
 );
 
 void main() {
-  test('returns no results for a blank query without calling the server', () async {
-    var called = false;
-    final client = clientReturning((_) {
-      called = true;
-      return jsonOk({'results': []});
-    });
+  test(
+    'returns no results for a blank query without calling the server',
+    () async {
+      var called = false;
+      final client = clientReturning((_) {
+        called = true;
+        return jsonOk({'results': []});
+      });
 
-    expect(await client.search('   '), isEmpty);
-    expect(called, isFalse, reason: 'a blank query must not hit the network');
-  });
+      expect(await client.search('   '), isEmpty);
+      expect(called, isFalse, reason: 'a blank query must not hit the network');
+    },
+  );
 
   test('sends the query and clamped limit to the dashboard endpoint', () async {
     late Uri captured;
@@ -54,13 +57,10 @@ void main() {
 
   test('forwards the supplied auth headers', () async {
     late Map<String, String> captured;
-    final client = clientReturning(
-      (request) {
-        captured = request.headers;
-        return jsonOk({'results': []});
-      },
-      headers: () async => const {'Cookie': 'hermes_session_at=xyz'},
-    );
+    final client = clientReturning((request) {
+      captured = request.headers;
+      return jsonOk({'results': []});
+    }, headers: () async => const {'Cookie': 'hermes_session_at=xyz'});
 
     await client.search('anything');
 
@@ -166,20 +166,23 @@ void main() {
     );
   });
 
-  test('rejects a malformed body rather than showing an empty result', () async {
-    final client = clientReturning((_) => http.Response('not json', 200));
+  test(
+    'rejects a malformed body rather than showing an empty result',
+    () async {
+      final client = clientReturning((_) => http.Response('not json', 200));
 
-    await expectLater(
-      client.search('anything'),
-      throwsA(
-        isA<SessionSearchException>().having(
-          (e) => e.message,
-          'message',
-          contains('malformed'),
+      await expectLater(
+        client.search('anything'),
+        throwsA(
+          isA<SessionSearchException>().having(
+            (e) => e.message,
+            'message',
+            contains('malformed'),
+          ),
         ),
-      ),
-    );
-  });
+      );
+    },
+  );
 
   test('returns empty when the payload carries no results list', () async {
     final client = clientReturning((_) => jsonOk({'ok': true}));

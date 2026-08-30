@@ -155,10 +155,10 @@ void main() {
         ],
       });
 
-      expect(
-        overview.projects.single.previewSessions.map((s) => s.title),
-        ['First', 'Second'],
-      );
+      expect(overview.projects.single.previewSessions.map((s) => s.title), [
+        'First',
+        'Second',
+      ]);
     });
 
     test('distinguishes explicit, auto and Home projects', () {
@@ -346,7 +346,10 @@ void main() {
       final client = ProjectsGatewayClient(rpc.call, capabilities: registry);
 
       await client.list();
-      await expectLater(client.tree(), throwsA(isA<ProjectsUnsupportedException>()));
+      await expectLater(
+        client.tree(),
+        throwsA(isA<ProjectsUnsupportedException>()),
+      );
 
       expect(client.cachedSupport, isTrue);
       expect(registry.supportFor('projects.list'), CapabilitySupport.supported);
@@ -366,8 +369,14 @@ void main() {
       ]);
       final client = ProjectsGatewayClient(rpc.call, capabilities: registry);
 
-      await expectLater(client.tree(), throwsA(isA<ProjectsUnsupportedException>()));
-      await expectLater(client.tree(), throwsA(isA<ProjectsUnsupportedException>()));
+      await expectLater(
+        client.tree(),
+        throwsA(isA<ProjectsUnsupportedException>()),
+      );
+      await expectLater(
+        client.tree(),
+        throwsA(isA<ProjectsUnsupportedException>()),
+      );
 
       expect(rpc.calls, hasLength(1));
     });

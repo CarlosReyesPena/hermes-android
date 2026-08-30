@@ -60,20 +60,23 @@ void main() {
     expect((await store.load()).expiresAtFor('quick-1'), deadline);
   });
 
-  test('a quick chat past its deadline reads as archived, not deleted', () async {
-    final store = await storeFor('gateway');
-    await store.record('quick-1', expiresAt: deadline);
+  test(
+    'a quick chat past its deadline reads as archived, not deleted',
+    () async {
+      final store = await storeFor('gateway');
+      await store.record('quick-1', expiresAt: deadline);
 
-    final state = await store.load();
-    final after = deadline.add(const Duration(minutes: 1));
+      final state = await store.load();
+      final after = deadline.add(const Duration(minutes: 1));
 
-    expect(state.statusFor('quick-1', after), QuickChatStatus.archived);
-    expect(state.archivedAt(after), {'quick-1'});
-    // Still recorded, still searchable: archiving is a lifecycle state, never
-    // a deletion.
-    expect(state.expiresAtFor('quick-1'), deadline);
-    expect((await store.load()).isQuick('quick-1'), isTrue);
-  });
+      expect(state.statusFor('quick-1', after), QuickChatStatus.archived);
+      expect(state.archivedAt(after), {'quick-1'});
+      // Still recorded, still searchable: archiving is a lifecycle state, never
+      // a deletion.
+      expect(state.expiresAtFor('quick-1'), deadline);
+      expect((await store.load()).isQuick('quick-1'), isTrue);
+    },
+  );
 
   test('the deadline itself has not passed yet', () async {
     final store = await storeFor('gateway');
@@ -127,10 +130,7 @@ void main() {
     await store.record('quick-3', expiresAt: deadline);
     await store.promote('quick-3');
 
-    await store.prune(
-      {'quick-1'},
-      now: deadline.add(const Duration(days: 1)),
-    );
+    await store.prune({'quick-1'}, now: deadline.add(const Duration(days: 1)));
     final state = await store.load();
 
     expect(state.isQuick('quick-1'), isTrue);
@@ -172,21 +172,24 @@ void main() {
     expect((await store.load()).isQuick('quick-1'), isTrue);
   });
 
-  test('a record with an unreadable deadline is dropped, never archived', () async {
-    SharedPreferences.setMockInitialValues({
-      'quick_chats_v1_gateway':
-          '{"expiries":{"quick-1":"tomorrow","quick-2":${deadline.millisecondsSinceEpoch}},"promoted":[]}',
-    });
-    final store = await storeFor('gateway');
+  test(
+    'a record with an unreadable deadline is dropped, never archived',
+    () async {
+      SharedPreferences.setMockInitialValues({
+        'quick_chats_v1_gateway':
+            '{"expiries":{"quick-1":"tomorrow","quick-2":${deadline.millisecondsSinceEpoch}},"promoted":[]}',
+      });
+      final store = await storeFor('gateway');
 
-    final state = await store.load();
+      final state = await store.load();
 
-    // Undatable work must never be silently archived on a guess.
-    expect(state.isQuick('quick-1'), isFalse);
-    expect(state.archivedAt(deadline.add(const Duration(days: 30))), {
-      'quick-2',
-    });
-  });
+      // Undatable work must never be silently archived on a guess.
+      expect(state.isQuick('quick-1'), isFalse);
+      expect(state.archivedAt(deadline.add(const Duration(days: 30))), {
+        'quick-2',
+      });
+    },
+  );
 
   test('the loaded state is immutable', () async {
     final store = await storeFor('gateway');

@@ -84,6 +84,8 @@ Future<void> _pump(
   ValueChanged<Session>? onOpenSession,
   List<HermesProject> projects = const [],
   ProjectSessionMover? onMoveSession,
+  Future<void> Function(String name)? onRenameProject,
+  Future<void> Function()? onArchiveProject,
   Future<void> Function()? onDeleteProject,
 }) async {
   await tester.pumpWidget(
@@ -96,6 +98,8 @@ Future<void> _pump(
         onOpenSession: onOpenSession,
         projects: projects,
         onMoveSession: onMoveSession,
+        onRenameProject: onRenameProject,
+        onArchiveProject: onArchiveProject,
         onDeleteProject: onDeleteProject,
       ),
     ),
@@ -316,6 +320,46 @@ void main() {
     expect(moves, ['p2']);
     expect(refreshes, [false, true]);
     expect(find.text('Moved to ScriptHive'), findsOneWidget);
+  });
+
+  testWidgets('project actions rename and archive through explicit flows', (
+    tester,
+  ) async {
+    final renamed = <String>[];
+    var archives = 0;
+    await _pump(
+      tester,
+      load: ({required refresh}) async => ProjectSessionsView(
+        projectId: 'p1',
+        tree: _tree(),
+        support: ProjectsSupport.native,
+      ),
+      onRenameProject: (name) async => renamed.add(name),
+      onArchiveProject: () async => archives++,
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Project actions'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Rename project'));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const Key('rename-project-name')),
+      'Mobile',
+    );
+    await tester.tap(find.widgetWithText(FilledButton, 'Rename'));
+    await tester.pumpAndSettle();
+    expect(renamed, ['Mobile']);
+    expect(find.text('Mobile'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Project actions'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Archive project'));
+    await tester.pumpAndSettle();
+    expect(find.text('Archive Mobile?'), findsOneWidget);
+    await tester.tap(find.widgetWithText(FilledButton, 'Archive'));
+    await tester.pumpAndSettle();
+    expect(archives, 1);
   });
 
   testWidgets('delete requires confirmation and preserves chats', (

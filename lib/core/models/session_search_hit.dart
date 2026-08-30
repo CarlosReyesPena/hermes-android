@@ -17,11 +17,7 @@ class SessionSearchHit {
   /// Role of the message that matched (`user`, `assistant`, ...), when known.
   final String? role;
 
-  const SessionSearchHit({
-    required this.session,
-    this.snippet = '',
-    this.role,
-  });
+  const SessionSearchHit({required this.session, this.snippet = '', this.role});
 
   /// Builds a hit from one `/api/sessions/search` result entry.
   ///

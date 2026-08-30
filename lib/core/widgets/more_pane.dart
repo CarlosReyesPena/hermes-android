@@ -76,6 +76,13 @@ class MoreSection {
 const _dashboardRequired =
     'Needs a reachable Hermes dashboard. Check the host, port, and '
     'credentials of this connection.';
+const _gatewayAssetsRequired =
+    'Needs a server-authoritative Assets index in the Hermes Gateway.';
+const _gatewayOrganizationRequired =
+    'Needs durable pin ordering, batch mutation, and undo contracts in the '
+    'Hermes Gateway.';
+const _gatewayAiFilingRequired =
+    'Needs a correction-aware filing contract in the Hermes Gateway.';
 
 /// Builds the More menu for the current connection.
 ///
@@ -92,6 +99,18 @@ List<MoreSection> buildMoreSections({required bool dashboardReachable}) {
     MoreSection(
       title: 'Workspace',
       entries: [
+        const MoreEntry(
+          id: 'unassigned',
+          title: 'Inbox / Unassigned',
+          subtitle: 'Chats that are not assigned to a Project',
+          icon: Icons.inbox_outlined,
+        ),
+        const MoreEntry(
+          id: 'archived-quick',
+          title: 'Archived quick chats',
+          subtitle: 'Review or promote quick chats past their retention period',
+          icon: Icons.archive_outlined,
+        ),
         MoreEntry(
           id: 'files',
           title: 'Files',
@@ -105,14 +124,29 @@ List<MoreSection> buildMoreSections({required bool dashboardReachable}) {
           title: 'Assets',
           subtitle: 'Artifacts, attachments, and generated media',
           icon: Icons.image_outlined,
-          availability: MoreEntryAvailability.comingSoon,
+          availability: MoreEntryAvailability.unavailable,
+          unavailableReason: _gatewayAssetsRequired,
         ),
-        const MoreEntry(
-          id: 'search',
-          title: 'Search',
-          subtitle: 'Find a chat across every project',
-          icon: Icons.search_outlined,
-          availability: MoreEntryAvailability.comingSoon,
+      ],
+    ),
+    const MoreSection(
+      title: 'Organization',
+      entries: [
+        MoreEntry(
+          id: 'pin-batch-undo',
+          title: 'Pin, batch and undo',
+          subtitle: 'Cross-device ordering and reversible bulk organization',
+          icon: Icons.push_pin_outlined,
+          availability: MoreEntryAvailability.unavailable,
+          unavailableReason: _gatewayOrganizationRequired,
+        ),
+        MoreEntry(
+          id: 'ai-filing',
+          title: 'AI-assisted filing',
+          subtitle: 'Suggest Projects and learn from your corrections',
+          icon: Icons.auto_fix_high_outlined,
+          availability: MoreEntryAvailability.unavailable,
+          unavailableReason: _gatewayAiFilingRequired,
         ),
       ],
     ),

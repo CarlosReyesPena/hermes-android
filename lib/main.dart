@@ -8,7 +8,7 @@ import 'core/services/config_backup_service.dart';
 import 'core/services/connection_manager.dart';
 import 'core/services/gateway_turn_application_controller.dart';
 import 'core/services/text_size_preference.dart';
-import 'core/screens/session_list_screen.dart';
+import 'core/screens/workspace_screen.dart';
 import 'core/theme/hermes_theme.dart';
 import 'core/utils/responsive.dart';
 import 'core/widgets/config_backup_card.dart';
@@ -265,16 +265,16 @@ class HomeScreenState extends State<HomeScreen> {
     final conn = _connections.where((c) => c.id == lastId).firstOrNull;
     if (conn == null) return;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) _navigateToSessions(conn);
+      if (mounted) _navigateToWorkspace(conn);
     });
   }
 
-  void _navigateToSessions(SavedConnection conn) {
+  void _navigateToWorkspace(SavedConnection conn) {
     widget.connManager.prefs.setString(_lastConnectionKey, conn.id);
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => SessionListScreen(
+        builder: (_) => WorkspaceScreen(
           connection: conn,
           turnApplicationController: widget.turnApplicationController,
         ),
@@ -760,7 +760,7 @@ class HomeScreenState extends State<HomeScreen> {
             ),
           ],
         ),
-        onTap: () => _navigateToSessions(conn),
+        onTap: () => _navigateToWorkspace(conn),
       ),
     );
   }
@@ -910,8 +910,13 @@ class _AddDialogState extends State<_AddDialog> {
     );
     _dashUser = TextEditingController(text: conn?.dashboardUsername ?? '');
     _dashPass = TextEditingController(text: conn?.dashboardPassword ?? '');
+    // The Desktop Gateway URL is an advanced override, not a default: the
+    // app derives the JSON-RPC/WebSocket origin from the dashboard details
+    // when this field is blank. Pre-filling a hardcoded example here made
+    // every new connection silently point at a dead host and wedge Project
+    // loading. See docs/ANDROID_FINAL_UI_SPEC_DRAFT.md.
     _desktopGatewayUrl = TextEditingController(
-      text: conn?.desktopGatewayUrl ?? 'http://192.168.1.193/desktop',
+      text: conn?.desktopGatewayUrl ?? '',
     );
     _dashboardProxied = conn?.dashboardProxied ?? false;
     _showDashboard =

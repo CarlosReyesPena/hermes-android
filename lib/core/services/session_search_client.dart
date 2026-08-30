@@ -54,17 +54,14 @@ class SessionSearchClient {
   /// unreachable, rejects the credentials, or answers with an unexpected shape
   /// — the caller surfaces that instead of showing an empty result set that
   /// would read as "no matches".
-  Future<List<SessionSearchHit>> search(
-    String query, {
-    int limit = 20,
-  }) async {
+  Future<List<SessionSearchHit>> search(String query, {int limit = 20}) async {
     final trimmed = query.trim();
     if (trimmed.isEmpty) return const [];
 
     final safeLimit = limit.clamp(1, maxLimit);
-    final uri = Uri.parse('$_baseUrl/api/sessions/search').replace(
-      queryParameters: {'q': trimmed, 'limit': '$safeLimit'},
-    );
+    final uri = Uri.parse(
+      '$_baseUrl/api/sessions/search',
+    ).replace(queryParameters: {'q': trimmed, 'limit': '$safeLimit'});
 
     final http.Response response;
     try {

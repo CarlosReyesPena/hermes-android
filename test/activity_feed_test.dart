@@ -150,7 +150,12 @@ void main() {
     final binding = _binding();
     final feed = _feed(
       [binding],
-      [_entry(binding: binding, status: GatewayRecoveryTurnStatus.waitingInput)],
+      [
+        _entry(
+          binding: binding,
+          status: GatewayRecoveryTurnStatus.waitingInput,
+        ),
+      ],
     );
 
     final item = _group(feed, ActivityGroupKind.needsYou).items.single;
@@ -310,8 +315,10 @@ void main() {
       ],
     );
 
-    expect(_group(feed, ActivityGroupKind.failed).items.map((i) => i.sessionId),
-        ['session-newer', 'session-older']);
+    expect(
+      _group(feed, ActivityGroupKind.failed).items.map((i) => i.sessionId),
+      ['session-newer', 'session-older'],
+    );
   });
 
   test('a session title is used when known and never invented when not', () {
@@ -473,42 +480,38 @@ void main() {
 
   test('a group limit below one is rejected instead of silently emptying the '
       'timeline', () {
-    expect(
-      () => _feed(const [], const [], groupLimit: 0),
-      throwsArgumentError,
-    );
+    expect(() => _feed(const [], const [], groupLimit: 0), throwsArgumentError);
   });
 
-  test('a null scope reads every connection, which is what diagnostics want',
-      () {
-    final mine = _binding(localSessionId: 'session-mine');
-    final other = _binding(
-      connectionId: 'connection-b',
-      endpointDigest: _digestB,
-      localSessionId: 'session-other',
-    );
-    final feed = _feed(
-      [mine, other],
-      [
-        _entry(binding: mine, status: GatewayRecoveryTurnStatus.running),
-        _entry(binding: other, status: GatewayRecoveryTurnStatus.running),
-      ],
-      connectionId: null,
-      endpointDigest: null,
-    );
+  test(
+    'a null scope reads every connection, which is what diagnostics want',
+    () {
+      final mine = _binding(localSessionId: 'session-mine');
+      final other = _binding(
+        connectionId: 'connection-b',
+        endpointDigest: _digestB,
+        localSessionId: 'session-other',
+      );
+      final feed = _feed(
+        [mine, other],
+        [
+          _entry(binding: mine, status: GatewayRecoveryTurnStatus.running),
+          _entry(binding: other, status: GatewayRecoveryTurnStatus.running),
+        ],
+        connectionId: null,
+        endpointDigest: null,
+      );
 
-    expect(_group(feed, ActivityGroupKind.running).items, hasLength(2));
-  });
+      expect(_group(feed, ActivityGroupKind.running).items, hasLength(2));
+    },
+  );
 
   test('every recovery-status value lands in exactly one group', () {
     // A status added to the contract later must be classified deliberately
     // rather than silently disappearing from the operational timeline.
     for (final status in GatewayRecoveryTurnStatus.values) {
       final binding = _binding(localSessionId: 'session-${status.wireValue}');
-      final feed = _feed(
-        [binding],
-        [_entry(binding: binding, status: status)],
-      );
+      final feed = _feed([binding], [_entry(binding: binding, status: status)]);
       final rows = feed.groups.expand((group) => group.items).toList();
       expect(
         rows,

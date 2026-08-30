@@ -68,6 +68,12 @@ void main() {
       expect(text.style?.color, tokens.blocked);
     });
 
+    testWidgets('announces its visible label exactly once', (tester) async {
+      await _pump(tester, const StatusChip(status: HermesStatus.idle));
+
+      expect(tester.getSemantics(find.byType(StatusChip)).label, 'Idle');
+    });
+
     testWidgets('exposes its state to screen readers', (tester) async {
       await _pump(tester, const StatusChip(status: HermesStatus.failed));
 

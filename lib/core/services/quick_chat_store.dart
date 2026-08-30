@@ -114,10 +114,7 @@ class QuickChatStore {
         // An unreadable deadline is dropped: archiving on a guess would hide
         // work the user never agreed to make ephemeral.
         if (id is! String || id.isEmpty || millis is! int) continue;
-        expiries[id] = DateTime.fromMillisecondsSinceEpoch(
-          millis,
-          isUtc: true,
-        );
+        expiries[id] = DateTime.fromMillisecondsSinceEpoch(millis, isUtc: true);
       }
 
       final promoted = <String>{
@@ -172,7 +169,10 @@ class QuickChatStore {
   /// becomes one on its first turn — so dropping it here would silently make
   /// it durable. Only a record whose deadline has already passed at [now] may
   /// be pruned on absence.
-  Future<void> prune(Set<String> liveSessionIds, {required DateTime now}) async {
+  Future<void> prune(
+    Set<String> liveSessionIds, {
+    required DateTime now,
+  }) async {
     final state = await load();
     bool keep(String id) {
       if (liveSessionIds.contains(id)) return true;

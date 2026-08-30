@@ -3,10 +3,8 @@ import 'package:hermes_android/core/models/gateway_activity.dart';
 import 'package:hermes_android/core/models/gateway_insight.dart';
 import 'package:hermes_android/core/utils/chat_display_items.dart';
 
-GatewayToolActivity _tool(String name) => GatewayToolActivity(
-  name: name,
-  phase: GatewayToolActivityPhase.completed,
-);
+GatewayToolActivity _tool(String name) =>
+    GatewayToolActivity(name: name, phase: GatewayToolActivityPhase.completed);
 
 GatewaySubagentActivity _subagent(String id) => GatewaySubagentActivity(
   id: id,
@@ -50,8 +48,10 @@ void main() {
 
       expect((items[1] as Map<String, dynamic>)['_retry_prompt'], 'first');
       expect((items[3] as Map<String, dynamic>)['_retry_prompt'], 'second');
-      expect((items[0] as Map<String, dynamic>).containsKey('_retry_prompt'),
-          isFalse);
+      expect(
+        (items[0] as Map<String, dynamic>).containsKey('_retry_prompt'),
+        isFalse,
+      );
     });
 
     test('never attaches a retry prompt before the first user message', () {
@@ -88,8 +88,10 @@ void main() {
       );
 
       expect(items, hasLength(1));
-      expect((items.single as Map<String, dynamic>)['_display_content'],
-          'answer');
+      expect(
+        (items.single as Map<String, dynamic>)['_display_content'],
+        'answer',
+      );
     });
 
     test('replaces a tool result message with the matching activity card', () {
@@ -127,19 +129,23 @@ void main() {
       ]);
     });
 
-    test('suppresses a tool result bubble even without a matching activity',
-        () {
-      final items = buildChatDisplayItems(
-        messages: [
-          {'role': 'tool', 'content': 'orphan output'},
-          {'role': 'assistant', 'content': 'done'},
-        ],
-      );
+    test(
+      'suppresses a tool result bubble even without a matching activity',
+      () {
+        final items = buildChatDisplayItems(
+          messages: [
+            {'role': 'tool', 'content': 'orphan output'},
+            {'role': 'assistant', 'content': 'done'},
+          ],
+        );
 
-      expect(items, hasLength(1));
-      expect((items.single as Map<String, dynamic>)['_display_content'],
-          'done');
-    });
+        expect(items, hasLength(1));
+        expect(
+          (items.single as Map<String, dynamic>)['_display_content'],
+          'done',
+        );
+      },
+    );
 
     test('appends tool activities that never matched a stored message', () {
       final items = buildChatDisplayItems(
@@ -193,17 +199,21 @@ void main() {
       );
     });
 
-    test('strips a trailing tool result block when the role is not tool-like',
-        () {
-      final items = buildChatDisplayItems(
-        messages: [
-          {'role': 'assistant', 'content': 'plain answer'},
-        ],
-      );
+    test(
+      'strips a trailing tool result block when the role is not tool-like',
+      () {
+        final items = buildChatDisplayItems(
+          messages: [
+            {'role': 'assistant', 'content': 'plain answer'},
+          ],
+        );
 
-      expect((items.single as Map<String, dynamic>)['_display_content'],
-          'plain answer');
-    });
+        expect(
+          (items.single as Map<String, dynamic>)['_display_content'],
+          'plain answer',
+        );
+      },
+    );
 
     test('emits a reasoning item before the assistant bubble', () {
       final items = buildChatDisplayItems(

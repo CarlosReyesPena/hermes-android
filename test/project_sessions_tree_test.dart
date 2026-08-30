@@ -325,7 +325,10 @@ void main() {
 
       await client.projectSessions('p1', sessionLimit: 50);
 
-      expect(rpc.calls.single.params, {'project_id': 'p1', 'session_limit': 50});
+      expect(rpc.calls.single.params, {
+        'project_id': 'p1',
+        'session_limit': 50,
+      });
     });
 
     test('returns null when the gateway knows no such project', () async {
@@ -382,42 +385,42 @@ void main() {
       expect(client.cachedSupport, isTrue);
     });
 
-    test('a missing drill-in never disowns the whole projects family', () async {
-      // A gateway can ship `projects.list` and predate
-      // `projects.project_sessions`. Letting one missing sub-method flip the
-      // family verdict would drop the entire Projects pane into compatibility
-      // mode — losing server-owned projects the gateway serves perfectly —
-      // and, worse, would keep it there: the verdict is cached, so no later
-      // `projects.list` would be attempted to disprove it.
-      final registry = CapabilityRegistry();
-      final rpc = _RecordingRpc([
-        _ok({
-          'projects': const [],
-          'active_id': null,
-        }),
-        _error(-32601, 'unknown method: projects.project_sessions'),
-        _ok({
-          'projects': const [],
-          'active_id': null,
-        }),
-      ]);
-      final client = ProjectsGatewayClient(rpc.call, capabilities: registry);
+    test(
+      'a missing drill-in never disowns the whole projects family',
+      () async {
+        // A gateway can ship `projects.list` and predate
+        // `projects.project_sessions`. Letting one missing sub-method flip the
+        // family verdict would drop the entire Projects pane into compatibility
+        // mode — losing server-owned projects the gateway serves perfectly —
+        // and, worse, would keep it there: the verdict is cached, so no later
+        // `projects.list` would be attempted to disprove it.
+        final registry = CapabilityRegistry();
+        final rpc = _RecordingRpc([
+          _ok({'projects': const [], 'active_id': null}),
+          _error(-32601, 'unknown method: projects.project_sessions'),
+          _ok({'projects': const [], 'active_id': null}),
+        ]);
+        final client = ProjectsGatewayClient(rpc.call, capabilities: registry);
 
-      await client.list();
-      await expectLater(
-        client.projectSessions('p1'),
-        throwsA(isA<ProjectsUnsupportedException>()),
-      );
+        await client.list();
+        await expectLater(
+          client.projectSessions('p1'),
+          throwsA(isA<ProjectsUnsupportedException>()),
+        );
 
-      // Only the drill-in is unavailable; the family still is.
-      expect(client.cachedSupport, isTrue);
-      expect(await client.isSupported(), isTrue);
-      expect(
-        registry.supportFor('projects.project_sessions'),
-        CapabilitySupport.unsupported,
-      );
-      expect(registry.supportFor('projects.list'), CapabilitySupport.supported);
-    });
+        // Only the drill-in is unavailable; the family still is.
+        expect(client.cachedSupport, isTrue);
+        expect(await client.isSupported(), isTrue);
+        expect(
+          registry.supportFor('projects.project_sessions'),
+          CapabilitySupport.unsupported,
+        );
+        expect(
+          registry.supportFor('projects.list'),
+          CapabilitySupport.supported,
+        );
+      },
+    );
 
     test('a missing projects.list still disowns the family', () async {
       // The inverse guard: the probe method genuinely defines the family, so

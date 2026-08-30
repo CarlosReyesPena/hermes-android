@@ -87,25 +87,30 @@ void main() {
     );
   });
 
-  test('falls back to the original query when AI rewrite is unavailable', () async {
-    for (final status in [404, 429, 503]) {
-      final client = AiSearchQueryRewriter(
-        baseUrl: 'http://gateway.example:8642',
-        apiKey: 'test-key',
-        httpClient: MockClient((_) async => http.Response('Unavailable', status)),
-      );
+  test(
+    'falls back to the original query when AI rewrite is unavailable',
+    () async {
+      for (final status in [404, 429, 503]) {
+        final client = AiSearchQueryRewriter(
+          baseUrl: 'http://gateway.example:8642',
+          apiKey: 'test-key',
+          httpClient: MockClient(
+            (_) async => http.Response('Unavailable', status),
+          ),
+        );
 
-      expect(
-        await client.rewrite(
-          query: 'find this',
-          provider: 'nvidia',
-          model: 'model',
-        ),
-        'find this',
-        reason: 'HTTP $status should degrade to ordinary full-text search',
-      );
-    }
-  });
+        expect(
+          await client.rewrite(
+            query: 'find this',
+            provider: 'nvidia',
+            model: 'model',
+          ),
+          'find this',
+          reason: 'HTTP $status should degrade to ordinary full-text search',
+        );
+      }
+    },
+  );
 
   test('surfaces auth and server error messages', () async {
     final authClient = AiSearchQueryRewriter(

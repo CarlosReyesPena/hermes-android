@@ -236,11 +236,7 @@ class _ActivityItemCard extends StatelessWidget {
   final DateTime now;
   final VoidCallback? onTap;
 
-  const _ActivityItemCard({
-    required this.item,
-    required this.now,
-    this.onTap,
-  });
+  const _ActivityItemCard({required this.item, required this.now, this.onTap});
 
   @override
   Widget build(BuildContext context) {

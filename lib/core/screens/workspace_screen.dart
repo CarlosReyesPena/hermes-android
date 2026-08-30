@@ -41,6 +41,7 @@ import 'cron_screen.dart';
 import 'memory_screen.dart';
 import 'settings_screen.dart';
 import 'skills_screen.dart';
+import 'workspace_sessions_screen.dart';
 
 /// Builds the Projects repository for a connection. Injectable for tests.
 typedef ProjectsRepositoryFactory =
@@ -476,6 +477,14 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
 
   Widget _pane(BuildContext context, HermesDestination destination) {
     switch (destination) {
+      case HermesDestination.chats:
+        return WorkspaceSessionsScreen(
+          title: 'Chats',
+          view: WorkspaceSessionView.all,
+          embedded: true,
+          load: _loadWorkspaceSessionsData,
+          onOpenSession: (session) => unawaited(_openSession(session)),
+        );
       case HermesDestination.projects:
         final repository = _repository;
         if (!_initialized) {
@@ -622,6 +631,8 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
           projects: repository.current.projects,
           onMoveSession: (session, targetProjectId) =>
               repository.assignSession(session.id, targetProjectId),
+          onRenameProject: (name) => repository.rename(projectId, name),
+          onArchiveProject: () => repository.archive(projectId),
           onDeleteProject: () => repository.delete(projectId),
         ),
       ),
@@ -830,6 +841,100 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
     }
   }
 
+  Future<WorkspaceSessionsData> _loadWorkspaceSessionsData() async {
+    final sessions = await _loadSessions();
+    _cacheSessionTitles(sessions);
+
+    Set<String> claimed = const {};
+    final repository = _repository;
+    if (repository != null) {
+      try {
+        // The session list is the primary surface and must never wait on the
+        // Projects transport: a wedged Desktop Gateway (unreachable host,
+        // slow connect) would otherwise hide every conversation behind an
+        // infinite skeleton. Bounded, best-effort, additive metadata only.
+        final overview = await repository
+            .overview(refresh: true)
+            .timeout(const Duration(seconds: 8));
+        claimed = overview.scopedSessionIds.toSet();
+      } catch (_) {
+        // A gateway without projects.tree still gets All chats and Search.
+      }
+    }
+
+    Set<String> archived = const {};
+    try {
+      final store = await _quickChatStore();
+      archived = (await store.load()).archivedAt(DateTime.now());
+    } catch (_) {
+      // Quick-chat metadata is additive; session access must survive its loss.
+    }
+
+    return WorkspaceSessionsData(
+      sessions: sessions,
+      claimedSessionIds: Set.unmodifiable(claimed),
+      archivedQuickChatIds: Set.unmodifiable(archived),
+    );
+  }
+
+  void _openWorkspaceSessionView(WorkspaceSessionView view) {
+    final title = switch (view) {
+      WorkspaceSessionView.all => 'All chats',
+      WorkspaceSessionView.unassigned => 'Inbox / Unassigned',
+      WorkspaceSessionView.archivedQuick => 'Archived quick chats',
+      WorkspaceSessionView.search => 'Search',
+    };
+    _push(
+      WorkspaceSessionsScreen(
+        title: title,
+        view: view,
+        load: _loadWorkspaceSessionsData,
+        onOpenSession: (session) => unawaited(_openSession(session)),
+        onPromote: view == WorkspaceSessionView.archivedQuick
+            ? _promoteQuickChat
+            : null,
+      ),
+    );
+  }
+
+  Future<void> _promoteQuickChat(Session session) async {
+    final repository = _repository;
+    if (repository == null) {
+      throw StateError('Projects are unavailable for this connection');
+    }
+    var view = repository.current;
+    if (view.support == ProjectsSupport.unknown) {
+      view = await repository.refresh();
+    }
+    final projects = view.projects
+        .where((project) => !project.archived)
+        .toList(growable: false);
+    if (projects.isEmpty) {
+      throw StateError('Create a Project before promoting this chat');
+    }
+
+    if (!mounted) throw const QuickChatPromotionCancelled();
+    final project = projects.length == 1
+        ? projects.single
+        : await showModalBottomSheet<HermesProject>(
+            context: context,
+            isScrollControlled: true,
+            builder: (_) => ProjectPickerSheet(projects: projects),
+          );
+    if (project == null) throw const QuickChatPromotionCancelled();
+
+    await repository.assignSession(session.id, project.id);
+    await (await _quickChatStore()).promote(session.id);
+    if (mounted) {
+      setState(() {
+        _archivedQuickChats = {
+          for (final id in _archivedQuickChats)
+            if (id != session.id) id,
+        };
+      });
+    }
+  }
+
   Future<void> _openFiles() async {
     final builder = widget.filesScreenBuilder;
     if (builder != null) {
@@ -849,6 +954,10 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
   void _openMoreEntry(MoreEntry entry) {
     final connection = widget.connection;
     switch (entry.id) {
+      case 'unassigned':
+        _openWorkspaceSessionView(WorkspaceSessionView.unassigned);
+      case 'archived-quick':
+        _openWorkspaceSessionView(WorkspaceSessionView.archivedQuick);
       case 'files':
         unawaited(_openFiles());
       case 'cron':
@@ -884,7 +993,9 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
             setState(() => _destination = destination),
         // The FAB belongs to the shell, not to this Scaffold: above the shell
         // it would float over the bottom bar and swallow taps on More.
-        floatingActionButton: _destination == HermesDestination.home
+        floatingActionButton:
+            _destination == HermesDestination.home ||
+                _destination == HermesDestination.chats
             ? FloatingActionButton.extended(
                 key: kWorkspaceNewChatButtonKey,
                 onPressed: () => unawaited(_startNewChat()),

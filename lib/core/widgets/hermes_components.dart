@@ -42,19 +42,21 @@ class StatusChip extends StatelessWidget {
     return Semantics(
       label: text,
       container: true,
-      child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: HermesSpacing.sm,
-          vertical: HermesSpacing.xs,
-        ),
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.14),
-          borderRadius: BorderRadius.circular(HermesRadius.sm),
-          border: Border.all(color: color.withValues(alpha: 0.4)),
-        ),
-        child: Text(
-          text,
-          style: tokens.typography.label.copyWith(color: color),
+      child: ExcludeSemantics(
+        child: Container(
+          padding: const EdgeInsets.symmetric(
+            horizontal: HermesSpacing.sm,
+            vertical: HermesSpacing.xs,
+          ),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.14),
+            borderRadius: BorderRadius.circular(HermesRadius.sm),
+            border: Border.all(color: color.withValues(alpha: 0.4)),
+          ),
+          child: Text(
+            text,
+            style: tokens.typography.label.copyWith(color: color),
+          ),
         ),
       ),
     );

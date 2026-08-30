@@ -19,6 +19,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/hermes_project.dart';
 import '../models/project_sessions_tree.dart';
+import '../models/projects_tree_overview.dart';
 import '../models/session.dart';
 import 'chat_space_store.dart';
 import 'projects_gateway_client.dart';
@@ -206,6 +207,9 @@ class ProjectsRepository {
   /// Set once the gateway proves it predates `projects.project_sessions`.
   bool _sessionsUnsupported = false;
 
+  ProjectsTreeOverview? _overviewCache;
+  bool _overviewUnsupported = false;
+
   ProjectsRepository({
     required this.client,
     required this.preferences,
@@ -256,6 +260,27 @@ class ProjectsRepository {
           error: error,
         ),
       );
+    }
+  }
+
+  /// Reads the server's cheap all-Project tree used for card counts and Inbox.
+  ///
+  /// Older gateways may support `projects.list` without this sibling method;
+  /// that degrades only the extra metadata, never the Projects list itself.
+  Future<ProjectsTreeOverview> overview({bool refresh = false}) async {
+    if (_current.support == ProjectsSupport.unsupported ||
+        _overviewUnsupported) {
+      return ProjectsTreeOverview.empty;
+    }
+    final cached = _overviewCache;
+    if (!refresh && cached != null) return cached;
+    try {
+      final overview = await client.tree();
+      _overviewCache = overview;
+      return overview;
+    } on ProjectsUnsupportedException {
+      _overviewUnsupported = true;
+      return ProjectsTreeOverview.empty;
     }
   }
 

@@ -40,14 +40,14 @@ void main() {
       gradle,
       contains('mapOf("armeabi-v7a" to 1, "arm64-v8a" to 2, "x86_64" to 3)'),
     );
-    expect(
-      gradle,
-      contains('variant.versionCode * 10 + abiVersionCode'),
-    );
+    expect(gradle, contains('variant.versionCode * 10 + abiVersionCode'));
     expect(releaseWorkflow, contains("MINIMUM_INSTALLED_VERSION_CODE: '2127'"));
     expect(releaseWorkflow, contains("REQUIRED_BASE_VERSION_CODE: '2131'"));
     expect(releaseWorkflow, contains("ARM64_ABI_CODE: '2'"));
-    expect(releaseWorkflow, contains('expected_code = base_code * 10 + abi_code'));
+    expect(
+      releaseWorkflow,
+      contains('expected_code = base_code * 10 + abi_code'),
+    );
     expect(
       releaseWorkflow,
       contains('Verify arm64 split APK effective versionCode'),

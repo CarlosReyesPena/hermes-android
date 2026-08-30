@@ -640,22 +640,25 @@ void main() {
       );
     });
 
-    test('ignores a redundant same-host override and derives dashboard port', () {
-      final connection = SavedConnection(
-        id: 'miniserver',
-        label: 'Miniserver',
-        host: 'hermes-miniserver.example.ts.net',
-        port: 8642,
-        apiKey: 'test-key',
-        dashboardPortOverride: 9119,
-        desktopGatewayUrl: 'https://hermes-miniserver.example.ts.net',
-      );
+    test(
+      'ignores a redundant same-host override and derives dashboard port',
+      () {
+        final connection = SavedConnection(
+          id: 'miniserver',
+          label: 'Miniserver',
+          host: 'hermes-miniserver.example.ts.net',
+          port: 8642,
+          apiKey: 'test-key',
+          dashboardPortOverride: 9119,
+          desktopGatewayUrl: 'https://hermes-miniserver.example.ts.net',
+        );
 
-      expect(
-        DesktopGatewayClient.normalizedGatewayBaseUrl(connection),
-        'http://hermes-miniserver.example.ts.net:9119',
-      );
-    });
+        expect(
+          DesktopGatewayClient.normalizedGatewayBaseUrl(connection),
+          'http://hermes-miniserver.example.ts.net:9119',
+        );
+      },
+    );
 
     test('preserves an explicit Desktop gateway override', () {
       final connection = SavedConnection(

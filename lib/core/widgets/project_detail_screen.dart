@@ -35,6 +35,8 @@ typedef ProjectSessionsLoader =
     Future<ProjectSessionsView> Function({required bool refresh});
 typedef ProjectSessionMover =
     Future<void> Function(Session session, String? projectId);
+typedef ProjectRenamer = Future<void> Function(String name);
+typedef ProjectArchiver = Future<void> Function();
 typedef ProjectDeleter = Future<void> Function();
 
 const kProjectNewChatButtonKey = Key('project-detail-new-chat');
@@ -60,6 +62,10 @@ class ProjectDetailScreen extends StatefulWidget {
   final List<HermesProject> projects;
   final ProjectSessionMover? onMoveSession;
 
+  /// Reversible Project administration backed by the Gateway.
+  final ProjectRenamer? onRenameProject;
+  final ProjectArchiver? onArchiveProject;
+
   /// Permanently removes this server Project. Its chat sessions survive and
   /// become Unassigned because the Gateway deletes only their assignments.
   final ProjectDeleter? onDeleteProject;
@@ -72,6 +78,8 @@ class ProjectDetailScreen extends StatefulWidget {
     this.onNewChat,
     this.projects = const [],
     this.onMoveSession,
+    this.onRenameProject,
+    this.onArchiveProject,
     this.onDeleteProject,
     super.key,
   });
@@ -94,10 +102,13 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen>
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
   bool _deleting = false;
+  bool _managing = false;
+  late String _projectName;
 
   @override
   void initState() {
     super.initState();
+    _projectName = widget.projectName;
     _load(refresh: false);
   }
 
@@ -197,11 +208,112 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen>
     }
   }
 
+  Future<void> _renameProject() async {
+    final rename = widget.onRenameProject;
+    if (rename == null || _managing) return;
+    var draft = _projectName;
+    final name = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text('Rename $_projectName'),
+        content: TextFormField(
+          key: const Key('rename-project-name'),
+          initialValue: _projectName,
+          autofocus: true,
+          maxLength: 80,
+          decoration: const InputDecoration(labelText: 'Name'),
+          onChanged: (value) => draft = value,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () {
+              final value = draft.trim();
+              if (value.isNotEmpty) Navigator.pop(dialogContext, value);
+            },
+            child: const Text('Rename'),
+          ),
+        ],
+      ),
+    );
+    if (name == null || !mounted || name == _projectName) return;
+    setState(() => _managing = true);
+    try {
+      await rename(name);
+      if (mounted) {
+        setState(() {
+          _projectName = name;
+          _managing = false;
+        });
+      }
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _managing = false);
+      _showManagementError('rename', _renameProject);
+    }
+  }
+
+  Future<void> _confirmArchive() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text('Archive $_projectName?'),
+        content: const Text(
+          'The Project will move to Archived. Its chats and files stay intact, '
+          'and you can restore it later.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Archive'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true && mounted) await _archiveProject();
+  }
+
+  Future<void> _archiveProject() async {
+    final archive = widget.onArchiveProject;
+    if (archive == null || _managing) return;
+    setState(() => _managing = true);
+    try {
+      await archive();
+      if (!mounted) return;
+      final navigator = Navigator.of(context);
+      if (navigator.canPop()) {
+        navigator.pop(true);
+      } else {
+        setState(() => _managing = false);
+      }
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _managing = false);
+      _showManagementError('archive', _archiveProject);
+    }
+  }
+
+  void _showManagementError(String action, Future<void> Function() retry) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Couldn’t $action project'),
+        action: SnackBarAction(label: 'Retry', onPressed: retry),
+      ),
+    );
+  }
+
   Future<void> _confirmDelete() async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: Text('Delete ${_view?.tree?.label ?? widget.projectName}?'),
+        title: Text('Delete $_projectName?'),
         content: const Text(
           'This permanently deletes the Project. Chats will not be deleted; '
           'they’ll return to Unassigned.',
@@ -258,14 +370,18 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen>
   @override
   Widget build(BuildContext context) {
     final view = _view;
-    final title = view?.tree?.label ?? widget.projectName;
+    final title = _projectName;
+    final hasActions =
+        widget.onRenameProject != null ||
+        widget.onArchiveProject != null ||
+        widget.onDeleteProject != null;
 
     return Scaffold(
       appBar: AppBar(
         title: Text(title),
         actions: [
-          if (widget.onDeleteProject != null)
-            if (_deleting)
+          if (hasActions)
+            if (_deleting || _managing)
               const Padding(
                 padding: EdgeInsets.all(HermesSpacing.md),
                 child: SizedBox.square(
@@ -277,27 +393,45 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen>
               PopupMenuButton<String>(
                 tooltip: 'Project actions',
                 onSelected: (action) {
-                  if (action == 'delete') _confirmDelete();
+                  switch (action) {
+                    case 'rename':
+                      _renameProject();
+                    case 'archive':
+                      _confirmArchive();
+                    case 'delete':
+                      _confirmDelete();
+                  }
                 },
                 itemBuilder: (context) => [
-                  PopupMenuItem<String>(
-                    value: 'delete',
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.delete_outline,
-                          color: Theme.of(context).colorScheme.error,
-                        ),
-                        const SizedBox(width: HermesSpacing.sm),
-                        Text(
-                          'Delete project',
-                          style: TextStyle(
+                  if (widget.onRenameProject != null)
+                    const PopupMenuItem<String>(
+                      value: 'rename',
+                      child: Text('Rename project'),
+                    ),
+                  if (widget.onArchiveProject != null)
+                    const PopupMenuItem<String>(
+                      value: 'archive',
+                      child: Text('Archive project'),
+                    ),
+                  if (widget.onDeleteProject != null)
+                    PopupMenuItem<String>(
+                      value: 'delete',
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.delete_outline,
                             color: Theme.of(context).colorScheme.error,
                           ),
-                        ),
-                      ],
+                          const SizedBox(width: HermesSpacing.sm),
+                          Text(
+                            'Delete project',
+                            style: TextStyle(
+                              color: Theme.of(context).colorScheme.error,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
                 ],
               ),
         ],

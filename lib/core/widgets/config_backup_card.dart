@@ -317,9 +317,7 @@ class _ConfigBackupCardState extends State<ConfigBackupCard> {
       if (!mounted) return;
       setState(() {
         _busy = false;
-        _status = destination == null
-            ? null
-            : 'Backup exported — $destination';
+        _status = destination == null ? null : 'Backup exported — $destination';
       });
     } on ConfigBackupException catch (error) {
       if (!mounted) return;

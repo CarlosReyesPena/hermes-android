@@ -31,13 +31,17 @@ class _FakeGateway {
   Object? failNext;
   int listCalls = 0;
   final List<Map<String, dynamic>> assignments = [];
+  final Map<String, int> counts;
 
   /// When set, `projects.list` waits on this before answering, so a test can
   /// observe the pane's loading state deterministically.
   Completer<void>? gate;
 
-  _FakeGateway({List<Map<String, dynamic>>? projects, this.activeId})
-    : projects = projects ?? [];
+  _FakeGateway({
+    List<Map<String, dynamic>>? projects,
+    this.activeId,
+    this.counts = const {},
+  }) : projects = projects ?? [];
 
   Future<Map<String, dynamic>> call(
     String method,
@@ -54,6 +58,23 @@ class _FakeGateway {
         if (pending != null) await pending.future;
         listCalls++;
         return _ok({'projects': projects, 'active_id': activeId});
+      case 'projects.tree':
+        return _ok({
+          'projects': [
+            for (final project in projects)
+              if (project['archived'] != true)
+                {
+                  'id': project['id'],
+                  'label': project['name'],
+                  'sessionCount': counts[project['id']] ?? 0,
+                  'lastActive': 1750000100,
+                  'previewSessions': const [],
+                  'repos': const [],
+                },
+          ],
+          'active_id': activeId,
+          'scoped_session_ids': const [],
+        });
       case 'projects.create':
         final created = _projectJson(
           id: 'srv-${projects.length + 1}',
@@ -61,6 +82,25 @@ class _FakeGateway {
         );
         projects = [...projects, created];
         return _ok({'project': created});
+      case 'projects.update':
+        final id = params['id'] as String;
+        final name = params['name'] as String;
+        projects = [
+          for (final project in projects)
+            if (project['id'] == id) {...project, 'name': name} else project,
+        ];
+        return _ok({'project': projects.firstWhere((p) => p['id'] == id)});
+      case 'projects.archive':
+        final id = params['id'] as String;
+        final restore = params['restore'] == true;
+        projects = [
+          for (final project in projects)
+            if (project['id'] == id)
+              {...project, 'archived': !restore}
+            else
+              project,
+        ];
+        return _ok({'projects': projects, 'active_id': activeId});
       case 'projects.assign_session':
         assignments.add(Map<String, dynamic>.from(params));
         return _ok({
@@ -166,7 +206,25 @@ void main() {
     expect(find.byType(HermesCard), findsNWidgets(2));
   });
 
-  testWidgets('hides archived projects from the main list', (tester) async {
+  testWidgets('shows authoritative chat counts on project cards', (
+    tester,
+  ) async {
+    final repository = await _repo(
+      _FakeGateway(
+        projects: [_projectJson(id: 'p1', name: 'Hermes Android')],
+        counts: const {'p1': 3},
+      ),
+    );
+
+    await _pumpPane(tester, repository);
+    await tester.pumpAndSettle();
+
+    expect(find.text('3 chats'), findsOneWidget);
+  });
+
+  testWidgets('separates archived projects from the active section', (
+    tester,
+  ) async {
     final repository = await _repo(
       _FakeGateway(
         projects: [
@@ -180,7 +238,69 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Live'), findsOneWidget);
-    expect(find.text('Retired'), findsNothing);
+    expect(find.text('Archived'), findsOneWidget);
+    expect(find.text('Retired'), findsOneWidget);
+    expect(find.byKey(const Key('project-actions-p2')), findsOneWidget);
+  });
+
+  testWidgets('shows archived projects and restores them from their actions', (
+    tester,
+  ) async {
+    final gateway = _FakeGateway(
+      projects: [
+        _projectJson(id: 'p1', name: 'Live'),
+        _projectJson(id: 'p2', name: 'Retired', archived: true),
+      ],
+    );
+    final repository = await _repo(gateway);
+
+    await _pumpPane(tester, repository);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Archived'), findsOneWidget);
+    expect(find.text('Retired'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('project-actions-p2')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Restore project'));
+    await tester.pumpAndSettle();
+
+    expect(repository.current.projects.map((p) => p.name), contains('Retired'));
+    expect(repository.current.archived, isEmpty);
+  });
+
+  testWidgets('renames and archives a live project from one actions menu', (
+    tester,
+  ) async {
+    final gateway = _FakeGateway(
+      projects: [_projectJson(id: 'p1', name: 'Old name')],
+    );
+    final repository = await _repo(gateway);
+
+    await _pumpPane(tester, repository);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('project-actions-p1')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Rename project'));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const Key('rename-project-name')),
+      'New name',
+    );
+    await tester.tap(find.widgetWithText(FilledButton, 'Rename'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('New name'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('project-actions-p1')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Archive project'));
+    await tester.pumpAndSettle();
+    expect(find.text('Archive New name?'), findsOneWidget);
+    await tester.tap(find.widgetWithText(FilledButton, 'Archive'));
+    await tester.pumpAndSettle();
+
+    expect(repository.current.projects, isEmpty);
+    expect(repository.current.archived.single.name, 'New name');
   });
 
   testWidgets('marks the active project', (tester) async {

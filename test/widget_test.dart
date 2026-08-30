@@ -160,7 +160,9 @@ void main() {
     semantics.dispose();
   });
 
-  testWidgets('message hierarchy labels user and assistant prose', (tester) async {
+  testWidgets('message hierarchy labels user and assistant prose', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       const MaterialApp(
         home: Scaffold(
@@ -178,7 +180,9 @@ void main() {
     expect(find.text('Hermes'), findsOneWidget);
   });
 
-  testWidgets('fenced code has language, copy, and wrap controls', (tester) async {
+  testWidgets('fenced code has language, copy, and wrap controls', (
+    tester,
+  ) async {
     String? clipboardText;
     final messenger =
         TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;

@@ -26,17 +26,19 @@ void main() {
       expect(sink.initializeCount, 1);
     });
 
-    test('degrades to a no-op when the platform channel is unavailable',
-        () async {
-      sink.initializeError = StateError('no platform channel');
+    test(
+      'degrades to a no-op when the platform channel is unavailable',
+      () async {
+        sink.initializeError = StateError('no platform channel');
 
-      await service.ensureInitialized();
+        await service.ensureInitialized();
 
-      // Initialization must not rethrow: the app has to keep running on a
-      // device where notifications are unavailable.
-      await service.showTurnCompleted(turnSummary: 'Done', turnId: 't-1');
-      expect(sink.shown, isEmpty);
-    });
+        // Initialization must not rethrow: the app has to keep running on a
+        // device where notifications are unavailable.
+        await service.showTurnCompleted(turnSummary: 'Done', turnId: 't-1');
+        expect(sink.shown, isEmpty);
+      },
+    );
 
     test('a failed initialization can be retried on the next call', () async {
       sink.initializeError = StateError('no platform channel');
@@ -53,46 +55,58 @@ void main() {
   });
 
   group('showTurnCompleted', () {
-    test('drops the notification when the service was never initialized',
-        () async {
-      await service.showTurnCompleted(turnSummary: 'Done', turnId: 't-1');
+    test(
+      'drops the notification when the service was never initialized',
+      () async {
+        await service.showTurnCompleted(turnSummary: 'Done', turnId: 't-1');
 
-      expect(sink.shown, isEmpty);
-    });
+        expect(sink.shown, isEmpty);
+      },
+    );
 
-    test('posts the turn summary as the body under the Hermes turn channel',
-        () async {
-      await service.ensureInitialized();
+    test(
+      'posts the turn summary as the body under the Hermes turn channel',
+      () async {
+        await service.ensureInitialized();
 
-      await service.showTurnCompleted(
-        turnSummary: 'Roadmap: Response ready',
-        turnId: 'turn-42',
-      );
+        await service.showTurnCompleted(
+          turnSummary: 'Roadmap: Response ready',
+          turnId: 'turn-42',
+        );
 
-      expect(sink.shown, hasLength(1));
-      final posted = sink.shown.single;
-      expect(posted.title, 'Hermes response ready');
-      expect(posted.body, 'Roadmap: Response ready');
-      // The payload is the deep-link seed Phase 3 will extend.
-      expect(posted.payload, 'turn-42');
-      expect(posted.channel.id, 'hermes_turn_notifications');
-      expect(posted.channel.name, 'Hermes Turns');
-      expect(
-        posted.channel.description,
-        'Notifications for completed background turns',
-      );
-    });
+        expect(sink.shown, hasLength(1));
+        final posted = sink.shown.single;
+        expect(posted.title, 'Hermes response ready');
+        expect(posted.body, 'Roadmap: Response ready');
+        // The payload is the deep-link seed Phase 3 will extend.
+        expect(posted.payload, 'turn-42');
+        expect(posted.channel.id, 'hermes_turn_notifications');
+        expect(posted.channel.name, 'Hermes Turns');
+        expect(
+          posted.channel.description,
+          'Notifications for completed background turns',
+        );
+      },
+    );
 
-    test('reuses one stable id per turn so a turn never stacks duplicates',
-        () async {
-      await service.ensureInitialized();
+    test(
+      'reuses one stable id per turn so a turn never stacks duplicates',
+      () async {
+        await service.ensureInitialized();
 
-      await service.showTurnCompleted(turnSummary: 'first', turnId: 'turn-42');
-      await service.showTurnCompleted(turnSummary: 'second', turnId: 'turn-42');
+        await service.showTurnCompleted(
+          turnSummary: 'first',
+          turnId: 'turn-42',
+        );
+        await service.showTurnCompleted(
+          turnSummary: 'second',
+          turnId: 'turn-42',
+        );
 
-      expect(sink.shown.map((n) => n.id).toSet(), hasLength(1));
-      expect(sink.shown.map((n) => n.body), ['first', 'second']);
-    });
+        expect(sink.shown.map((n) => n.id).toSet(), hasLength(1));
+        expect(sink.shown.map((n) => n.body), ['first', 'second']);
+      },
+    );
 
     test('gives distinct turns distinct ids', () async {
       await service.ensureInitialized();
@@ -120,15 +134,17 @@ void main() {
   });
 
   group('runtime permission', () {
-    test('initialization asks Android for the notification permission',
-        () async {
-      await service.ensureInitialized();
+    test(
+      'initialization asks Android for the notification permission',
+      () async {
+        await service.ensureInitialized();
 
-      // Android 13+ denies POST_NOTIFICATIONS by default even when the
-      // manifest declares it. Never asking means every notification is
-      // silently dropped by the OS.
-      expect(sink.permissionRequestCount, 1);
-    });
+        // Android 13+ denies POST_NOTIFICATIONS by default even when the
+        // manifest declares it. Never asking means every notification is
+        // silently dropped by the OS.
+        expect(sink.permissionRequestCount, 1);
+      },
+    );
 
     test('the permission is requested once, not on every call', () async {
       await service.ensureInitialized();
@@ -137,14 +153,16 @@ void main() {
       expect(sink.permissionRequestCount, 1);
     });
 
-    test('a denied permission is reported instead of silently dropping posts',
-        () async {
-      sink.permissionResult = false;
+    test(
+      'a denied permission is reported instead of silently dropping posts',
+      () async {
+        sink.permissionResult = false;
 
-      await service.ensureInitialized();
+        await service.ensureInitialized();
 
-      expect(service.permissionGranted, isFalse);
-    });
+        expect(service.permissionGranted, isFalse);
+      },
+    );
 
     test('a granted permission lets turn notifications through', () async {
       sink.permissionResult = true;
@@ -167,16 +185,18 @@ void main() {
       expect(sink.shown, hasLength(1));
     });
 
-    test('a failing permission request does not break initialization',
-        () async {
-      sink.permissionError = StateError('no platform channel');
+    test(
+      'a failing permission request does not break initialization',
+      () async {
+        sink.permissionError = StateError('no platform channel');
 
-      await service.ensureInitialized();
+        await service.ensureInitialized();
 
-      // The app must keep running; notifications degrade, they never crash.
-      await service.showTurnCompleted(turnSummary: 'done', turnId: 'turn-1');
-      expect(sink.shown, hasLength(1));
-    });
+        // The app must keep running; notifications degrade, they never crash.
+        await service.showTurnCompleted(turnSummary: 'done', turnId: 'turn-1');
+        expect(sink.shown, hasLength(1));
+      },
+    );
   });
 
   group('cancellation', () {

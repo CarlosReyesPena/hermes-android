@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hermes_android/core/screens/session_list_screen.dart';
+import 'package:hermes_android/core/screens/workspace_screen.dart';
 import 'package:hermes_android/core/services/config_backup_service.dart';
 import 'package:hermes_android/core/services/connection_manager.dart';
 import 'package:hermes_android/core/services/gateway_turn_application_controller.dart';
+import 'package:hermes_android/core/widgets/hermes_shell.dart';
 import 'package:hermes_android/main.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -84,6 +87,24 @@ void main() {
     expect(find.byKey(const Key('home_restore_config_button')), findsOneWidget);
   });
 
+  testWidgets('a saved connection opens Workspace as the primary surface', (
+    tester,
+  ) async {
+    final manager = await buildManager();
+    await manager.saveConnection('Miniserver', 'host', 8642, 'key');
+    await pumpHome(tester, manager);
+
+    await tester.tap(find.text('Miniserver'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+
+    expect(find.byType(WorkspaceScreen), findsOneWidget);
+    expect(find.byType(SessionListScreen), findsNothing);
+    for (final destination in HermesDestination.values) {
+      expect(find.text(destination.label), findsWidgets);
+    }
+  });
+
   testWidgets('restore stays reachable once connections exist', (tester) async {
     final manager = await buildManager();
     await manager.saveConnection('Miniserver', 'host', 8642, 'key');
@@ -152,5 +173,29 @@ void main() {
     expect(find.text('Merge'), findsOneWidget);
     expect(find.text('Replace'), findsOneWidget);
     expect(ConfigImportMode.values, hasLength(2));
+  });
+
+  testWidgets('a new connection never pre-fills a Desktop Gateway URL', (
+    tester,
+  ) async {
+    // Regression: the form used to pre-fill a hardcoded example
+    // (`http://192.168.1.193/desktop`). Saving it silently pointed the app at
+    // a dead Desktop Gateway, which wedged Project/session loading.
+    final manager = await buildManager();
+    await pumpHome(tester, manager);
+
+    await tester.tap(find.byTooltip('Add Connection'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Custom proxy and dashboard details'));
+    await tester.pumpAndSettle();
+
+    final field = find.widgetWithText(
+      TextField,
+      'Desktop Gateway URL (optional)',
+    );
+    expect(field, findsOneWidget);
+    final textField = tester.widget<TextField>(field);
+    expect(textField.controller?.text, isEmpty);
   });
 }

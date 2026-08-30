@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hermes_android/core/models/connection.dart';
 import 'package:hermes_android/core/models/session.dart';
 import 'package:hermes_android/core/screens/chat_screen.dart';
 import 'package:hermes_android/core/screens/workspace_screen.dart';
+import 'package:hermes_android/core/screens/workspace_sessions_screen.dart';
 import 'package:hermes_android/core/services/chat_space_store.dart';
 import 'package:hermes_android/core/services/gateway_turn_application_controller.dart';
 import 'package:hermes_android/core/services/gateway_turn_coordinator.dart';
@@ -67,11 +70,15 @@ Future<ProjectsRepository> _repository(
   List<Map<String, dynamic>>? assignments,
   List<String>? deletions,
   int assignmentFailures = 0,
+  bool hangOverview = false,
 }) async {
   var failuresLeft = assignmentFailures;
   var serverProjects = [...projects];
   return ProjectsRepository(
     client: ProjectsGatewayClient((method, params) async {
+      if (method == 'projects.tree' && hangOverview) {
+        return Completer<Map<String, dynamic>>().future;
+      }
       if (method == 'projects.list') {
         return {
           'jsonrpc': '2.0',
@@ -233,6 +240,53 @@ void main() {
     for (final destination in HermesDestination.values) {
       expect(find.text(destination.label), findsWidgets);
     }
+  });
+
+  testWidgets('Chats is the single Workspace browser for all sessions', (
+    tester,
+  ) async {
+    final opened = <String>[];
+    await _pump(
+      tester,
+      connection: _connection(desktopGatewayUrl: 'https://host:8642'),
+      repository: await _repository([]),
+      sessions: [_session(id: 's1', title: 'Daily driver')],
+      openedSessions: opened,
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text(HermesDestination.chats.label).last);
+    await tester.pumpAndSettle();
+
+    expect(find.byType(WorkspaceSessionsScreen), findsOneWidget);
+    expect(find.byKey(kWorkspaceSessionSearchKey), findsOneWidget);
+    expect(find.text('Daily driver'), findsOneWidget);
+
+    await tester.tap(find.text('Daily driver'));
+    expect(opened, ['s1']);
+  });
+
+  testWidgets('Chats still shows sessions when the Projects overview hangs', (
+    tester,
+  ) async {
+    // Regression: a wedged Desktop Gateway (unreachable host, silent
+    // socket) used to block the whole session list behind an infinite
+    // skeleton because the Projects overview had no bound.
+    await _pump(
+      tester,
+      connection: _connection(desktopGatewayUrl: 'https://host:8642'),
+      repository: await _repository([], hangOverview: true),
+      sessions: [_session(id: 's1', title: 'Still reachable')],
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text(HermesDestination.chats.label).last);
+    await tester.pumpAndSettle();
+    await tester.pump(const Duration(seconds: 9));
+
+    expect(find.byKey(kWorkspaceSessionSearchKey), findsOneWidget);
+    expect(find.text('Still reachable'), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('names the connection so multi-gateway users stay oriented', (
@@ -651,6 +705,11 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(MorePane), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('Cron'),
+      160,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(find.text('Cron'), findsOneWidget);
     await tester.scrollUntilVisible(
       find.text('Settings'),
@@ -658,6 +717,24 @@ void main() {
       scrollable: find.byType(Scrollable).first,
     );
     expect(find.text('Settings'), findsOneWidget);
+  });
+
+  testWidgets('More opens Inbox as a native Smart View', (tester) async {
+    await _pump(
+      tester,
+      connection: _connection(desktopGatewayUrl: 'https://host:8642'),
+      repository: await _repository([]),
+      sessions: [_session(id: 's1', title: 'Find me')],
+      openedSessions: <String>[],
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text(HermesDestination.more.label).last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Inbox / Unassigned'));
+    await tester.pumpAndSettle();
+    expect(find.byType(WorkspaceSessionsScreen), findsOneWidget);
+    expect(find.text('Find me'), findsOneWidget);
   });
 
   testWidgets('More opens the native Files screen', (tester) async {
@@ -691,6 +768,11 @@ void main() {
 
     await tester.tap(find.text(HermesDestination.more.label).last);
     await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('Open the Hermes dashboard'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
     await tester.tap(find.text('Open the Hermes dashboard'));
     await tester.pumpAndSettle();
 
@@ -717,6 +799,11 @@ void main() {
 
     await tester.tap(find.text(HermesDestination.more.label).last);
     await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('Cron'),
+      160,
+      scrollable: find.byType(Scrollable).first,
+    );
     await tester.tap(find.text('Cron'), warnIfMissed: false);
     await tester.pumpAndSettle();
 
@@ -927,7 +1014,7 @@ void main() {
   });
 
   group('the global New button', () {
-    testWidgets('is offered on Home', (tester) async {
+    testWidgets('is offered on Home and Chats', (tester) async {
       await _pump(
         tester,
         connection: _connection(desktopGatewayUrl: 'https://host:8642'),
@@ -937,11 +1024,16 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byKey(kWorkspaceNewChatButtonKey), findsOneWidget);
+
+      await tester.tap(find.text(HermesDestination.chats.label).last);
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(kWorkspaceNewChatButtonKey), findsOneWidget);
     });
 
     testWidgets('is not offered on the other destinations', (tester) async {
-      // New is a Home affordance. Leaving it floating over Projects or More
-      // would make it ambiguous what it would create.
+      // New is a Home and Chats affordance. Leaving it floating over Projects
+      // or More would make it ambiguous what it would create.
       await _pump(
         tester,
         connection: _connection(desktopGatewayUrl: 'https://host:8642'),
@@ -951,6 +1043,11 @@ void main() {
       await tester.pumpAndSettle();
 
       await tester.tap(find.text(HermesDestination.more.label).last);
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(kWorkspaceNewChatButtonKey), findsNothing);
+
+      await tester.tap(find.text(HermesDestination.projects.label).last);
       await tester.pumpAndSettle();
 
       expect(find.byKey(kWorkspaceNewChatButtonKey), findsNothing);
