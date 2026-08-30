@@ -1080,13 +1080,13 @@
     "semantic_hash": ""
   },
   "lib/core/widgets/project_detail_screen.dart": {
-    "mtime": 1788044280.9341052,
-    "ast_hash": "d498d0ab6d4a76120cd53787f299f2da",
+    "mtime": 1788086659.40459,
+    "ast_hash": "a33aaa2e55e24d767882a4f0b9612f67",
     "semantic_hash": ""
   },
   "test/project_detail_screen_test.dart": {
-    "mtime": 1788043379.926364,
-    "ast_hash": "6330214df0bba3eaa02137f87125c6d8",
+    "mtime": 1788086659.7855942,
+    "ast_hash": "15e10af80f87fd39967de3413876ca85",
     "semantic_hash": ""
   },
   "lib/core/screens/files_screen.dart": {
@@ -1150,8 +1150,8 @@
     "semantic_hash": ""
   },
   "lib/core/screens/workspace_sessions_screen.dart": {
-    "mtime": 1788084479.1591203,
-    "ast_hash": "acb87e7648633522b35792f5cfedb432",
+    "mtime": 1788086750.4516678,
+    "ast_hash": "69bf40b9cb424a96c55318e0f2e22a4e",
     "semantic_hash": ""
   },
   "test/workspace_sessions_screen_test.dart": {
@@ -1192,6 +1192,16 @@
   "docs/plans/2026-08-30-chats-enrichi.md": {
     "mtime": 1788083793.6055748,
     "ast_hash": "733d195f297f905b276613647309b965",
+    "semantic_hash": ""
+  },
+  "lib/core/utils/relative_time.dart": {
+    "mtime": 1788086502.7677042,
+    "ast_hash": "2ec19256eb68d95dada5f3ca98bc61d6",
+    "semantic_hash": ""
+  },
+  "docs/plans/2026-08-30-project-detail-5-tabs.md": {
+    "mtime": 1788086387.3251932,
+    "ast_hash": "b3158b1bf47b5ce7f81bcc06c56992da",
     "semantic_hash": ""
   }
 }

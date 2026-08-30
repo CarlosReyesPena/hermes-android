@@ -35,6 +35,8 @@ Session _session({
   String id = 's1',
   String title = 'Ship the Files browser',
   double startedAt = 1750000000,
+  bool isActive = true,
+  double? lastActive,
 }) => Session(
   id: id,
   title: title,
@@ -43,7 +45,8 @@ Session _session({
   startedAt: startedAt,
   source: 'cli',
   messageCount: 3,
-  isActive: true,
+  isActive: isActive,
+  lastActive: lastActive ?? startedAt,
 );
 
 ProjectSessionsTree _tree({
@@ -254,6 +257,100 @@ void main() {
     // Deriving the count from the rows on screen would report 1.
     expect(find.text('12'), findsOneWidget);
     expect(find.textContaining('hermes-android'), findsWidgets);
+  });
+
+  testWidgets('declares the five project tabs', (tester) async {
+    await _pump(
+      tester,
+      load: ({required refresh}) async => ProjectSessionsView(
+        projectId: 'p1',
+        tree: _tree(sessions: [_session()]),
+        sessions: [_session()],
+        support: ProjectsSupport.native,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    for (final tab in ['Chats', 'Overview', 'Files', 'Assets', 'Activity']) {
+      expect(find.text(tab), findsWidgets, reason: '$tab tab must exist');
+    }
+  });
+
+  testWidgets('Files tab lists the server folder paths', (tester) async {
+    await _pump(
+      tester,
+      load: ({required refresh}) async => ProjectSessionsView(
+        projectId: 'p1',
+        tree: _tree(sessions: [_session()]),
+        sessions: [_session()],
+        support: ProjectsSupport.native,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Files'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('/home/carlos/dev/hermes-android'), findsWidgets);
+    expect(find.textContaining('hermes-android'), findsWidgets);
+  });
+
+  testWidgets('Assets tab explains the missing server index', (tester) async {
+    await _pump(
+      tester,
+      load: ({required refresh}) async => ProjectSessionsView(
+        projectId: 'p1',
+        tree: _tree(sessions: [_session()]),
+        sessions: [_session()],
+        support: ProjectsSupport.native,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Assets'));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.textContaining('server-authoritative Assets index'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('Activity tab shows the project chat activity', (tester) async {
+    await _pump(
+      tester,
+      load: ({required refresh}) async => ProjectSessionsView(
+        projectId: 'p1',
+        tree: _tree(
+          sessions: [
+            _session(id: 's-run', title: 'Running build'),
+            _session(
+              id: 's-done',
+              title: 'Finished task',
+              startedAt: 1749990000,
+              isActive: false,
+            ),
+          ],
+        ),
+        sessions: [
+          _session(id: 's-run', title: 'Running build'),
+          _session(
+            id: 's-done',
+            title: 'Finished task',
+            startedAt: 1749990000,
+            isActive: false,
+          ),
+        ],
+        support: ProjectsSupport.native,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Activity'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Running'), findsOneWidget);
+    expect(find.text('Done'), findsOneWidget);
   });
 
   testWidgets('opening a chat reports the session the server sent', (

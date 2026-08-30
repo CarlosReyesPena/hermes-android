@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../models/session.dart';
 import '../theme/hermes_theme.dart';
+import '../utils/relative_time.dart';
 import '../widgets/hermes_components.dart';
 
 const kWorkspaceSessionSearchKey = Key('workspace-session-search');
@@ -512,17 +513,8 @@ class _WorkspaceSessionsScreenState extends State<WorkspaceSessionsScreen> {
   }
 
   /// Compact relative time: "now", "5m", "2h", "3d", else a date.
-  String _relativeTime(DateTime now, double lastActiveSeconds) {
-    final activity = DateTime.fromMillisecondsSinceEpoch(
-      (lastActiveSeconds * 1000).round(),
-    );
-    final elapsed = now.difference(activity);
-    if (elapsed.inMinutes < 1) return 'now';
-    if (elapsed.inHours < 1) return '${elapsed.inMinutes}m';
-    if (elapsed.inDays < 1) return '${elapsed.inHours}h';
-    if (elapsed.inDays < 7) return '${elapsed.inDays}d';
-    return '${activity.day}/${activity.month}';
-  }
+  String _relativeTime(DateTime now, double lastActiveSeconds) =>
+      formatRelativeTime(now, lastActiveSeconds);
 }
 
 /// A small neutral label under a conversation row (project, unassigned).

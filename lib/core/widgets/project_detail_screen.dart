@@ -27,6 +27,7 @@ import '../models/session.dart';
 import '../services/projects_repository.dart';
 import '../theme/hermes_theme.dart';
 import '../utils/project_session_filter.dart';
+import '../utils/relative_time.dart';
 import 'hermes_components.dart';
 
 /// Reads one project's chats. Mirrors `ProjectsRepository.projectSessions` so
@@ -90,7 +91,7 @@ class ProjectDetailScreen extends StatefulWidget {
 
 class _ProjectDetailScreenState extends State<ProjectDetailScreen>
     with SingleTickerProviderStateMixin {
-  late final TabController _tabs = TabController(length: 2, vsync: this);
+  late final TabController _tabs = TabController(length: 5, vsync: this);
 
   ProjectSessionsView? _view;
 
@@ -440,7 +441,11 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen>
           tabs: const [
             Tab(text: 'Chats'),
             Tab(text: 'Overview'),
+            Tab(text: 'Files'),
+            Tab(text: 'Assets'),
+            Tab(text: 'Activity'),
           ],
+          isScrollable: true,
         ),
       ),
       body: _buildBody(view),
@@ -486,7 +491,13 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen>
 
     return TabBarView(
       controller: _tabs,
-      children: [_buildChats(view), _buildOverview(view)],
+      children: [
+        _buildChats(view),
+        _buildOverview(view),
+        _buildFiles(view),
+        _buildAssets(view),
+        _buildActivity(view),
+      ],
     );
   }
 
@@ -651,6 +662,181 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen>
               ),
             ),
           ],
+        ],
+      ),
+    );
+  }
+
+  /// The project's folders, exactly as the server described them.
+  ///
+  /// Paths come from `projects.project_sessions` (project, repos, lanes); the
+  /// screen never scans local storage and never invents a tree of its own.
+  Widget _buildFiles(ProjectSessionsView view) {
+    final tokens = HermesTokens.of(context);
+    final paths = <String>[];
+    void add(String? path) {
+      if (path != null && path.trim().isNotEmpty && !paths.contains(path)) {
+        paths.add(path);
+      }
+    }
+
+    final tree = view.tree;
+    add(tree?.path);
+    for (final repo in tree?.repos ?? const <ProjectRepo>[]) {
+      add(repo.path);
+      for (final lane in repo.lanes) {
+        add(lane.path);
+      }
+    }
+
+    return RefreshIndicator(
+      onRefresh: () => _load(refresh: true),
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.only(bottom: HermesSpacing.xl),
+        children: [
+          if (view.isStale) const _OfflineNotice(),
+          if (paths.isEmpty)
+            const Padding(
+              padding: EdgeInsets.only(top: HermesSpacing.xl),
+              child: EmptyState(
+                icon: Icons.folder_open_outlined,
+                title: 'No folders yet',
+                message:
+                    'The server has not reported folders for this project yet. '
+                    'Global Files stays available from More.',
+              ),
+            )
+          else ...[
+            const SectionHeader(title: 'Folders'),
+            for (final path in paths)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  HermesSpacing.lg,
+                  0,
+                  HermesSpacing.lg,
+                  HermesSpacing.sm,
+                ),
+                child: HermesCard(
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.folder_outlined,
+                        size: 18,
+                        color: tokens.muted,
+                      ),
+                      const SizedBox(width: HermesSpacing.md),
+                      Expanded(
+                        child: Text(
+                          path,
+                          style: tokens.typography.mono.copyWith(
+                            color: tokens.onSurface,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  /// Honest capability gate: no server Assets index, no fake gallery.
+  Widget _buildAssets(ProjectSessionsView view) {
+    return RefreshIndicator(
+      onRefresh: () => _load(refresh: true),
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.only(bottom: HermesSpacing.xl),
+        children: [
+          if (view.isStale) const _OfflineNotice(),
+          const Padding(
+            padding: EdgeInsets.only(top: HermesSpacing.xl),
+            child: ErrorState.unsupported(
+              title: 'Assets unavailable',
+              message:
+                  'Assets need a server-authoritative Assets index in the '
+                  'Hermes Gateway before they can be shown per project.',
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// The project's own activity: every chat with its current state and when
+  /// it was last active, newest first.
+  Widget _buildActivity(ProjectSessionsView view) {
+    final tokens = HermesTokens.of(context);
+    final now = DateTime.now();
+    final sessions = [...view.sessions]
+      ..sort((a, b) => b.lastActive.compareTo(a.lastActive));
+
+    return RefreshIndicator(
+      onRefresh: () => _load(refresh: true),
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.only(bottom: HermesSpacing.xl),
+        children: [
+          if (view.isStale) const _OfflineNotice(),
+          if (sessions.isEmpty)
+            const Padding(
+              padding: EdgeInsets.only(top: HermesSpacing.xl),
+              child: EmptyState(
+                icon: Icons.bolt_outlined,
+                title: 'No activity yet',
+                message:
+                    'Chats in this project will show their state and last '
+                    'activity here.',
+              ),
+            )
+          else
+            for (final session in sessions)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  HermesSpacing.lg,
+                  0,
+                  HermesSpacing.lg,
+                  HermesSpacing.sm,
+                ),
+                child: HermesCard(
+                  onTap: () => widget.onOpenSession?.call(session),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              session.title.trim().isEmpty
+                                  ? 'Untitled chat'
+                                  : session.title,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: HermesSpacing.xs),
+                            Text(
+                              formatRelativeTime(now, session.lastActive),
+                              style: tokens.typography.label.copyWith(
+                                color: tokens.muted,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      StatusChip(
+                        status: session.isActive
+                            ? HermesStatus.running
+                            : HermesStatus.completed,
+                        label: session.isActive ? 'Running' : 'Done',
+                      ),
+                    ],
+                  ),
+                ),
+              ),
         ],
       ),
     );

@@ -376,6 +376,6 @@ Chaque surface définit explicitement :
 - [x] **Accueil** reste un digest priorisé et ne montre jamais la liste complète.
 - [x] L’ancienne liste de sessions est supprimée ; **Chats** la remplace dans Workspace.
 - [x] Non classés, Récents et Archivés deviennent des filtres de Chats, pas des pages séparées.
-- [ ] Détail Project à cinq onglets : Aperçu, Chats, Fichiers, Ressources, Activité.
+- [x] Détail Project à cinq onglets : Aperçu, Chats, Fichiers, Ressources, Activité (livré 2026-08-30, ordre Chats/Overview/Files/Assets/Activity pour rester sessions-first).
 - [x] Le bouton `+` global propose uniquement Chat rapide ou Chat de projet.
 - [x] La recherche est globale et partagée, sans implémentations concurrentes.
