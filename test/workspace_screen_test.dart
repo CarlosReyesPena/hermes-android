@@ -71,6 +71,7 @@ Future<ProjectsRepository> _repository(
   List<String>? deletions,
   int assignmentFailures = 0,
   bool hangOverview = false,
+  Map<String, ({String label, String sessionId})>? treeWithPreview,
 }) async {
   var failuresLeft = assignmentFailures;
   var serverProjects = [...projects];
@@ -78,6 +79,35 @@ Future<ProjectsRepository> _repository(
     client: ProjectsGatewayClient((method, params) async {
       if (method == 'projects.tree' && hangOverview) {
         return Completer<Map<String, dynamic>>().future;
+      }
+      if (method == 'projects.tree' && treeWithPreview != null) {
+        return {
+          'jsonrpc': '2.0',
+          'id': 1,
+          'result': {
+            'projects': [
+              for (final entry in treeWithPreview.entries)
+                {
+                  'id': entry.key,
+                  'label': entry.value.label,
+                  'isNoProject': false,
+                  'sessionCount': 1,
+                  'previewSessions': [
+                    {
+                      'id': entry.value.sessionId,
+                      'title': 'preview',
+                      'started_at': 1750000000,
+                    },
+                  ],
+                },
+            ],
+            'active_id': null,
+            'scoped_session_ids': [
+              for (final entry in treeWithPreview.entries)
+                entry.value.sessionId,
+            ],
+          },
+        };
       }
       if (method == 'projects.list') {
         return {
@@ -264,6 +294,33 @@ void main() {
 
     await tester.tap(find.text('Daily driver'));
     expect(opened, ['s1']);
+  });
+
+  testWidgets('Chats rows show the project label from the server tree', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      connection: _connection(desktopGatewayUrl: 'https://host:8642'),
+      repository: await _repository(
+        [_projectJson(id: 'p1', name: 'Hermes Android')],
+        treeWithPreview: {'p1': (label: 'Hermes Android', sessionId: 's1')},
+      ),
+      sessions: [_session(id: 's1', title: 'In project')],
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text(HermesDestination.chats.label).last);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Hermes Android'), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byType(HermesCard),
+        matching: find.byIcon(Icons.folder_outlined),
+      ),
+      findsOneWidget,
+    );
   });
 
   testWidgets('Chats still shows sessions when the Projects overview hangs', (

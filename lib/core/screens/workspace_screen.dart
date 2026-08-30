@@ -846,6 +846,7 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
     _cacheSessionTitles(sessions);
 
     Set<String> claimed = const {};
+    Map<String, String> projectLabels = const {};
     final repository = _repository;
     if (repository != null) {
       try {
@@ -857,6 +858,14 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
             .overview(refresh: true)
             .timeout(const Duration(seconds: 8));
         claimed = overview.scopedSessionIds.toSet();
+        // Best-effort session → project label, from the server's own preview
+        // rows. A conversation the overview does not name stays honest as
+        // "Unassigned" in the Chats row.
+        projectLabels = {
+          for (final project in overview.projects)
+            for (final preview in project.previewSessions)
+              preview.id: project.label,
+        };
       } catch (_) {
         // A gateway without projects.tree still gets All chats and Search.
       }
@@ -874,6 +883,7 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
       sessions: sessions,
       claimedSessionIds: Set.unmodifiable(claimed),
       archivedQuickChatIds: Set.unmodifiable(archived),
+      projectLabels: Map.unmodifiable(projectLabels),
     );
   }
 

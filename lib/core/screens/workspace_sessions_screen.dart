@@ -10,15 +10,119 @@ const kWorkspaceSessionSearchKey = Key('workspace-session-search');
 
 enum WorkspaceSessionView { all, unassigned, archivedQuick, search }
 
+/// The chip filters the Chats browser offers (decision #4 of the final UI
+/// spec): every conversation, recent activity, unassigned, and archived.
+enum WorkspaceChatsFilter {
+  all('All'),
+  recent('Recent'),
+  unassigned('Unassigned'),
+  archived('Archived');
+
+  final String label;
+  const WorkspaceChatsFilter(this.label);
+}
+
+/// How recently a conversation was last active, for date group headers.
+enum ChatDateBucket {
+  today('Today'),
+  yesterday('Yesterday'),
+  thisWeek('This week'),
+  earlier('Earlier');
+
+  final String label;
+  const ChatDateBucket(this.label);
+}
+
+/// How long "Recent" means in the Chats browser.
+const Duration kRecentChatsWindow = Duration(days: 7);
+
+/// Assigns a conversation to its date bucket, by calendar day.
+ChatDateBucket chatDateBucket(DateTime now, double lastActiveSeconds) {
+  final activity = DateTime.fromMillisecondsSinceEpoch(
+    (lastActiveSeconds * 1000).round(),
+  );
+  final today = DateTime(now.year, now.month, now.day);
+  final day = DateTime(activity.year, activity.month, activity.day);
+  final diff = today.difference(day).inDays;
+  if (diff <= 0) return ChatDateBucket.today;
+  if (diff == 1) return ChatDateBucket.yesterday;
+  if (diff < 7) return ChatDateBucket.thisWeek;
+  return ChatDateBucket.earlier;
+}
+
+/// Filters and sorts the Chats browser list for one chip filter.
+///
+/// Sorting is always by most recent activity, so a conversation moving up in
+/// the list is the honest signal that it changed. [now] is injectable so the
+/// "Recent" window and date buckets are deterministic in tests.
+List<Session> filterChats({
+  required List<Session> sessions,
+  required WorkspaceChatsFilter filter,
+  Set<String> claimedSessionIds = const {},
+  Set<String> archivedQuickChatIds = const {},
+  String query = '',
+  DateTime? now,
+}) {
+  final current = now ?? DateTime.now();
+  final normalized = query.trim().toLowerCase();
+  final recentCutoff =
+      current.subtract(kRecentChatsWindow).millisecondsSinceEpoch / 1000.0;
+
+  final filtered = [
+    for (final session in sessions)
+      if (switch (filter) {
+            WorkspaceChatsFilter.all => true,
+            WorkspaceChatsFilter.recent => session.lastActive >= recentCutoff,
+            WorkspaceChatsFilter.unassigned => !claimedSessionIds.contains(
+              session.id,
+            ),
+            WorkspaceChatsFilter.archived =>
+              session.archived || archivedQuickChatIds.contains(session.id),
+          } &&
+          (normalized.isEmpty ||
+              session.title.toLowerCase().contains(normalized) ||
+              session.preview.toLowerCase().contains(normalized) ||
+              session.id.toLowerCase().contains(normalized) ||
+              session.model.toLowerCase().contains(normalized)))
+        session,
+  ]..sort((a, b) => b.lastActive.compareTo(a.lastActive));
+  return filtered;
+}
+
+/// Groups conversations into date buckets, newest bucket first.
+List<MapEntry<ChatDateBucket, List<Session>>> groupChatsByDate(
+  DateTime now,
+  List<Session> sessions,
+) {
+  final buckets = <ChatDateBucket, List<Session>>{
+    for (final bucket in ChatDateBucket.values) bucket: <Session>[],
+  };
+  for (final session in sessions) {
+    buckets[chatDateBucket(now, session.lastActive)]!.add(session);
+  }
+  return [
+    for (final bucket in ChatDateBucket.values)
+      if (buckets[bucket]!.isNotEmpty)
+        MapEntry(bucket, List.unmodifiable(buckets[bucket]!)),
+  ];
+}
+
 class WorkspaceSessionsData {
   final List<Session> sessions;
   final Set<String> claimedSessionIds;
   final Set<String> archivedQuickChatIds;
 
+  /// Best-effort session id → project label mapping.
+  ///
+  /// Built from the server `projects.tree` preview rows; a conversation whose
+  /// project is unknown stays honest as "Unassigned" in the UI.
+  final Map<String, String> projectLabels;
+
   const WorkspaceSessionsData({
     this.sessions = const [],
     this.claimedSessionIds = const {},
     this.archivedQuickChatIds = const {},
+    this.projectLabels = const {},
   });
 }
 
@@ -65,6 +169,10 @@ class WorkspaceSessionsScreen extends StatefulWidget {
   final WorkspaceSessionPromoter? onPromote;
   final bool embedded;
 
+  /// Clock injection for deterministic filter/date tests. When null the
+  /// screen uses `DateTime.now()`.
+  final DateTime? now;
+
   const WorkspaceSessionsScreen({
     required this.title,
     required this.view,
@@ -72,6 +180,7 @@ class WorkspaceSessionsScreen extends StatefulWidget {
     required this.onOpenSession,
     this.onPromote,
     this.embedded = false,
+    this.now,
     super.key,
   });
 
@@ -85,6 +194,12 @@ class _WorkspaceSessionsScreenState extends State<WorkspaceSessionsScreen> {
   Object? _error;
   String _query = '';
   final Set<String> _promoting = {};
+
+  /// The active chip filter in the embedded Chats browser.
+  WorkspaceChatsFilter _filter = WorkspaceChatsFilter.all;
+
+  /// Injectable clock for deterministic tests.
+  DateTime get _now => widget.now ?? DateTime.now();
 
   @override
   void initState() {
@@ -124,6 +239,7 @@ class _WorkspaceSessionsScreenState extends State<WorkspaceSessionsScreen> {
               for (final id in data.archivedQuickChatIds)
                 if (id != session.id) id,
             },
+            projectLabels: data.projectLabels,
           );
           _promoting.remove(session.id);
         });
@@ -172,13 +288,32 @@ class _WorkspaceSessionsScreenState extends State<WorkspaceSessionsScreen> {
   }
 
   Widget _buildLoaded(WorkspaceSessionsData data) {
-    final sessions = filterWorkspaceSessions(
-      sessions: data.sessions,
-      view: widget.view,
-      claimedSessionIds: data.claimedSessionIds,
-      archivedQuickChatIds: data.archivedQuickChatIds,
-      query: _query,
-    );
+    final sessions = widget.embedded
+        ? filterChats(
+            sessions: data.sessions,
+            filter: _filter,
+            claimedSessionIds: data.claimedSessionIds,
+            archivedQuickChatIds: data.archivedQuickChatIds,
+            query: _query,
+            now: _now,
+          )
+        : filterWorkspaceSessions(
+            sessions: data.sessions,
+            view: widget.view,
+            claimedSessionIds: data.claimedSessionIds,
+            archivedQuickChatIds: data.archivedQuickChatIds,
+            query: _query,
+          );
+
+    final groups = widget.embedded
+        ? groupChatsByDate(_now, sessions)
+        : [
+            MapEntry(
+              ChatDateBucket.today,
+              List<Session>.unmodifiable(sessions),
+            ),
+          ];
+
     return RefreshIndicator(
       onRefresh: _load,
       child: ListView(
@@ -204,77 +339,225 @@ class _WorkspaceSessionsScreenState extends State<WorkspaceSessionsScreen> {
             ),
             onChanged: (value) => setState(() => _query = value),
           ),
+          if (widget.embedded) ...[
+            const SizedBox(height: HermesSpacing.md),
+            _buildChips(),
+          ],
           const SizedBox(height: HermesSpacing.lg),
           if (sessions.isEmpty)
             EmptyState(
-              icon: widget.view == WorkspaceSessionView.unassigned
-                  ? Icons.inbox_outlined
-                  : Icons.search_off,
+              icon: _emptyIcon,
               title: _query.isEmpty ? 'Nothing here' : 'No matches',
               message: _emptyMessage,
             )
           else
-            for (final session in sessions)
+            for (final group in groups) ...[
               Padding(
-                padding: const EdgeInsets.only(bottom: HermesSpacing.sm),
-                child: HermesCard(
-                  onTap: () => widget.onOpenSession(session),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.chat_bubble_outline),
-                      const SizedBox(width: HermesSpacing.md),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              session.title.isEmpty
-                                  ? 'Untitled chat'
-                                  : session.title,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            if (session.preview.isNotEmpty)
-                              Text(
-                                session.preview,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  color: HermesTokens.of(context).muted,
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
-                      if (widget.view == WorkspaceSessionView.archivedQuick &&
-                          widget.onPromote != null)
-                        _promoting.contains(session.id)
-                            ? const SizedBox.square(
-                                dimension: 24,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                ),
-                              )
-                            : IconButton(
-                                tooltip: 'Promote to project',
-                                onPressed: () => unawaited(_promote(session)),
-                                icon: const Icon(Icons.drive_file_move_outline),
-                              ),
-                    ],
-                  ),
+                padding: const EdgeInsets.only(
+                  top: HermesSpacing.xs,
+                  bottom: HermesSpacing.sm,
+                ),
+                child: Text(
+                  widget.embedded ? group.key.label : widget.title,
+                  style: HermesTokens.of(context).typography.section,
                 ),
               ),
+              for (final session in group.value)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: HermesSpacing.sm),
+                  child: _buildSessionRow(session, data),
+                ),
+            ],
         ],
       ),
     );
   }
 
-  String get _emptyMessage => switch (widget.view) {
-    WorkspaceSessionView.unassigned =>
-      'Every conversation is already assigned to a Project.',
-    WorkspaceSessionView.archivedQuick =>
-      'Quick chats appear here after their retention period.',
-    WorkspaceSessionView.all ||
-    WorkspaceSessionView.search => 'No conversation matches this view.',
-  };
+  Widget _buildChips() {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          for (final filter in WorkspaceChatsFilter.values)
+            Padding(
+              padding: const EdgeInsets.only(right: HermesSpacing.sm),
+              child: ChoiceChip(
+                label: Text(filter.label),
+                selected: _filter == filter,
+                onSelected: (_) => setState(() => _filter = filter),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSessionRow(Session session, WorkspaceSessionsData data) {
+    final tokens = HermesTokens.of(context);
+    final projectLabel = data.projectLabels[session.id];
+    final showPromote =
+        widget.view == WorkspaceSessionView.archivedQuick &&
+        widget.onPromote != null;
+    return HermesCard(
+      onTap: () => widget.onOpenSession(session),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            session.pinned
+                ? Icons.push_pin_outlined
+                : Icons.chat_bubble_outline,
+            size: 20,
+            color: session.pinned ? tokens.accent : tokens.muted,
+          ),
+          const SizedBox(width: HermesSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  session.title.isEmpty ? 'Untitled chat' : session.title,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                if (session.preview.isNotEmpty)
+                  Text(
+                    session.preview,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(color: tokens.muted),
+                  ),
+                const SizedBox(height: HermesSpacing.xs),
+                Wrap(
+                  spacing: HermesSpacing.sm,
+                  runSpacing: HermesSpacing.xs,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    StatusChip(
+                      status: session.isActive
+                          ? HermesStatus.running
+                          : HermesStatus.completed,
+                      label: session.isActive ? 'Running' : 'Done',
+                    ),
+                    if (projectLabel != null)
+                      _MetaChip(
+                        label: projectLabel,
+                        icon: Icons.folder_outlined,
+                      )
+                    else
+                      _MetaChip(
+                        label: 'Unassigned',
+                        icon: Icons.inbox_outlined,
+                      ),
+                    Text(
+                      _relativeTime(_now, session.lastActive),
+                      style: tokens.typography.label.copyWith(
+                        color: tokens.muted,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          if (showPromote)
+            _promoting.contains(session.id)
+                ? const SizedBox.square(
+                    dimension: 24,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : IconButton(
+                    tooltip: 'Promote to project',
+                    onPressed: () => unawaited(_promote(session)),
+                    icon: const Icon(Icons.drive_file_move_outline),
+                  ),
+        ],
+      ),
+    );
+  }
+
+  IconData get _emptyIcon {
+    if (widget.embedded) {
+      return switch (_filter) {
+        WorkspaceChatsFilter.unassigned => Icons.inbox_outlined,
+        WorkspaceChatsFilter.archived => Icons.archive_outlined,
+        WorkspaceChatsFilter.recent => Icons.history_outlined,
+        WorkspaceChatsFilter.all => Icons.search_off,
+      };
+    }
+    return widget.view == WorkspaceSessionView.unassigned
+        ? Icons.inbox_outlined
+        : Icons.search_off;
+  }
+
+  String get _emptyMessage {
+    if (widget.embedded) {
+      return switch (_filter) {
+        WorkspaceChatsFilter.unassigned =>
+          'Every conversation is already assigned to a Project.',
+        WorkspaceChatsFilter.archived => 'Archived conversations appear here.',
+        WorkspaceChatsFilter.recent =>
+          'Nothing changed in the last seven days.',
+        WorkspaceChatsFilter.all => 'No conversation matches this view.',
+      };
+    }
+    return switch (widget.view) {
+      WorkspaceSessionView.unassigned =>
+        'Every conversation is already assigned to a Project.',
+      WorkspaceSessionView.archivedQuick =>
+        'Quick chats appear here after their retention period.',
+      WorkspaceSessionView.all ||
+      WorkspaceSessionView.search => 'No conversation matches this view.',
+    };
+  }
+
+  /// Compact relative time: "now", "5m", "2h", "3d", else a date.
+  String _relativeTime(DateTime now, double lastActiveSeconds) {
+    final activity = DateTime.fromMillisecondsSinceEpoch(
+      (lastActiveSeconds * 1000).round(),
+    );
+    final elapsed = now.difference(activity);
+    if (elapsed.inMinutes < 1) return 'now';
+    if (elapsed.inHours < 1) return '${elapsed.inMinutes}m';
+    if (elapsed.inDays < 1) return '${elapsed.inHours}h';
+    if (elapsed.inDays < 7) return '${elapsed.inDays}d';
+    return '${activity.day}/${activity.month}';
+  }
+}
+
+/// A small neutral label under a conversation row (project, unassigned).
+class _MetaChip extends StatelessWidget {
+  final String label;
+  final IconData icon;
+
+  const _MetaChip({required this.label, required this.icon});
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = HermesTokens.of(context);
+    return Semantics(
+      label: label,
+      container: true,
+      child: ExcludeSemantics(
+        child: Container(
+          padding: const EdgeInsets.symmetric(
+            horizontal: HermesSpacing.sm,
+            vertical: HermesSpacing.xs,
+          ),
+          decoration: BoxDecoration(
+            color: tokens.raised,
+            borderRadius: BorderRadius.circular(HermesRadius.sm),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 12, color: tokens.muted),
+              const SizedBox(width: 4),
+              Text(label, style: tokens.typography.label),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }

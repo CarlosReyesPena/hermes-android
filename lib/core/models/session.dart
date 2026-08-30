@@ -10,6 +10,19 @@ class Session {
   final double startedAt;
   final double? endedAt;
 
+  /// Most recent activity, in seconds since the epoch.
+  ///
+  /// The Gateway sends `last_active`; older gateways may not, so the parser
+  /// falls back to [startedAt]. Every date grouping and "Recent" filter in
+  /// the Chats browser ranks by this value.
+  final double lastActive;
+
+  /// Whether the user pinned the chat server-side.
+  final bool pinned;
+
+  /// Whether the Gateway archived the session.
+  final bool archived;
+
   const Session({
     required this.id,
     required this.title,
@@ -20,10 +33,15 @@ class Session {
     required this.preview,
     required this.startedAt,
     this.endedAt,
+    this.lastActive = 0,
+    this.pinned = false,
+    this.archived = false,
   });
 
   factory Session.fromJson(Map<String, dynamic> json) {
     final endedAt = json['ended_at'];
+    final startedAt = (json['started_at'] ?? 0).toDouble();
+    final lastActive = (json['last_active'] ?? startedAt).toDouble();
     return Session(
       id: json['id'] ?? '',
       title: json['title'] ?? 'Untitled',
@@ -32,8 +50,11 @@ class Session {
       messageCount: json['message_count'] ?? 0,
       isActive: endedAt == null,
       preview: json['preview'] ?? '',
-      startedAt: (json['started_at'] ?? 0).toDouble(),
+      startedAt: startedAt,
       endedAt: endedAt?.toDouble(),
+      lastActive: lastActive,
+      pinned: json['pinned'] == true,
+      archived: json['archived'] == true,
     );
   }
 }

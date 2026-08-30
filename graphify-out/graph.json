@@ -538,7 +538,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "int",
-      "community": 52,
+      "community": 112,
       "norm_label": "int?"
     },
     {
@@ -658,7 +658,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "bool_get",
-      "community": 43,
+      "community": 183,
       "norm_label": "bool get"
     },
     {
@@ -858,7 +858,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "dart_async",
-      "community": 120,
+      "community": 184,
       "norm_label": "dart:async"
     },
     {
@@ -1538,7 +1538,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "models_gateway_activity_duration",
-      "community": 101,
+      "community": 131,
       "norm_label": "_duration"
     },
     {
@@ -1578,7 +1578,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "models_gateway_approval",
-      "community": 48,
+      "community": 181,
       "norm_label": "gateway_approval.dart"
     },
     {
@@ -1608,7 +1608,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "models_gateway_approval_wirevalue",
-      "community": 48,
+      "community": 181,
       "norm_label": "wirevalue"
     },
     {
@@ -1618,7 +1618,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "models_gateway_approval_command",
-      "community": 48,
+      "community": 181,
       "norm_label": "command"
     },
     {
@@ -1628,7 +1628,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "models_gateway_approval_description",
-      "community": 48,
+      "community": 181,
       "norm_label": "description"
     },
     {
@@ -1638,7 +1638,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "models_gateway_approval_allowpermanent",
-      "community": 48,
+      "community": 181,
       "norm_label": "allowpermanent"
     },
     {
@@ -1648,7 +1648,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "models_gateway_approval_smartdenied",
-      "community": 48,
+      "community": 181,
       "norm_label": "smartdenied"
     },
     {
@@ -1658,7 +1658,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "models_gateway_approval_choices",
-      "community": 48,
+      "community": 181,
       "norm_label": "choices"
     },
     {
@@ -1668,7 +1668,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "models_gateway_approval_fromwirevalue",
-      "community": 48,
+      "community": 181,
       "norm_label": "fromwirevalue"
     },
     {
@@ -1678,7 +1678,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "models_gateway_approval_fromeventdata",
-      "community": 48,
+      "community": 181,
       "norm_label": "fromeventdata"
     },
     {
@@ -1688,7 +1688,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "models_gateway_clarify",
-      "community": 109,
+      "community": 183,
       "norm_label": "gateway_clarify.dart"
     },
     {
@@ -1698,7 +1698,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "models_gateway_clarify_gatewayclarifyrequest",
-      "community": 52,
+      "community": 183,
       "norm_label": "gatewayclarifyrequest"
     },
     {
@@ -1708,7 +1708,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "models_gateway_clarify_requestid",
-      "community": 109,
+      "community": 183,
       "norm_label": "requestid"
     },
     {
@@ -1718,7 +1718,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "models_gateway_clarify_question",
-      "community": 109,
+      "community": 183,
       "norm_label": "question"
     },
     {
@@ -1728,7 +1728,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "models_gateway_clarify_choices",
-      "community": 109,
+      "community": 183,
       "norm_label": "choices"
     },
     {
@@ -1738,7 +1738,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "models_gateway_clarify_multiselect",
-      "community": 109,
+      "community": 183,
       "norm_label": "multiselect"
     },
     {
@@ -1748,7 +1748,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "models_gateway_clarify_haschoices",
-      "community": 109,
+      "community": 183,
       "norm_label": "haschoices"
     },
     {
@@ -1758,7 +1758,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "models_gateway_clarify_fromeventdata",
-      "community": 109,
+      "community": 183,
       "norm_label": "fromeventdata"
     },
     {
@@ -1818,7 +1818,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "models_gateway_insight_gatewaynotice",
-      "community": 131,
+      "community": 119,
       "norm_label": "gatewaynotice"
     },
     {
@@ -4272,6 +4272,36 @@
       "norm_label": "endedat"
     },
     {
+      "label": "lastActive",
+      "file_type": "code",
+      "source_file": "lib/core/models/session.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "models_session_lastactive",
+      "community": 147,
+      "norm_label": "lastactive"
+    },
+    {
+      "label": "pinned",
+      "file_type": "code",
+      "source_file": "lib/core/models/session.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "models_session_pinned",
+      "community": 147,
+      "norm_label": "pinned"
+    },
+    {
+      "label": "archived",
+      "file_type": "code",
+      "source_file": "lib/core/models/session.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "models_session_archived",
+      "community": 147,
+      "norm_label": "archived"
+    },
+    {
       "label": "fromJson",
       "file_type": "code",
       "source_file": "lib/core/models/session.dart",
@@ -4598,7 +4628,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "typedef",
-      "community": 44,
+      "community": 58,
       "norm_label": "typedef"
     },
     {
@@ -6208,7 +6238,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_flutter_material_dart",
-      "community": 131,
+      "community": 146,
       "norm_label": "package:flutter/material.dart"
     },
     {
@@ -6298,7 +6328,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "services_connection_manager_dart",
-      "community": 47,
+      "community": 148,
       "norm_label": "../services/connection_manager.dart"
     },
     {
@@ -6438,7 +6468,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "models_gateway_clarify_dart",
-      "community": 52,
+      "community": 112,
       "norm_label": "../models/gateway_clarify.dart"
     },
     {
@@ -6448,7 +6478,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "models_gateway_insight_dart",
-      "community": 131,
+      "community": 119,
       "norm_label": "../models/gateway_insight.dart"
     },
     {
@@ -7168,7 +7198,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "screens_memory_screen",
-      "community": 47,
+      "community": 148,
       "norm_label": "memory_screen.dart"
     },
     {
@@ -7178,7 +7208,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "screens_memory_screen_memoryscreen",
-      "community": 47,
+      "community": 148,
       "norm_label": "memoryscreen"
     },
     {
@@ -7188,7 +7218,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "screens_memory_screen_memoryscreenstate",
-      "community": 47,
+      "community": 148,
       "norm_label": "_memoryscreenstate"
     },
     {
@@ -7198,7 +7228,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "screens_memory_screen_connection",
-      "community": 47,
+      "community": 148,
       "norm_label": "connection"
     },
     {
@@ -7208,7 +7238,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "screens_memory_screen_client",
-      "community": 47,
+      "community": 148,
       "norm_label": "_client"
     },
     {
@@ -7218,7 +7248,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "screens_memory_screen_entries",
-      "community": 47,
+      "community": 148,
       "norm_label": "_entries"
     },
     {
@@ -7228,7 +7258,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "screens_memory_screen_loading",
-      "community": 47,
+      "community": 148,
       "norm_label": "_loading"
     },
     {
@@ -7238,7 +7268,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "screens_memory_screen_error",
-      "community": 47,
+      "community": 148,
       "norm_label": "_error"
     },
     {
@@ -7248,7 +7278,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "screens_memory_screen_source",
-      "community": 47,
+      "community": 148,
       "norm_label": "_source"
     },
     {
@@ -7258,7 +7288,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "screens_memory_screen_createstate",
-      "community": 47,
+      "community": 148,
       "norm_label": "createstate"
     },
     {
@@ -7268,7 +7298,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "screens_memory_screen_initstate",
-      "community": 47,
+      "community": 148,
       "norm_label": "initstate"
     },
     {
@@ -7278,7 +7308,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "screens_memory_screen_dispose",
-      "community": 47,
+      "community": 148,
       "norm_label": "dispose"
     },
     {
@@ -7288,7 +7318,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "screens_memory_screen_loadmemory",
-      "community": 47,
+      "community": 148,
       "norm_label": "_loadmemory"
     },
     {
@@ -7298,7 +7328,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "screens_memory_screen_build",
-      "community": 47,
+      "community": 148,
       "norm_label": "build"
     },
     {
@@ -7308,7 +7338,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "screens_memory_screen_buildbody",
-      "community": 47,
+      "community": 148,
       "norm_label": "_buildbody"
     },
     {
@@ -10062,6 +10092,26 @@
       "norm_label": "workspacesessionview"
     },
     {
+      "label": "WorkspaceChatsFilter",
+      "file_type": "code",
+      "source_file": "lib/core/screens/workspace_sessions_screen.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "screens_workspace_sessions_screen_workspacechatsfilter",
+      "community": 125,
+      "norm_label": "workspacechatsfilter"
+    },
+    {
+      "label": "ChatDateBucket",
+      "file_type": "code",
+      "source_file": "lib/core/screens/workspace_sessions_screen.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "screens_workspace_sessions_screen_chatdatebucket",
+      "community": 125,
+      "norm_label": "chatdatebucket"
+    },
+    {
       "label": "WorkspaceSessionsData",
       "file_type": "code",
       "source_file": "lib/core/screens/workspace_sessions_screen.dart",
@@ -10078,7 +10128,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "screens_workspace_sessions_screen_quickchatpromotioncancelled",
-      "community": 133,
+      "community": 113,
       "norm_label": "quickchatpromotioncancelled"
     },
     {
@@ -10088,7 +10138,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "exception",
-      "community": 133,
+      "community": 113,
       "norm_label": "exception"
     },
     {
@@ -10098,7 +10148,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "screens_workspace_sessions_screen_workspacesessionsscreen",
-      "community": 125,
+      "community": 190,
       "norm_label": "workspacesessionsscreen"
     },
     {
@@ -10108,8 +10158,18 @@
       "source_location": null,
       "_origin": "ast",
       "id": "screens_workspace_sessions_screen_workspacesessionsscreenstate",
-      "community": 125,
+      "community": 190,
       "norm_label": "_workspacesessionsscreenstate"
+    },
+    {
+      "label": "_MetaChip",
+      "file_type": "code",
+      "source_file": "lib/core/screens/workspace_sessions_screen.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "screens_workspace_sessions_screen_metachip",
+      "community": 119,
+      "norm_label": "_metachip"
     },
     {
       "label": "kWorkspaceSessionSearchKey",
@@ -10122,14 +10182,64 @@
       "norm_label": "kworkspacesessionsearchkey"
     },
     {
-      "label": "sessions",
+      "label": "label",
       "file_type": "code",
       "source_file": "lib/core/screens/workspace_sessions_screen.dart",
       "source_location": null,
       "_origin": "ast",
-      "id": "screens_workspace_sessions_screen_sessions",
+      "id": "screens_workspace_sessions_screen_label",
       "community": 125,
-      "norm_label": "sessions"
+      "norm_label": "label"
+    },
+    {
+      "label": "kRecentChatsWindow",
+      "file_type": "code",
+      "source_file": "lib/core/screens/workspace_sessions_screen.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "screens_workspace_sessions_screen_krecentchatswindow",
+      "community": 125,
+      "norm_label": "krecentchatswindow"
+    },
+    {
+      "label": "activity",
+      "file_type": "code",
+      "source_file": "lib/core/screens/workspace_sessions_screen.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "screens_workspace_sessions_screen_activity",
+      "community": 125,
+      "norm_label": "activity"
+    },
+    {
+      "label": "today",
+      "file_type": "code",
+      "source_file": "lib/core/screens/workspace_sessions_screen.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "screens_workspace_sessions_screen_today",
+      "community": 125,
+      "norm_label": "today"
+    },
+    {
+      "label": "day",
+      "file_type": "code",
+      "source_file": "lib/core/screens/workspace_sessions_screen.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "screens_workspace_sessions_screen_day",
+      "community": 125,
+      "norm_label": "day"
+    },
+    {
+      "label": "diff",
+      "file_type": "code",
+      "source_file": "lib/core/screens/workspace_sessions_screen.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "screens_workspace_sessions_screen_diff",
+      "community": 125,
+      "norm_label": "diff"
     },
     {
       "label": "claimedSessionIds",
@@ -10142,6 +10252,16 @@
       "norm_label": "claimedsessionids"
     },
     {
+      "label": "required WorkspaceChatsFilter filter,\n  Set",
+      "file_type": "code",
+      "source_file": null,
+      "source_location": null,
+      "_origin": "ast",
+      "id": "required_workspacechatsfilter_filter_set",
+      "community": 125,
+      "norm_label": "required workspacechatsfilter filter,\n  set"
+    },
+    {
       "label": "archivedQuickChatIds",
       "file_type": "code",
       "source_file": "lib/core/screens/workspace_sessions_screen.dart",
@@ -10150,6 +10270,86 @@
       "id": "screens_workspace_sessions_screen_archivedquickchatids",
       "community": 125,
       "norm_label": "archivedquickchatids"
+    },
+    {
+      "label": "query",
+      "file_type": "code",
+      "source_file": "lib/core/screens/workspace_sessions_screen.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "screens_workspace_sessions_screen_query",
+      "community": 125,
+      "norm_label": "query"
+    },
+    {
+      "label": "current",
+      "file_type": "code",
+      "source_file": "lib/core/screens/workspace_sessions_screen.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "screens_workspace_sessions_screen_current",
+      "community": 125,
+      "norm_label": "current"
+    },
+    {
+      "label": "normalized",
+      "file_type": "code",
+      "source_file": "lib/core/screens/workspace_sessions_screen.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "screens_workspace_sessions_screen_normalized",
+      "community": 125,
+      "norm_label": "normalized"
+    },
+    {
+      "label": "recentCutoff",
+      "file_type": "code",
+      "source_file": "lib/core/screens/workspace_sessions_screen.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "screens_workspace_sessions_screen_recentcutoff",
+      "community": 125,
+      "norm_label": "recentcutoff"
+    },
+    {
+      "label": "filtered",
+      "file_type": "code",
+      "source_file": "lib/core/screens/workspace_sessions_screen.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "screens_workspace_sessions_screen_filtered",
+      "community": 125,
+      "norm_label": "filtered"
+    },
+    {
+      "label": "buckets",
+      "file_type": "code",
+      "source_file": "lib/core/screens/workspace_sessions_screen.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "screens_workspace_sessions_screen_buckets",
+      "community": 125,
+      "norm_label": "buckets"
+    },
+    {
+      "label": "sessions",
+      "file_type": "code",
+      "source_file": "lib/core/screens/workspace_sessions_screen.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "screens_workspace_sessions_screen_sessions",
+      "community": 125,
+      "norm_label": "sessions"
+    },
+    {
+      "label": "projectLabels",
+      "file_type": "code",
+      "source_file": "lib/core/screens/workspace_sessions_screen.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "screens_workspace_sessions_screen_projectlabels",
+      "community": 125,
+      "norm_label": "projectlabels"
     },
     {
       "label": "WorkspaceSessionsLoader",
@@ -10180,26 +10380,6 @@
       "id": "required_workspacesessionview_view_set",
       "community": 125,
       "norm_label": "required workspacesessionview view,\n  set"
-    },
-    {
-      "label": "query",
-      "file_type": "code",
-      "source_file": "lib/core/screens/workspace_sessions_screen.dart",
-      "source_location": null,
-      "_origin": "ast",
-      "id": "screens_workspace_sessions_screen_query",
-      "community": 125,
-      "norm_label": "query"
-    },
-    {
-      "label": "normalized",
-      "file_type": "code",
-      "source_file": "lib/core/screens/workspace_sessions_screen.dart",
-      "source_location": null,
-      "_origin": "ast",
-      "id": "screens_workspace_sessions_screen_normalized",
-      "community": 125,
-      "norm_label": "normalized"
     },
     {
       "label": "title",
@@ -10262,6 +10442,26 @@
       "norm_label": "embedded"
     },
     {
+      "label": "now",
+      "file_type": "code",
+      "source_file": "lib/core/screens/workspace_sessions_screen.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "screens_workspace_sessions_screen_now",
+      "community": 125,
+      "norm_label": "now"
+    },
+    {
+      "label": "DateTime",
+      "file_type": "code",
+      "source_file": null,
+      "source_location": null,
+      "_origin": "ast",
+      "id": "datetime",
+      "community": 57,
+      "norm_label": "datetime"
+    },
+    {
       "label": "_data",
       "file_type": "code",
       "source_file": "lib/core/screens/workspace_sessions_screen.dart",
@@ -10292,14 +10492,64 @@
       "norm_label": "_promoting"
     },
     {
-      "label": "_emptyMessage",
+      "label": "_filter",
       "file_type": "code",
       "source_file": "lib/core/screens/workspace_sessions_screen.dart",
       "source_location": null,
       "_origin": "ast",
-      "id": "screens_workspace_sessions_screen_emptymessage",
+      "id": "screens_workspace_sessions_screen_filter",
       "community": 125,
-      "norm_label": "_emptymessage"
+      "norm_label": "_filter"
+    },
+    {
+      "label": "DateTime get",
+      "file_type": "code",
+      "source_file": null,
+      "source_location": null,
+      "_origin": "ast",
+      "id": "datetime_get",
+      "community": 144,
+      "norm_label": "datetime get"
+    },
+    {
+      "label": "icon",
+      "file_type": "code",
+      "source_file": "lib/core/screens/workspace_sessions_screen.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "screens_workspace_sessions_screen_icon",
+      "community": 125,
+      "norm_label": "icon"
+    },
+    {
+      "label": "IconData",
+      "file_type": "code",
+      "source_file": null,
+      "source_location": null,
+      "_origin": "ast",
+      "id": "icondata",
+      "community": 42,
+      "norm_label": "icondata"
+    },
+    {
+      "label": "filterChats",
+      "file_type": "code",
+      "source_file": "lib/core/screens/workspace_sessions_screen.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "screens_workspace_sessions_screen_filterchats",
+      "community": 125,
+      "norm_label": "filterchats"
+    },
+    {
+      "label": "groupChatsByDate",
+      "file_type": "code",
+      "source_file": "lib/core/screens/workspace_sessions_screen.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "screens_workspace_sessions_screen_groupchatsbydate",
+      "community": 125,
+      "norm_label": "groupchatsbydate"
     },
     {
       "label": "filterWorkspaceSessions",
@@ -10360,6 +10610,36 @@
       "id": "screens_workspace_sessions_screen_buildloaded",
       "community": 125,
       "norm_label": "_buildloaded"
+    },
+    {
+      "label": "_buildChips",
+      "file_type": "code",
+      "source_file": "lib/core/screens/workspace_sessions_screen.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "screens_workspace_sessions_screen_buildchips",
+      "community": 125,
+      "norm_label": "_buildchips"
+    },
+    {
+      "label": "_buildSessionRow",
+      "file_type": "code",
+      "source_file": "lib/core/screens/workspace_sessions_screen.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "screens_workspace_sessions_screen_buildsessionrow",
+      "community": 125,
+      "norm_label": "_buildsessionrow"
+    },
+    {
+      "label": "_relativeTime",
+      "file_type": "code",
+      "source_file": "lib/core/screens/workspace_sessions_screen.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "screens_workspace_sessions_screen_relativetime",
+      "community": 125,
+      "norm_label": "_relativetime"
     },
     {
       "label": "ai_search_query_rewriter.dart",
@@ -10498,7 +10778,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "dart_convert",
-      "community": 148,
+      "community": 36,
       "norm_label": "dart:convert"
     },
     {
@@ -10978,7 +11258,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "dart_io",
-      "community": 151,
+      "community": 50,
       "norm_label": "dart:io"
     },
     {
@@ -11738,7 +12018,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "services_config_backup_configbackupexception",
-      "community": 148,
+      "community": 155,
       "norm_label": "configbackupexception"
     },
     {
@@ -11820,16 +12100,6 @@
       "id": "services_config_backup_createdat",
       "community": 127,
       "norm_label": "createdat"
-    },
-    {
-      "label": "DateTime",
-      "file_type": "code",
-      "source_file": null,
-      "source_location": null,
-      "_origin": "ast",
-      "id": "datetime",
-      "community": 57,
-      "norm_label": "datetime"
     },
     {
       "label": "appVersion",
@@ -12408,7 +12678,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "services_connection_manager_credentialstore",
-      "community": 136,
+      "community": 186,
       "norm_label": "credentialstore"
     },
     {
@@ -12418,7 +12688,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "services_connection_manager_fluttersecurecredentialstore",
-      "community": 136,
+      "community": 186,
       "norm_label": "fluttersecurecredentialstore"
     },
     {
@@ -12428,7 +12698,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "services_connection_manager_credentialstorageexception",
-      "community": 133,
+      "community": 113,
       "norm_label": "credentialstorageexception"
     },
     {
@@ -12660,6 +12930,26 @@
       "id": "services_connection_manager_baseurl",
       "community": 5,
       "norm_label": "baseurl"
+    },
+    {
+      "label": "requestTimeout",
+      "file_type": "code",
+      "source_file": "lib/core/services/connection_manager.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "services_connection_manager_requesttimeout",
+      "community": 5,
+      "norm_label": "requesttimeout"
+    },
+    {
+      "label": "static const Duration",
+      "file_type": "code",
+      "source_file": null,
+      "source_location": null,
+      "_origin": "ast",
+      "id": "static_const_duration",
+      "community": 56,
+      "norm_label": "static const duration"
     },
     {
       "label": "_headers",
@@ -13062,6 +13352,16 @@
       "norm_label": "_credentialkey"
     },
     {
+      "label": "_freshClient",
+      "file_type": "code",
+      "source_file": "lib/core/services/connection_manager.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "services_connection_manager_freshclient",
+      "community": 5,
+      "norm_label": "_freshclient"
+    },
+    {
       "label": "getSessions",
       "file_type": "code",
       "source_file": "lib/core/services/connection_manager.dart",
@@ -13400,6 +13700,16 @@
       "id": "package_flutter_secure_storage_flutter_secure_storage_dart",
       "community": 5,
       "norm_label": "package:flutter_secure_storage/flutter_secure_storage.dart"
+    },
+    {
+      "label": "package:http/io_client.dart",
+      "file_type": "code",
+      "source_file": null,
+      "source_location": null,
+      "_origin": "ast",
+      "id": "package_http_io_client_dart",
+      "community": 5,
+      "norm_label": "package:http/io_client.dart"
     },
     {
       "label": "desktop_gateway_client.dart",
@@ -13988,7 +14298,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "services_gateway_turn_application_controller_gatewayturnapplicationsession",
-      "community": 162,
+      "community": 38,
       "norm_label": "gatewayturnapplicationsession"
     },
     {
@@ -14008,7 +14318,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "services_gateway_turn_application_controller_coordinatorgatewayturnapplicationsession",
-      "community": 162,
+      "community": 38,
       "norm_label": "_coordinatorgatewayturnapplicationsession"
     },
     {
@@ -14268,7 +14578,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "services_gateway_turn_coordinator_gatewayturncoordinatorexception",
-      "community": 133,
+      "community": 113,
       "norm_label": "gatewayturncoordinatorexception"
     },
     {
@@ -15558,7 +15868,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "services_gateway_turn_journal_gatewayturnjournalexception",
-      "community": 133,
+      "community": 113,
       "norm_label": "gatewayturnjournalexception"
     },
     {
@@ -17138,7 +17448,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "services_projects_gateway_client_projectsunsupportedexception",
-      "community": 133,
+      "community": 113,
       "norm_label": "projectsunsupportedexception"
     },
     {
@@ -17268,7 +17578,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "services_projects_gateway_client_list",
-      "community": 109,
+      "community": 181,
       "norm_label": "list"
     },
     {
@@ -18338,7 +18648,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "services_remote_files_client_remotedirectory",
-      "community": 150,
+      "community": 142,
       "norm_label": "remotedirectory"
     },
     {
@@ -18348,7 +18658,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "services_remote_files_client_remotefileentry",
-      "community": 150,
+      "community": 142,
       "norm_label": "remotefileentry"
     },
     {
@@ -18358,7 +18668,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "services_remote_files_client_remotetextpreview",
-      "community": 142,
+      "community": 150,
       "norm_label": "remotetextpreview"
     },
     {
@@ -18378,7 +18688,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "services_remote_files_client_remotefilesdatasource",
-      "community": 158,
+      "community": 188,
       "norm_label": "remotefilesdatasource"
     },
     {
@@ -18388,7 +18698,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "services_remote_files_client_remotefilesclient",
-      "community": 158,
+      "community": 188,
       "norm_label": "remotefilesclient"
     },
     {
@@ -19088,7 +19398,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "double_get",
-      "community": 157,
+      "community": 153,
       "norm_label": "double get"
     },
     {
@@ -19628,7 +19938,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "services_ws_client_jsonrpcerror",
-      "community": 133,
+      "community": 113,
       "norm_label": "jsonrpcerror"
     },
     {
@@ -20780,16 +21090,6 @@
       "id": "theme_hermes_theme_fast",
       "community": 56,
       "norm_label": "fast"
-    },
-    {
-      "label": "static const Duration",
-      "file_type": "code",
-      "source_file": null,
-      "source_location": null,
-      "_origin": "ast",
-      "id": "static_const_duration",
-      "community": 56,
-      "norm_label": "static const duration"
     },
     {
       "label": "standard",
@@ -23158,7 +23458,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "widgets_activity_pane_activitypane",
-      "community": 144,
+      "community": 34,
       "norm_label": "activitypane"
     },
     {
@@ -23168,7 +23468,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "widgets_activity_pane_activitypanestate",
-      "community": 144,
+      "community": 34,
       "norm_label": "activitypanestate"
     },
     {
@@ -23178,7 +23478,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "widgets_activity_pane_overflownote",
-      "community": 119,
+      "community": 144,
       "norm_label": "_overflownote"
     },
     {
@@ -23188,7 +23488,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "widgets_activity_pane_offlinebanner",
-      "community": 144,
+      "community": 119,
       "norm_label": "_offlinebanner"
     },
     {
@@ -23198,7 +23498,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "widgets_activity_pane_activityitemcard",
-      "community": 119,
+      "community": 144,
       "norm_label": "_activityitemcard"
     },
     {
@@ -23300,16 +23600,6 @@
       "id": "widgets_activity_pane_now",
       "community": 144,
       "norm_label": "_now"
-    },
-    {
-      "label": "DateTime get",
-      "file_type": "code",
-      "source_file": null,
-      "source_location": null,
-      "_origin": "ast",
-      "id": "datetime_get",
-      "community": 65,
-      "norm_label": "datetime get"
     },
     {
       "label": "count",
@@ -24158,7 +24448,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "widgets_gateway_clarify_dialog",
-      "community": 52,
+      "community": 112,
       "norm_label": "gateway_clarify_dialog.dart"
     },
     {
@@ -24168,7 +24458,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "widgets_gateway_clarify_dialog_gatewayclarifydialog",
-      "community": 52,
+      "community": 112,
       "norm_label": "gatewayclarifydialog"
     },
     {
@@ -24178,7 +24468,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "widgets_gateway_clarify_dialog_gatewayclarifydialogstate",
-      "community": 52,
+      "community": 112,
       "norm_label": "_gatewayclarifydialogstate"
     },
     {
@@ -24188,7 +24478,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "widgets_gateway_clarify_dialog_clarifyresponder",
-      "community": 52,
+      "community": 112,
       "norm_label": "clarifyresponder"
     },
     {
@@ -24198,7 +24488,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "widgets_gateway_clarify_dialog_request",
-      "community": 52,
+      "community": 112,
       "norm_label": "request"
     },
     {
@@ -24208,7 +24498,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "widgets_gateway_clarify_dialog_onrespond",
-      "community": 52,
+      "community": 112,
       "norm_label": "onrespond"
     },
     {
@@ -24218,7 +24508,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "widgets_gateway_clarify_dialog_othercontroller",
-      "community": 52,
+      "community": 112,
       "norm_label": "_othercontroller"
     },
     {
@@ -24228,7 +24518,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "widgets_gateway_clarify_dialog_selectedindices",
-      "community": 52,
+      "community": 112,
       "norm_label": "_selectedindices"
     },
     {
@@ -24238,7 +24528,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "widgets_gateway_clarify_dialog_selectedindex",
-      "community": 52,
+      "community": 112,
       "norm_label": "_selectedindex"
     },
     {
@@ -24248,7 +24538,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "widgets_gateway_clarify_dialog_submitting",
-      "community": 52,
+      "community": 112,
       "norm_label": "_submitting"
     },
     {
@@ -24258,7 +24548,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "widgets_gateway_clarify_dialog_error",
-      "community": 52,
+      "community": 112,
       "norm_label": "_error"
     },
     {
@@ -24268,7 +24558,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "widgets_gateway_clarify_dialog_createstate",
-      "community": 52,
+      "community": 112,
       "norm_label": "createstate"
     },
     {
@@ -24278,7 +24568,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "widgets_gateway_clarify_dialog_dispose",
-      "community": 52,
+      "community": 112,
       "norm_label": "dispose"
     },
     {
@@ -24288,7 +24578,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "widgets_gateway_clarify_dialog_selectchoice",
-      "community": 52,
+      "community": 112,
       "norm_label": "_selectchoice"
     },
     {
@@ -24298,7 +24588,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "widgets_gateway_clarify_dialog_respond",
-      "community": 52,
+      "community": 112,
       "norm_label": "_respond"
     },
     {
@@ -24308,7 +24598,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "widgets_gateway_clarify_dialog_build",
-      "community": 52,
+      "community": 112,
       "norm_label": "build"
     },
     {
@@ -24318,7 +24608,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "widgets_gateway_insight_card",
-      "community": 131,
+      "community": 119,
       "norm_label": "gateway_insight_card.dart"
     },
     {
@@ -24328,7 +24618,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "widgets_gateway_insight_card_gatewayreasoningcard",
-      "community": 131,
+      "community": 119,
       "norm_label": "gatewayreasoningcard"
     },
     {
@@ -24338,7 +24628,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "widgets_gateway_insight_card_gatewaynoticecard",
-      "community": 131,
+      "community": 119,
       "norm_label": "gatewaynoticecard"
     },
     {
@@ -24348,7 +24638,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "widgets_gateway_insight_card_gatewaysubagentcard",
-      "community": 131,
+      "community": 119,
       "norm_label": "gatewaysubagentcard"
     },
     {
@@ -24358,7 +24648,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "widgets_gateway_insight_card_text",
-      "community": 131,
+      "community": 119,
       "norm_label": "text"
     },
     {
@@ -24368,7 +24658,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "widgets_gateway_insight_card_initiallyexpanded",
-      "community": 131,
+      "community": 119,
       "norm_label": "initiallyexpanded"
     },
     {
@@ -24378,7 +24668,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "widgets_gateway_insight_card_notice",
-      "community": 131,
+      "community": 119,
       "norm_label": "notice"
     },
     {
@@ -24388,7 +24678,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "widgets_gateway_insight_card_activities",
-      "community": 131,
+      "community": 119,
       "norm_label": "activities"
     },
     {
@@ -24398,7 +24688,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "widgets_gateway_insight_card_build",
-      "community": 131,
+      "community": 119,
       "norm_label": "build"
     },
     {
@@ -24598,7 +24888,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "widgets_hermes_components_errorstate",
-      "community": 119,
+      "community": 39,
       "norm_label": "errorstate"
     },
     {
@@ -24762,16 +25052,6 @@
       "norm_label": "icon"
     },
     {
-      "label": "IconData",
-      "file_type": "code",
-      "source_file": null,
-      "source_location": null,
-      "_origin": "ast",
-      "id": "icondata",
-      "community": 42,
-      "norm_label": "icondata"
-    },
-    {
       "label": "message",
       "file_type": "code",
       "source_file": "lib/core/widgets/hermes_components.dart",
@@ -24908,7 +25188,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "widgets_hermes_shell_hermesdestination",
-      "community": 130,
+      "community": 157,
       "norm_label": "hermesdestination"
     },
     {
@@ -25138,7 +25418,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "widgets_home_pane_offlinebanner",
-      "community": 119,
+      "community": 65,
       "norm_label": "_offlinebanner"
     },
     {
@@ -27278,7 +27558,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_main_homescreen",
-      "community": 34,
+      "community": 189,
       "norm_label": "homescreen"
     },
     {
@@ -27288,7 +27568,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_main_homescreenstate",
-      "community": 34,
+      "community": 189,
       "norm_label": "homescreenstate"
     },
     {
@@ -28238,7 +28518,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_hermes_android_core_utils_activity_feed_dart",
-      "community": 115,
+      "community": 145,
       "norm_label": "package:hermes_android/core/utils/activity_feed.dart"
     },
     {
@@ -28428,7 +28708,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_hermes_android_core_widgets_activity_pane_dart",
-      "community": 64,
+      "community": 145,
       "norm_label": "package:hermes_android/core/widgets/activity_pane.dart"
     },
     {
@@ -28438,7 +28718,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_hermes_android_core_widgets_hermes_components_dart",
-      "community": 130,
+      "community": 162,
       "norm_label": "package:hermes_android/core/widgets/hermes_components.dart"
     },
     {
@@ -28480,6 +28760,106 @@
       "id": "package_http_testing_dart",
       "community": 36,
       "norm_label": "package:http/testing.dart"
+    },
+    {
+      "label": "api_client_timeout_test.dart",
+      "file_type": "code",
+      "source_file": "test/api_client_timeout_test.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "test_api_client_timeout_test",
+      "community": 36,
+      "norm_label": "api_client_timeout_test.dart"
+    },
+    {
+      "label": "_HangingHttpClient",
+      "file_type": "code",
+      "source_file": "test/api_client_timeout_test.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "test_api_client_timeout_test_hanginghttpclient",
+      "community": 159,
+      "norm_label": "_hanginghttpclient"
+    },
+    {
+      "label": "http.BaseClient",
+      "file_type": "code",
+      "source_file": null,
+      "source_location": null,
+      "_origin": "ast",
+      "id": "http_baseclient",
+      "community": 159,
+      "norm_label": "http.baseclient"
+    },
+    {
+      "label": "_JsonHttpClient",
+      "file_type": "code",
+      "source_file": "test/api_client_timeout_test.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "test_api_client_timeout_test_jsonhttpclient",
+      "community": 159,
+      "norm_label": "_jsonhttpclient"
+    },
+    {
+      "label": "body",
+      "file_type": "code",
+      "source_file": "test/api_client_timeout_test.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "test_api_client_timeout_test_body",
+      "community": 36,
+      "norm_label": "body"
+    },
+    {
+      "label": "send",
+      "file_type": "code",
+      "source_file": "test/api_client_timeout_test.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "test_api_client_timeout_test_send",
+      "community": 36,
+      "norm_label": "send"
+    },
+    {
+      "label": "main",
+      "file_type": "code",
+      "source_file": "test/api_client_timeout_test.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "test_api_client_timeout_test_main",
+      "community": 36,
+      "norm_label": "main"
+    },
+    {
+      "label": "package:hermes_android/core/services/connection_manager.dart",
+      "file_type": "code",
+      "source_file": null,
+      "source_location": null,
+      "_origin": "ast",
+      "id": "package_hermes_android_core_services_connection_manager_dart",
+      "community": 36,
+      "norm_label": "package:hermes_android/core/services/connection_manager.dart"
+    },
+    {
+      "label": "StreamedResponse",
+      "file_type": "code",
+      "source_file": null,
+      "source_location": null,
+      "_origin": "ast",
+      "id": "streamedresponse",
+      "community": 36,
+      "norm_label": "streamedresponse"
+    },
+    {
+      "label": "TimeoutException",
+      "file_type": "code",
+      "source_file": null,
+      "source_location": null,
+      "_origin": "ast",
+      "id": "timeoutexception",
+      "community": 36,
+      "norm_label": "timeoutexception"
     },
     {
       "label": "attachment_draft_service_test.dart",
@@ -28568,7 +28948,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_hermes_android_core_models_attachment_draft_dart",
-      "community": 82,
+      "community": 19,
       "norm_label": "package:hermes_android/core/models/attachment_draft.dart"
     },
     {
@@ -28578,7 +28958,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_hermes_android_core_services_attachment_draft_service_dart",
-      "community": 82,
+      "community": 19,
       "norm_label": "package:hermes_android/core/services/attachment_draft_service.dart"
     },
     {
@@ -28588,7 +28968,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_attachment_draft_tile_test",
-      "community": 82,
+      "community": 19,
       "norm_label": "attachment_draft_tile_test.dart"
     },
     {
@@ -28598,7 +28978,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_attachment_draft_tile_test_main",
-      "community": 82,
+      "community": 19,
       "norm_label": "main"
     },
     {
@@ -28608,7 +28988,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_hermes_android_core_widgets_attachment_draft_tile_dart",
-      "community": 82,
+      "community": 19,
       "norm_label": "package:hermes_android/core/widgets/attachment_draft_tile.dart"
     },
     {
@@ -28618,7 +28998,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "iconbutton",
-      "community": 82,
+      "community": 19,
       "norm_label": "iconbutton"
     },
     {
@@ -28628,7 +29008,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_capability_registry_test",
-      "community": 120,
+      "community": 184,
       "norm_label": "capability_registry_test.dart"
     },
     {
@@ -28638,7 +29018,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_capability_registry_test_protocolname",
-      "community": 120,
+      "community": 184,
       "norm_label": "protocolname"
     },
     {
@@ -28648,7 +29028,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_capability_registry_test_protocolmajor",
-      "community": 120,
+      "community": 184,
       "norm_label": "protocolmajor"
     },
     {
@@ -28658,7 +29038,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_capability_registry_test_readyframe",
-      "community": 120,
+      "community": 184,
       "norm_label": "_readyframe"
     },
     {
@@ -28668,7 +29048,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_capability_registry_test_main",
-      "community": 120,
+      "community": 184,
       "norm_label": "main"
     },
     {
@@ -28678,7 +29058,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_hermes_android_core_services_capability_registry_dart",
-      "community": 120,
+      "community": 151,
       "norm_label": "package:hermes_android/core/services/capability_registry.dart"
     },
     {
@@ -28688,7 +29068,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_hermes_android_core_services_ws_client_dart",
-      "community": 120,
+      "community": 187,
       "norm_label": "package:hermes_android/core/services/ws_client.dart"
     },
     {
@@ -28800,16 +29180,6 @@
       "id": "test_chat_history_scroll_test_controlledchathttpclient",
       "community": 159,
       "norm_label": "_controlledchathttpclient"
-    },
-    {
-      "label": "http.BaseClient",
-      "file_type": "code",
-      "source_file": null,
-      "source_location": null,
-      "_origin": "ast",
-      "id": "http_baseclient",
-      "community": 159,
-      "norm_label": "http.baseclient"
     },
     {
       "label": "Token",
@@ -29172,16 +29542,6 @@
       "norm_label": "package:hermes_android/core/screens/chat_screen.dart"
     },
     {
-      "label": "package:hermes_android/core/services/connection_manager.dart",
-      "file_type": "code",
-      "source_file": null,
-      "source_location": null,
-      "_origin": "ast",
-      "id": "package_hermes_android_core_services_connection_manager_dart",
-      "community": 36,
-      "norm_label": "package:hermes_android/core/services/connection_manager.dart"
-    },
-    {
       "label": "package:hermes_android/core/utils/chat_history_scroll.dart",
       "file_type": "code",
       "source_file": null,
@@ -29378,7 +29738,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "support_fake_voice_composer_adapter_dart",
-      "community": 112,
+      "community": 82,
       "norm_label": "support/fake_voice_composer_adapter.dart"
     },
     {
@@ -29448,7 +29808,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_chat_turn_notification_wiring_test_callbackcapturingturnsession",
-      "community": 162,
+      "community": 38,
       "norm_label": "_callbackcapturingturnsession"
     },
     {
@@ -29668,7 +30028,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_hermes_android_core_services_gateway_turn_coordinator_dart",
-      "community": 120,
+      "community": 187,
       "norm_label": "package:hermes_android/core/services/gateway_turn_coordinator.dart"
     },
     {
@@ -29708,7 +30068,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_chat_turn_recovery_test_faketurnsession",
-      "community": 162,
+      "community": 38,
       "norm_label": "_faketurnsession"
     },
     {
@@ -30098,7 +30458,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_chat_voice_composer_test",
-      "community": 112,
+      "community": 138,
       "norm_label": "chat_voice_composer_test.dart"
     },
     {
@@ -30118,7 +30478,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_chat_voice_composer_test_textscale",
-      "community": 112,
+      "community": 138,
       "norm_label": "textscale"
     },
     {
@@ -30128,7 +30488,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "testremotepromptsubmit_remotesubmit_double",
-      "community": 112,
+      "community": 138,
       "norm_label": "testremotepromptsubmit? remotesubmit,\n  double"
     },
     {
@@ -30138,7 +30498,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_chat_voice_composer_test_apiclient",
-      "community": 112,
+      "community": 138,
       "norm_label": "apiclient"
     },
     {
@@ -30148,7 +30508,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_chat_voice_composer_test_main",
-      "community": 112,
+      "community": 138,
       "norm_label": "main"
     },
     {
@@ -30158,7 +30518,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_chat_voice_composer_test_pumpchat",
-      "community": 112,
+      "community": 138,
       "norm_label": "_pumpchat"
     },
     {
@@ -30168,7 +30528,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_chat_voice_composer_test_pumpwidget",
-      "community": 112,
+      "community": 138,
       "norm_label": "pumpwidget"
     },
     {
@@ -30178,7 +30538,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_chat_voice_composer_test_pumpandsettle",
-      "community": 112,
+      "community": 138,
       "norm_label": "pumpandsettle"
     },
     {
@@ -30188,7 +30548,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_chat_voice_composer_test_send",
-      "community": 112,
+      "community": 138,
       "norm_label": "send"
     },
     {
@@ -30198,7 +30558,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_hermes_android_core_widgets_voice_composer_controls_dart",
-      "community": 112,
+      "community": 138,
       "norm_label": "package:hermes_android/core/widgets/voice_composer_controls.dart"
     },
     {
@@ -30298,7 +30658,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_hermes_android_core_services_config_backup_dart",
-      "community": 148,
+      "community": 155,
       "norm_label": "package:hermes_android/core/services/config_backup.dart"
     },
     {
@@ -30338,7 +30698,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_config_backup_service_test_memorycredentialstore",
-      "community": 136,
+      "community": 186,
       "norm_label": "_memorycredentialstore"
     },
     {
@@ -30438,7 +30798,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_config_backup_test",
-      "community": 148,
+      "community": 155,
       "norm_label": "config_backup_test.dart"
     },
     {
@@ -30448,7 +30808,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_config_backup_test_fastiterations",
-      "community": 148,
+      "community": 155,
       "norm_label": "fastiterations"
     },
     {
@@ -30458,7 +30818,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_config_backup_test_main",
-      "community": 148,
+      "community": 155,
       "norm_label": "main"
     },
     {
@@ -30468,7 +30828,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_config_backup_test_samplebackup",
-      "community": 148,
+      "community": 155,
       "norm_label": "samplebackup"
     },
     {
@@ -30478,7 +30838,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_hermes_android_core_models_connection_dart",
-      "community": 38,
+      "community": 155,
       "norm_label": "package:hermes_android/core/models/connection.dart"
     },
     {
@@ -30508,7 +30868,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_connection_manager_test_memorycredentialstore",
-      "community": 136,
+      "community": 186,
       "norm_label": "_memorycredentialstore"
     },
     {
@@ -30748,7 +31108,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_hermes_android_core_services_desktop_gateway_client_dart",
-      "community": 38,
+      "community": 185,
       "norm_label": "package:hermes_android/core/services/desktop_gateway_client.dart"
     },
     {
@@ -30768,7 +31128,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_document_intake_profile_test",
-      "community": 38,
+      "community": 185,
       "norm_label": "document_intake_profile_test.dart"
     },
     {
@@ -30778,7 +31138,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_document_intake_profile_test_gatewayprefix",
-      "community": 38,
+      "community": 185,
       "norm_label": "gatewayprefix"
     },
     {
@@ -30788,7 +31148,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_document_intake_profile_test_desktopgatewayurl",
-      "community": 38,
+      "community": 185,
       "norm_label": "desktopgatewayurl"
     },
     {
@@ -30798,7 +31158,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_document_intake_profile_test_connection",
-      "community": 38,
+      "community": 185,
       "norm_label": "_connection"
     },
     {
@@ -30808,7 +31168,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_document_intake_profile_test_main",
-      "community": 38,
+      "community": 185,
       "norm_label": "main"
     },
     {
@@ -30828,7 +31188,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_files_screen_test_fakefilesdatasource",
-      "community": 158,
+      "community": 188,
       "norm_label": "_fakefilesdatasource"
     },
     {
@@ -30968,7 +31328,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_gateway_approval_test",
-      "community": 153,
+      "community": 146,
       "norm_label": "gateway_approval_test.dart"
     },
     {
@@ -30978,7 +31338,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_gateway_approval_test_main",
-      "community": 153,
+      "community": 146,
       "norm_label": "main"
     },
     {
@@ -30988,7 +31348,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_hermes_android_core_models_gateway_approval_dart",
-      "community": 153,
+      "community": 146,
       "norm_label": "package:hermes_android/core/models/gateway_approval.dart"
     },
     {
@@ -30998,7 +31358,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_hermes_android_core_widgets_gateway_approval_dialog_dart",
-      "community": 153,
+      "community": 146,
       "norm_label": "package:hermes_android/core/widgets/gateway_approval_dialog.dart"
     },
     {
@@ -31138,7 +31498,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_gateway_turn_application_controller_test_fakeapplicationsession",
-      "community": 162,
+      "community": 38,
       "norm_label": "_fakeapplicationsession"
     },
     {
@@ -32508,7 +32868,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_hermes_components_test",
-      "community": 130,
+      "community": 162,
       "norm_label": "hermes_components_test.dart"
     },
     {
@@ -32518,7 +32878,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_hermes_components_test_brightness",
-      "community": 130,
+      "community": 162,
       "norm_label": "brightness"
     },
     {
@@ -32528,7 +32888,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_hermes_components_test_textscale",
-      "community": 130,
+      "community": 162,
       "norm_label": "textscale"
     },
     {
@@ -32538,7 +32898,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_hermes_components_test_size",
-      "community": 130,
+      "community": 162,
       "norm_label": "size"
     },
     {
@@ -32548,7 +32908,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "size",
-      "community": 130,
+      "community": 162,
       "norm_label": "size"
     },
     {
@@ -32558,7 +32918,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_hermes_components_test_pump",
-      "community": 130,
+      "community": 162,
       "norm_label": "_pump"
     },
     {
@@ -32568,7 +32928,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_hermes_components_test_pumpwidget",
-      "community": 130,
+      "community": 162,
       "norm_label": "pumpwidget"
     },
     {
@@ -32578,7 +32938,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_hermes_components_test_main",
-      "community": 130,
+      "community": 162,
       "norm_label": "main"
     },
     {
@@ -32588,7 +32948,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "container",
-      "community": 130,
+      "community": 162,
       "norm_label": "container"
     },
     {
@@ -32598,7 +32958,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "icon",
-      "community": 130,
+      "community": 162,
       "norm_label": "icon"
     },
     {
@@ -32608,7 +32968,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_hermes_shell_test",
-      "community": 130,
+      "community": 157,
       "norm_label": "hermes_shell_test.dart"
     },
     {
@@ -32618,7 +32978,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_hermes_shell_test_initial",
-      "community": 130,
+      "community": 157,
       "norm_label": "initial"
     },
     {
@@ -32628,7 +32988,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_hermes_shell_test_badges",
-      "community": 130,
+      "community": 157,
       "norm_label": "badges"
     },
     {
@@ -32638,7 +32998,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_hermes_shell_test_size",
-      "community": 130,
+      "community": 157,
       "norm_label": "size"
     },
     {
@@ -32648,7 +33008,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "widget_floatingactionbutton_size",
-      "community": 130,
+      "community": 157,
       "norm_label": "widget? floatingactionbutton,\n  size"
     },
     {
@@ -32658,7 +33018,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_hermes_shell_test_textscale",
-      "community": 130,
+      "community": 157,
       "norm_label": "textscale"
     },
     {
@@ -32668,7 +33028,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_hermes_shell_test_brightness",
-      "community": 130,
+      "community": 157,
       "norm_label": "brightness"
     },
     {
@@ -32678,7 +33038,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_hermes_shell_test_pumpshell",
-      "community": 130,
+      "community": 157,
       "norm_label": "_pumpshell"
     },
     {
@@ -32688,7 +33048,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_hermes_shell_test_pumpwidget",
-      "community": 130,
+      "community": 157,
       "norm_label": "pumpwidget"
     },
     {
@@ -32698,7 +33058,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_hermes_shell_test_pumpandsettle",
-      "community": 130,
+      "community": 157,
       "norm_label": "pumpandsettle"
     },
     {
@@ -32708,7 +33068,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_hermes_shell_test_main",
-      "community": 130,
+      "community": 157,
       "norm_label": "main"
     },
     {
@@ -32718,7 +33078,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_hermes_android_core_widgets_hermes_shell_dart",
-      "community": 130,
+      "community": 157,
       "norm_label": "package:hermes_android/core/widgets/hermes_shell.dart"
     },
     {
@@ -32798,7 +33158,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_home_config_restore_test_memorycredentialstore",
-      "community": 136,
+      "community": 186,
       "norm_label": "_memorycredentialstore"
     },
     {
@@ -32958,7 +33318,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_hermes_android_main_dart",
-      "community": 157,
+      "community": 153,
       "norm_label": "package:hermes_android/main.dart"
     },
     {
@@ -32978,7 +33338,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_home_digest_test",
-      "community": 137,
+      "community": 131,
       "norm_label": "home_digest_test.dart"
     },
     {
@@ -32988,7 +33348,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_home_digest_test_now",
-      "community": 137,
+      "community": 131,
       "norm_label": "_now"
     },
     {
@@ -32998,7 +33358,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_home_digest_test_title",
-      "community": 137,
+      "community": 131,
       "norm_label": "title"
     },
     {
@@ -33008,7 +33368,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "required_string_id_string",
-      "community": 137,
+      "community": 131,
       "norm_label": "required string id,\n  string"
     },
     {
@@ -33018,7 +33378,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_home_digest_test_startedago",
-      "community": 137,
+      "community": 131,
       "norm_label": "startedago"
     },
     {
@@ -33028,7 +33388,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_home_digest_test_messagecount",
-      "community": 137,
+      "community": 131,
       "norm_label": "messagecount"
     },
     {
@@ -33038,7 +33398,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "duration_endedago_int",
-      "community": 137,
+      "community": 131,
       "norm_label": "duration? endedago,\n  int"
     },
     {
@@ -33048,7 +33408,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_home_digest_test_preview",
-      "community": 137,
+      "community": 131,
       "norm_label": "preview"
     },
     {
@@ -33058,7 +33418,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_home_digest_test_null",
-      "community": 137,
+      "community": 131,
       "norm_label": "null"
     },
     {
@@ -33068,7 +33428,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_home_digest_test_section",
-      "community": 137,
+      "community": 131,
       "norm_label": "section"
     },
     {
@@ -33078,7 +33438,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_home_digest_test_epoch",
-      "community": 137,
+      "community": 131,
       "norm_label": "_epoch"
     },
     {
@@ -33088,7 +33448,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_home_digest_test_session",
-      "community": 137,
+      "community": 131,
       "norm_label": "_session"
     },
     {
@@ -33098,7 +33458,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_home_digest_test_ids",
-      "community": 137,
+      "community": 131,
       "norm_label": "_ids"
     },
     {
@@ -33108,7 +33468,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_home_digest_test_main",
-      "community": 137,
+      "community": 131,
       "norm_label": "main"
     },
     {
@@ -33118,7 +33478,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_hermes_android_core_utils_home_digest_dart",
-      "community": 137,
+      "community": 131,
       "norm_label": "package:hermes_android/core/utils/home_digest.dart"
     },
     {
@@ -33128,7 +33488,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "argumenterror",
-      "community": 133,
+      "community": 151,
       "norm_label": "argumenterror"
     },
     {
@@ -34098,7 +34458,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_hermes_android_core_services_projects_gateway_client_dart",
-      "community": 113,
+      "community": 109,
       "norm_label": "package:hermes_android/core/services/projects_gateway_client.dart"
     },
     {
@@ -34268,7 +34628,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "formatexception",
-      "community": 133,
+      "community": 151,
       "norm_label": "formatexception"
     },
     {
@@ -34278,7 +34638,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_projects_gateway_client_test",
-      "community": 133,
+      "community": 151,
       "norm_label": "projects_gateway_client_test.dart"
     },
     {
@@ -34288,7 +34648,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_projects_gateway_client_test_recordingrpc",
-      "community": 133,
+      "community": 151,
       "norm_label": "_recordingrpc"
     },
     {
@@ -34298,7 +34658,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_projects_gateway_client_test_responses",
-      "community": 133,
+      "community": 151,
       "norm_label": "responses"
     },
     {
@@ -34308,7 +34668,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_projects_gateway_client_test_id",
-      "community": 133,
+      "community": 151,
       "norm_label": "id"
     },
     {
@@ -34318,7 +34678,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_projects_gateway_client_test_slug",
-      "community": 133,
+      "community": 151,
       "norm_label": "slug"
     },
     {
@@ -34328,7 +34688,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_projects_gateway_client_test_name",
-      "community": 133,
+      "community": 151,
       "norm_label": "name"
     },
     {
@@ -34338,7 +34698,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_projects_gateway_client_test_archived",
-      "community": 133,
+      "community": 151,
       "norm_label": "archived"
     },
     {
@@ -34348,7 +34708,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_projects_gateway_client_test_call",
-      "community": 133,
+      "community": 151,
       "norm_label": "call"
     },
     {
@@ -34358,7 +34718,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_projects_gateway_client_test_ok",
-      "community": 133,
+      "community": 151,
       "norm_label": "_ok"
     },
     {
@@ -34368,7 +34728,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_projects_gateway_client_test_error",
-      "community": 133,
+      "community": 151,
       "norm_label": "_error"
     },
     {
@@ -34378,7 +34738,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_projects_gateway_client_test_projectjson",
-      "community": 133,
+      "community": 151,
       "norm_label": "_projectjson"
     },
     {
@@ -34388,7 +34748,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_projects_gateway_client_test_main",
-      "community": 133,
+      "community": 151,
       "norm_label": "main"
     },
     {
@@ -34608,7 +34968,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_hermes_android_core_widgets_space_migration_preview_dart",
-      "community": 128,
+      "community": 130,
       "norm_label": "package:hermes_android/core/widgets/space_migration_preview.dart"
     },
     {
@@ -35098,7 +35458,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_release_identity_test",
-      "community": 151,
+      "community": 50,
       "norm_label": "release_identity_test.dart"
     },
     {
@@ -35108,7 +35468,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_release_identity_test_main",
-      "community": 151,
+      "community": 50,
       "norm_label": "main"
     },
     {
@@ -35158,7 +35518,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_secure_connection_storage_test_faultinjectingcredentialstore",
-      "community": 136,
+      "community": 186,
       "norm_label": "_faultinjectingcredentialstore"
     },
     {
@@ -35432,6 +35792,26 @@
       "norm_label": "main"
     },
     {
+      "label": "session_model_test.dart",
+      "file_type": "code",
+      "source_file": "test/session_model_test.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "test_session_model_test",
+      "community": 153,
+      "norm_label": "session_model_test.dart"
+    },
+    {
+      "label": "main",
+      "file_type": "code",
+      "source_file": "test/session_model_test.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "test_session_model_test_main",
+      "community": 153,
+      "norm_label": "main"
+    },
+    {
       "label": "session_name_dialog_test.dart",
       "file_type": "code",
       "source_file": "test/session_name_dialog_test.dart",
@@ -35558,7 +35938,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_space_migration_preview_test",
-      "community": 128,
+      "community": 130,
       "norm_label": "space_migration_preview_test.dart"
     },
     {
@@ -35568,7 +35948,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_space_migration_preview_test_brightness",
-      "community": 128,
+      "community": 130,
       "norm_label": "brightness"
     },
     {
@@ -35578,7 +35958,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_space_migration_preview_test_textscale",
-      "community": 128,
+      "community": 130,
       "norm_label": "textscale"
     },
     {
@@ -35588,7 +35968,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_space_migration_preview_test_space",
-      "community": 128,
+      "community": 130,
       "norm_label": "_space"
     },
     {
@@ -35598,7 +35978,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_space_migration_preview_test_project",
-      "community": 128,
+      "community": 130,
       "norm_label": "_project"
     },
     {
@@ -35608,7 +35988,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_space_migration_preview_test_pump",
-      "community": 128,
+      "community": 130,
       "norm_label": "_pump"
     },
     {
@@ -35618,7 +35998,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_space_migration_preview_test_pumpwidget",
-      "community": 128,
+      "community": 130,
       "norm_label": "pumpwidget"
     },
     {
@@ -35628,7 +36008,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_space_migration_preview_test_main",
-      "community": 128,
+      "community": 130,
       "norm_label": "main"
     },
     {
@@ -36198,7 +36578,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "support_inert_turn_application_session_inertturnapplicationsession",
-      "community": 162,
+      "community": 156,
       "norm_label": "inertturnapplicationsession"
     },
     {
@@ -36558,7 +36938,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_text_size_preference_test",
-      "community": 157,
+      "community": 153,
       "norm_label": "text_size_preference_test.dart"
     },
     {
@@ -36578,7 +36958,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_text_size_preference_test_textscalefactor",
-      "community": 157,
+      "community": 153,
       "norm_label": "textscalefactor"
     },
     {
@@ -36588,7 +36968,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_text_size_preference_test_main",
-      "community": 157,
+      "community": 153,
       "norm_label": "main"
     },
     {
@@ -36598,7 +36978,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_text_size_preference_test_scale",
-      "community": 157,
+      "community": 153,
       "norm_label": "scale"
     },
     {
@@ -36608,7 +36988,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_hermes_android_core_services_text_size_preference_dart",
-      "community": 157,
+      "community": 153,
       "norm_label": "package:hermes_android/core/services/text_size_preference.dart"
     },
     {
@@ -36618,7 +36998,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_hermes_android_core_widgets_text_size_settings_card_dart",
-      "community": 157,
+      "community": 153,
       "norm_label": "package:hermes_android/core/widgets/text_size_settings_card.dart"
     },
     {
@@ -36668,7 +37048,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_turn_recovery_fallback_test",
-      "community": 120,
+      "community": 187,
       "norm_label": "turn_recovery_fallback_test.dart"
     },
     {
@@ -36678,7 +37058,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_turn_recovery_fallback_test_main",
-      "community": 120,
+      "community": 187,
       "norm_label": "main"
     },
     {
@@ -36688,7 +37068,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_hermes_android_core_utils_turn_recovery_fallback_dart",
-      "community": 120,
+      "community": 187,
       "norm_label": "package:hermes_android/core/utils/turn_recovery_fallback.dart"
     },
     {
@@ -36698,7 +37078,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_voice_composer_controller_test",
-      "community": 112,
+      "community": 82,
       "norm_label": "voice_composer_controller_test.dart"
     },
     {
@@ -36708,7 +37088,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_voice_composer_controller_test_main",
-      "community": 112,
+      "community": 82,
       "norm_label": "main"
     },
     {
@@ -36718,7 +37098,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_hermes_android_core_controllers_voice_composer_controller_dart",
-      "community": 112,
+      "community": 82,
       "norm_label": "package:hermes_android/core/controllers/voice_composer_controller.dart"
     },
     {
@@ -36858,7 +37238,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_workspace_screen_test_controllableturnsession",
-      "community": 162,
+      "community": 156,
       "norm_label": "_controllableturnsession"
     },
     {
@@ -36900,6 +37280,16 @@
       "id": "test_workspace_screen_test_assignmentfailures",
       "community": 64,
       "norm_label": "assignmentfailures"
+    },
+    {
+      "label": "hangOverview",
+      "file_type": "code",
+      "source_file": "test/workspace_screen_test.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "test_workspace_screen_test_hangoverview",
+      "community": 64,
+      "norm_label": "hangoverview"
     },
     {
       "label": "failuresLeft",
@@ -40882,6 +41272,106 @@
       "norm_label": "definition de termine pour chaque tranche"
     },
     {
+      "label": "2026-08-30-chats-enrichi.md",
+      "file_type": "document",
+      "source_file": "docs/plans/2026-08-30-chats-enrichi.md",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "plans_2026_08_30_chats_enrichi",
+      "community": 182,
+      "norm_label": "2026-08-30-chats-enrichi.md"
+    },
+    {
+      "label": "Chats enrichi \u2014 filtres, regroupement, lignes riches",
+      "file_type": "document",
+      "source_file": "docs/plans/2026-08-30-chats-enrichi.md",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "plans_2026_08_30_chats_enrichi_chats_enrichi_filtres_regroupement_lignes_riches",
+      "community": 182,
+      "norm_label": "chats enrichi \u2014 filtres, regroupement, lignes riches"
+    },
+    {
+      "label": "Objectif",
+      "file_type": "document",
+      "source_file": "docs/plans/2026-08-30-chats-enrichi.md",
+      "source_location": "L5",
+      "_origin": "ast",
+      "id": "plans_2026_08_30_chats_enrichi_objectif",
+      "community": 182,
+      "norm_label": "objectif"
+    },
+    {
+      "label": "Donn\u00e9es disponibles (v\u00e9rifi\u00e9 API r\u00e9elle)",
+      "file_type": "document",
+      "source_file": "docs/plans/2026-08-30-chats-enrichi.md",
+      "source_location": "L9",
+      "_origin": "ast",
+      "id": "plans_2026_08_30_chats_enrichi_donn\u00e9es_disponibles_v\u00e9rifi\u00e9_api_r\u00e9elle",
+      "community": 182,
+      "norm_label": "donnees disponibles (verifie api reelle)"
+    },
+    {
+      "label": "Tranches",
+      "file_type": "document",
+      "source_file": "docs/plans/2026-08-30-chats-enrichi.md",
+      "source_location": "L14",
+      "_origin": "ast",
+      "id": "plans_2026_08_30_chats_enrichi_tranches",
+      "community": 182,
+      "norm_label": "tranches"
+    },
+    {
+      "label": "Task 1 \u2014 Mod\u00e8le Session enrichi",
+      "file_type": "document",
+      "source_file": "docs/plans/2026-08-30-chats-enrichi.md",
+      "source_location": "L16",
+      "_origin": "ast",
+      "id": "plans_2026_08_30_chats_enrichi_task_1_mod\u00e8le_session_enrichi",
+      "community": 182,
+      "norm_label": "task 1 \u2014 modele session enrichi"
+    },
+    {
+      "label": "Task 2 \u2014 Logique pure filtres + dates",
+      "file_type": "document",
+      "source_file": "docs/plans/2026-08-30-chats-enrichi.md",
+      "source_location": "L20",
+      "_origin": "ast",
+      "id": "plans_2026_08_30_chats_enrichi_task_2_logique_pure_filtres_dates",
+      "community": 182,
+      "norm_label": "task 2 \u2014 logique pure filtres + dates"
+    },
+    {
+      "label": "Task 3 \u2014 UI Chats",
+      "file_type": "document",
+      "source_file": "docs/plans/2026-08-30-chats-enrichi.md",
+      "source_location": "L27",
+      "_origin": "ast",
+      "id": "plans_2026_08_30_chats_enrichi_task_3_ui_chats",
+      "community": 182,
+      "norm_label": "task 3 \u2014 ui chats"
+    },
+    {
+      "label": "Task 4 \u2014 Mapping projet best-effort",
+      "file_type": "document",
+      "source_file": "docs/plans/2026-08-30-chats-enrichi.md",
+      "source_location": "L33",
+      "_origin": "ast",
+      "id": "plans_2026_08_30_chats_enrichi_task_4_mapping_projet_best_effort",
+      "community": 182,
+      "norm_label": "task 4 \u2014 mapping projet best-effort"
+    },
+    {
+      "label": "Porte qualit\u00e9",
+      "file_type": "document",
+      "source_file": "docs/plans/2026-08-30-chats-enrichi.md",
+      "source_location": "L38",
+      "_origin": "ast",
+      "id": "plans_2026_08_30_chats_enrichi_porte_qualit\u00e9",
+      "community": 182,
+      "norm_label": "porte qualite"
+    },
+    {
       "label": "2026-08-30-workspace-unique-chats.md",
       "file_type": "document",
       "source_file": "docs/plans/2026-08-30-workspace-unique-chats.md",
@@ -40902,10 +41392,30 @@
       "norm_label": "workspace unique + chats implementation plan"
     },
     {
+      "label": "Bugs discovered and fixed during on-device verification",
+      "file_type": "document",
+      "source_file": "docs/plans/2026-08-30-workspace-unique-chats.md",
+      "source_location": "L5",
+      "_origin": "ast",
+      "id": "plans_2026_08_30_workspace_unique_chats_bugs_discovered_and_fixed_during_on_device_verification",
+      "community": 161,
+      "norm_label": "bugs discovered and fixed during on-device verification"
+    },
+    {
+      "label": "Live verification (emulator, restored real config)",
+      "file_type": "document",
+      "source_file": "docs/plans/2026-08-30-workspace-unique-chats.md",
+      "source_location": "L11",
+      "_origin": "ast",
+      "id": "plans_2026_08_30_workspace_unique_chats_live_verification_emulator_restored_real_config",
+      "community": 161,
+      "norm_label": "live verification (emulator, restored real config)"
+    },
+    {
       "label": "Task 1: Lock the five-destination shell contract",
       "file_type": "document",
       "source_file": "docs/plans/2026-08-30-workspace-unique-chats.md",
-      "source_location": "L13",
+      "source_location": "L20",
       "_origin": "ast",
       "id": "plans_2026_08_30_workspace_unique_chats_task_1_lock_the_five_destination_shell_contract",
       "community": 161,
@@ -40915,7 +41425,7 @@
       "label": "Task 2: Embed the conversation browser in Workspace",
       "file_type": "document",
       "source_file": "docs/plans/2026-08-30-workspace-unique-chats.md",
-      "source_location": "L37",
+      "source_location": "L44",
       "_origin": "ast",
       "id": "plans_2026_08_30_workspace_unique_chats_task_2_embed_the_conversation_browser_in_workspace",
       "community": 161,
@@ -40925,7 +41435,7 @@
       "label": "Task 3: Wire Chats to real Workspace data",
       "file_type": "document",
       "source_file": "docs/plans/2026-08-30-workspace-unique-chats.md",
-      "source_location": "L61",
+      "source_location": "L68",
       "_origin": "ast",
       "id": "plans_2026_08_30_workspace_unique_chats_task_3_wire_chats_to_real_workspace_data",
       "community": 161,
@@ -40935,7 +41445,7 @@
       "label": "Task 4: Make Workspace the connection launch surface",
       "file_type": "document",
       "source_file": "docs/plans/2026-08-30-workspace-unique-chats.md",
-      "source_location": "L91",
+      "source_location": "L98",
       "_origin": "ast",
       "id": "plans_2026_08_30_workspace_unique_chats_task_4_make_workspace_the_connection_launch_surface",
       "community": 161,
@@ -40945,7 +41455,7 @@
       "label": "Task 5: Remove normal legacy navigation and stale claims",
       "file_type": "document",
       "source_file": "docs/plans/2026-08-30-workspace-unique-chats.md",
-      "source_location": "L116",
+      "source_location": "L123",
       "_origin": "ast",
       "id": "plans_2026_08_30_workspace_unique_chats_task_5_remove_normal_legacy_navigation_and_stale_claims",
       "community": 161,
@@ -40955,7 +41465,7 @@
       "label": "Task 6: Full quality and device gate",
       "file_type": "document",
       "source_file": "docs/plans/2026-08-30-workspace-unique-chats.md",
-      "source_location": "L136",
+      "source_location": "L143",
       "_origin": "ast",
       "id": "plans_2026_08_30_workspace_unique_chats_task_6_full_quality_and_device_gate",
       "community": 161,
@@ -43188,6 +43698,16 @@
       "relation": "imports",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
+      "source_file": "test/api_client_timeout_test.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "test_api_client_timeout_test",
+      "target": "dart_async"
+    },
+    {
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
       "source_file": "test/capability_registry_test.dart",
       "source_location": null,
       "weight": 1.0,
@@ -43272,6 +43792,16 @@
       "source_location": null,
       "weight": 1.0,
       "source": "test_projects_pane_test",
+      "target": "dart_async"
+    },
+    {
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "test/workspace_screen_test.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "test_workspace_screen_test",
       "target": "dart_async"
     },
     {
@@ -44452,6 +44982,17 @@
       "weight": 1.0,
       "context": "variable_type",
       "source": "models_gateway_insight",
+      "target": "models_gateway_activity_duration"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/core/screens/workspace_sessions_screen.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "context": "variable_type",
+      "source": "screens_workspace_sessions_screen",
       "target": "models_gateway_activity_duration"
     },
     {
@@ -46399,6 +46940,17 @@
       "relation": "references",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
+      "source_file": "lib/core/screens/workspace_sessions_screen.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "context": "variable_type",
+      "source": "screens_workspace_sessions_screen",
+      "target": "map"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
       "source_file": "lib/core/services/capability_registry.dart",
       "source_location": null,
       "weight": 1.0,
@@ -46723,6 +47275,17 @@
       "weight": 1.0,
       "context": "variable_type",
       "source": "models_projects_tree_overview",
+      "target": "return"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/core/screens/workspace_sessions_screen.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "context": "variable_type",
+      "source": "screens_workspace_sessions_screen",
       "target": "return"
     },
     {
@@ -47898,6 +48461,16 @@
       "source_location": null,
       "weight": 1.0,
       "source": "models_session",
+      "target": "models_session_archived"
+    },
+    {
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/core/models/session.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "models_session",
       "target": "models_session_endedat"
     },
     {
@@ -47938,6 +48511,16 @@
       "source_location": null,
       "weight": 1.0,
       "source": "models_session",
+      "target": "models_session_lastactive"
+    },
+    {
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/core/models/session.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "models_session",
       "target": "models_session_messagecount"
     },
     {
@@ -47949,6 +48532,16 @@
       "weight": 1.0,
       "source": "models_session",
       "target": "models_session_model"
+    },
+    {
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/core/models/session.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "models_session",
+      "target": "models_session_pinned"
     },
     {
       "relation": "defines",
@@ -51331,6 +51924,16 @@
       "source_location": null,
       "weight": 1.0,
       "source": "lib_main_hermesheader",
+      "target": "statelesswidget"
+    },
+    {
+      "relation": "inherits",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/core/screens/workspace_sessions_screen.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "screens_workspace_sessions_screen_metachip",
       "target": "statelesswidget"
     },
     {
@@ -58340,7 +58943,61 @@
       "weight": 1.0,
       "context": "variable_type",
       "source": "screens_workspace_sessions_screen",
+      "target": "datetime"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/core/screens/workspace_sessions_screen.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "context": "variable_type",
+      "source": "screens_workspace_sessions_screen",
+      "target": "datetime_get"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/core/screens/workspace_sessions_screen.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "context": "variable_type",
+      "source": "screens_workspace_sessions_screen",
+      "target": "icondata"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/core/screens/workspace_sessions_screen.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "context": "variable_type",
+      "source": "screens_workspace_sessions_screen",
+      "target": "required_workspacechatsfilter_filter_set"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/core/screens/workspace_sessions_screen.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "context": "variable_type",
+      "source": "screens_workspace_sessions_screen",
       "target": "required_workspacesessionview_view_set"
+    },
+    {
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/core/screens/workspace_sessions_screen.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "screens_workspace_sessions_screen",
+      "target": "screens_workspace_sessions_screen_activity"
     },
     {
       "relation": "defines",
@@ -58360,6 +59017,16 @@
       "source_location": null,
       "weight": 1.0,
       "source": "screens_workspace_sessions_screen",
+      "target": "screens_workspace_sessions_screen_buckets"
+    },
+    {
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/core/screens/workspace_sessions_screen.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "screens_workspace_sessions_screen",
       "target": "screens_workspace_sessions_screen_build"
     },
     {
@@ -58370,7 +59037,37 @@
       "source_location": null,
       "weight": 1.0,
       "source": "screens_workspace_sessions_screen",
+      "target": "screens_workspace_sessions_screen_buildchips"
+    },
+    {
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/core/screens/workspace_sessions_screen.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "screens_workspace_sessions_screen",
       "target": "screens_workspace_sessions_screen_buildloaded"
+    },
+    {
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/core/screens/workspace_sessions_screen.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "screens_workspace_sessions_screen",
+      "target": "screens_workspace_sessions_screen_buildsessionrow"
+    },
+    {
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/core/screens/workspace_sessions_screen.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "screens_workspace_sessions_screen",
+      "target": "screens_workspace_sessions_screen_chatdatebucket"
     },
     {
       "relation": "defines",
@@ -58400,7 +59097,37 @@
       "source_location": null,
       "weight": 1.0,
       "source": "screens_workspace_sessions_screen",
+      "target": "screens_workspace_sessions_screen_current"
+    },
+    {
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/core/screens/workspace_sessions_screen.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "screens_workspace_sessions_screen",
       "target": "screens_workspace_sessions_screen_data"
+    },
+    {
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/core/screens/workspace_sessions_screen.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "screens_workspace_sessions_screen",
+      "target": "screens_workspace_sessions_screen_day"
+    },
+    {
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/core/screens/workspace_sessions_screen.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "screens_workspace_sessions_screen",
+      "target": "screens_workspace_sessions_screen_diff"
     },
     {
       "relation": "defines",
@@ -58420,7 +59147,7 @@
       "source_location": null,
       "weight": 1.0,
       "source": "screens_workspace_sessions_screen",
-      "target": "screens_workspace_sessions_screen_emptymessage"
+      "target": "screens_workspace_sessions_screen_error"
     },
     {
       "relation": "defines",
@@ -58430,7 +59157,27 @@
       "source_location": null,
       "weight": 1.0,
       "source": "screens_workspace_sessions_screen",
-      "target": "screens_workspace_sessions_screen_error"
+      "target": "screens_workspace_sessions_screen_filter"
+    },
+    {
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/core/screens/workspace_sessions_screen.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "screens_workspace_sessions_screen",
+      "target": "screens_workspace_sessions_screen_filterchats"
+    },
+    {
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/core/screens/workspace_sessions_screen.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "screens_workspace_sessions_screen",
+      "target": "screens_workspace_sessions_screen_filtered"
     },
     {
       "relation": "defines",
@@ -58450,7 +59197,37 @@
       "source_location": null,
       "weight": 1.0,
       "source": "screens_workspace_sessions_screen",
+      "target": "screens_workspace_sessions_screen_groupchatsbydate"
+    },
+    {
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/core/screens/workspace_sessions_screen.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "screens_workspace_sessions_screen",
+      "target": "screens_workspace_sessions_screen_icon"
+    },
+    {
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/core/screens/workspace_sessions_screen.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "screens_workspace_sessions_screen",
       "target": "screens_workspace_sessions_screen_initstate"
+    },
+    {
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/core/screens/workspace_sessions_screen.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "screens_workspace_sessions_screen",
+      "target": "screens_workspace_sessions_screen_krecentchatswindow"
     },
     {
       "relation": "defines",
@@ -58470,6 +59247,16 @@
       "source_location": null,
       "weight": 1.0,
       "source": "screens_workspace_sessions_screen",
+      "target": "screens_workspace_sessions_screen_label"
+    },
+    {
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/core/screens/workspace_sessions_screen.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "screens_workspace_sessions_screen",
       "target": "screens_workspace_sessions_screen_load"
     },
     {
@@ -58480,7 +59267,27 @@
       "source_location": null,
       "weight": 1.0,
       "source": "screens_workspace_sessions_screen",
+      "target": "screens_workspace_sessions_screen_metachip"
+    },
+    {
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/core/screens/workspace_sessions_screen.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "screens_workspace_sessions_screen",
       "target": "screens_workspace_sessions_screen_normalized"
+    },
+    {
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/core/screens/workspace_sessions_screen.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "screens_workspace_sessions_screen",
+      "target": "screens_workspace_sessions_screen_now"
     },
     {
       "relation": "defines",
@@ -58501,6 +59308,16 @@
       "weight": 1.0,
       "source": "screens_workspace_sessions_screen",
       "target": "screens_workspace_sessions_screen_onpromote"
+    },
+    {
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/core/screens/workspace_sessions_screen.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "screens_workspace_sessions_screen",
+      "target": "screens_workspace_sessions_screen_projectlabels"
     },
     {
       "relation": "defines",
@@ -58550,6 +59367,26 @@
       "source_location": null,
       "weight": 1.0,
       "source": "screens_workspace_sessions_screen",
+      "target": "screens_workspace_sessions_screen_recentcutoff"
+    },
+    {
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/core/screens/workspace_sessions_screen.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "screens_workspace_sessions_screen",
+      "target": "screens_workspace_sessions_screen_relativetime"
+    },
+    {
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/core/screens/workspace_sessions_screen.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "screens_workspace_sessions_screen",
       "target": "screens_workspace_sessions_screen_sessions"
     },
     {
@@ -58570,7 +59407,28 @@
       "source_location": null,
       "weight": 1.0,
       "source": "screens_workspace_sessions_screen",
+      "target": "screens_workspace_sessions_screen_today"
+    },
+    {
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/core/screens/workspace_sessions_screen.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "screens_workspace_sessions_screen",
       "target": "screens_workspace_sessions_screen_view"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/core/screens/workspace_sessions_screen.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "context": "variable_type",
+      "source": "screens_workspace_sessions_screen",
+      "target": "screens_workspace_sessions_screen_workspacechatsfilter"
     },
     {
       "relation": "references",
@@ -58777,6 +59635,105 @@
       "weight": 1.0,
       "source": "screens_workspace_sessions_screen_workspacesessionsscreenstate",
       "target": "screens_workspace_sessions_screen_workspacesessionsscreen"
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "tools/fake_gateway/fake_gateway.py",
+      "source_location": "L14",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "fake_gateway_fake_gateway",
+      "target": "datetime"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/core/services/config_backup.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "context": "variable_type",
+      "source": "services_config_backup",
+      "target": "datetime"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/core/utils/activity_feed.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "context": "variable_type",
+      "source": "utils_activity_feed",
+      "target": "datetime"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/core/utils/new_chat_options.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "context": "variable_type",
+      "source": "utils_new_chat_options",
+      "target": "datetime"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/core/widgets/activity_pane.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "context": "variable_type",
+      "source": "widgets_activity_pane",
+      "target": "datetime"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/core/widgets/activity_pane.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "context": "variable_type",
+      "source": "widgets_activity_pane",
+      "target": "datetime_get"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/core/widgets/home_pane.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "context": "variable_type",
+      "source": "widgets_home_pane",
+      "target": "datetime_get"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/core/widgets/hermes_components.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "context": "variable_type",
+      "source": "widgets_hermes_components",
+      "target": "icondata"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/core/widgets/more_pane.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "context": "variable_type",
+      "source": "widgets_more_pane",
+      "target": "icondata"
     },
     {
       "relation": "references",
@@ -59280,6 +60237,16 @@
       "source_location": null,
       "weight": 1.0,
       "source": "test_ai_search_query_rewriter_test",
+      "target": "package_http_http_dart"
+    },
+    {
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "test/api_client_timeout_test.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "test_api_client_timeout_test",
       "target": "package_http_http_dart"
     },
     {
@@ -59873,6 +60840,16 @@
       "source_location": null,
       "weight": 1.0,
       "source": "services_config_backup_io",
+      "target": "dart_io"
+    },
+    {
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/core/services/connection_manager.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "services_connection_manager",
       "target": "dart_io"
     },
     {
@@ -60893,17 +61870,6 @@
       "target": "dart_math"
     },
     {
-      "relation": "references",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "lib/core/services/config_backup.dart",
-      "source_location": null,
-      "weight": 1.0,
-      "context": "variable_type",
-      "source": "services_config_backup",
-      "target": "datetime"
-    },
-    {
       "relation": "imports",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
@@ -61312,50 +62278,6 @@
       "context": "variable_type",
       "source": "widgets_hermes_shell",
       "target": "static_const_int"
-    },
-    {
-      "relation": "imports_from",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "tools/fake_gateway/fake_gateway.py",
-      "source_location": "L14",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "fake_gateway_fake_gateway",
-      "target": "datetime"
-    },
-    {
-      "relation": "references",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "lib/core/utils/activity_feed.dart",
-      "source_location": null,
-      "weight": 1.0,
-      "context": "variable_type",
-      "source": "utils_activity_feed",
-      "target": "datetime"
-    },
-    {
-      "relation": "references",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "lib/core/utils/new_chat_options.dart",
-      "source_location": null,
-      "weight": 1.0,
-      "context": "variable_type",
-      "source": "utils_new_chat_options",
-      "target": "datetime"
-    },
-    {
-      "relation": "references",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "lib/core/widgets/activity_pane.dart",
-      "source_location": null,
-      "weight": 1.0,
-      "context": "variable_type",
-      "source": "widgets_activity_pane",
-      "target": "datetime"
     },
     {
       "relation": "imports",
@@ -61807,6 +62729,16 @@
       "target": "package_flutter_secure_storage_flutter_secure_storage_dart"
     },
     {
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/core/services/connection_manager.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "services_connection_manager",
+      "target": "package_http_io_client_dart"
+    },
+    {
       "relation": "defines",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
@@ -62245,6 +63177,16 @@
       "source_location": null,
       "weight": 1.0,
       "source": "services_connection_manager",
+      "target": "services_connection_manager_freshclient"
+    },
+    {
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/core/services/connection_manager.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "services_connection_manager",
       "target": "services_connection_manager_fromconnection"
     },
     {
@@ -62555,6 +63497,16 @@
       "source_location": null,
       "weight": 1.0,
       "source": "services_connection_manager",
+      "target": "services_connection_manager_requesttimeout"
+    },
+    {
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/core/services/connection_manager.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "services_connection_manager",
       "target": "services_connection_manager_resetauth"
     },
     {
@@ -62778,6 +63730,17 @@
       "weight": 1.0,
       "context": "variable_type",
       "source": "services_connection_manager",
+      "target": "static_const_duration"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/core/services/connection_manager.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "context": "variable_type",
+      "source": "services_connection_manager",
       "target": "static_const_uuid"
     },
     {
@@ -62917,6 +63880,17 @@
       "context": "variable_type",
       "source": "services_gateway_turn_journal",
       "target": "fluttersecurestorage"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/core/theme/hermes_theme.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "context": "variable_type",
+      "source": "theme_hermes_theme",
+      "target": "static_const_duration"
     },
     {
       "relation": "references",
@@ -71400,17 +72374,6 @@
       "weight": 1.0,
       "context": "variable_type",
       "source": "theme_hermes_theme",
-      "target": "static_const_duration"
-    },
-    {
-      "relation": "references",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "lib/core/theme/hermes_theme.dart",
-      "source_location": null,
-      "weight": 1.0,
-      "context": "variable_type",
-      "source": "theme_hermes_theme",
       "target": "textstyle"
     },
     {
@@ -74017,17 +74980,6 @@
       "target": "activityfeedloader"
     },
     {
-      "relation": "references",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "lib/core/widgets/activity_pane.dart",
-      "source_location": null,
-      "weight": 1.0,
-      "context": "variable_type",
-      "source": "widgets_activity_pane",
-      "target": "datetime_get"
-    },
-    {
       "relation": "imports",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
@@ -74308,17 +75260,6 @@
       "context": "type_lookup",
       "source": "test_activity_pane_test",
       "target": "widgets_activity_pane_activitypanestate"
-    },
-    {
-      "relation": "references",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "lib/core/widgets/home_pane.dart",
-      "source_location": null,
-      "weight": 1.0,
-      "context": "variable_type",
-      "source": "widgets_home_pane",
-      "target": "datetime_get"
     },
     {
       "relation": "imports",
@@ -75528,17 +76469,6 @@
       "weight": 1.0,
       "context": "variable_type",
       "source": "widgets_hermes_components",
-      "target": "icondata"
-    },
-    {
-      "relation": "references",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "lib/core/widgets/hermes_components.dart",
-      "source_location": null,
-      "weight": 1.0,
-      "context": "variable_type",
-      "source": "widgets_hermes_components",
       "target": "widget"
     },
     {
@@ -75882,17 +76812,6 @@
       "context": "variable_type",
       "source": "widgets_hermes_shell",
       "target": "widget"
-    },
-    {
-      "relation": "references",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "lib/core/widgets/more_pane.dart",
-      "source_location": null,
-      "weight": 1.0,
-      "context": "variable_type",
-      "source": "widgets_more_pane",
-      "target": "icondata"
     },
     {
       "relation": "references",
@@ -79341,6 +80260,16 @@
       "relation": "imports",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
+      "source_file": "test/api_client_timeout_test.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "test_api_client_timeout_test",
+      "target": "package_flutter_test_flutter_test_dart"
+    },
+    {
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
       "source_file": "test/attachment_draft_service_test.dart",
       "source_location": null,
       "weight": 1.0,
@@ -79835,6 +80764,16 @@
       "source_location": null,
       "weight": 1.0,
       "source": "test_secure_connection_storage_test",
+      "target": "package_flutter_test_flutter_test_dart"
+    },
+    {
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "test/session_model_test.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "test_session_model_test",
       "target": "package_flutter_test_flutter_test_dart"
     },
     {
@@ -80649,6 +81588,278 @@
       "target": "package_http_testing_dart"
     },
     {
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "test/api_client_timeout_test.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "test_api_client_timeout_test",
+      "target": "package_hermes_android_core_services_connection_manager_dart"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "test/api_client_timeout_test.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "context": "type_lookup",
+      "source": "test_api_client_timeout_test",
+      "target": "streamedresponse"
+    },
+    {
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "test/api_client_timeout_test.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "test_api_client_timeout_test",
+      "target": "test_api_client_timeout_test_body"
+    },
+    {
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "test/api_client_timeout_test.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "test_api_client_timeout_test",
+      "target": "test_api_client_timeout_test_hanginghttpclient"
+    },
+    {
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "test/api_client_timeout_test.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "test_api_client_timeout_test",
+      "target": "test_api_client_timeout_test_jsonhttpclient"
+    },
+    {
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "test/api_client_timeout_test.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "test_api_client_timeout_test",
+      "target": "test_api_client_timeout_test_main"
+    },
+    {
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "test/api_client_timeout_test.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "test_api_client_timeout_test",
+      "target": "test_api_client_timeout_test_send"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "test/api_client_timeout_test.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "context": "type_lookup",
+      "source": "test_api_client_timeout_test",
+      "target": "timeoutexception"
+    },
+    {
+      "relation": "inherits",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "test/api_client_timeout_test.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "test_api_client_timeout_test_hanginghttpclient",
+      "target": "http_baseclient"
+    },
+    {
+      "relation": "inherits",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "test/api_client_timeout_test.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "test_api_client_timeout_test_jsonhttpclient",
+      "target": "http_baseclient"
+    },
+    {
+      "relation": "inherits",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "test/chat_history_scroll_test.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "test_chat_history_scroll_test_controlledchathttpclient",
+      "target": "http_baseclient"
+    },
+    {
+      "relation": "inherits",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "test/chat_remote_submit_failure_test.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "test_chat_remote_submit_failure_test_emptychathttpclient",
+      "target": "http_baseclient"
+    },
+    {
+      "relation": "inherits",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "test/chat_turn_notification_wiring_test.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "test_chat_turn_notification_wiring_test_emptychathttpclient",
+      "target": "http_baseclient"
+    },
+    {
+      "relation": "inherits",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "test/chat_turn_recovery_test.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "test_chat_turn_recovery_test_emptychathttpclient",
+      "target": "http_baseclient"
+    },
+    {
+      "relation": "inherits",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "test/chat_voice_composer_test.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "test_chat_voice_composer_test_emptychathttpclient",
+      "target": "http_baseclient"
+    },
+    {
+      "relation": "inherits",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "test/connection_manager_test.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "test_connection_manager_test_blockingstreamingclient",
+      "target": "http_baseclient"
+    },
+    {
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "test/chat_history_scroll_test.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "test_chat_history_scroll_test",
+      "target": "package_hermes_android_core_services_connection_manager_dart"
+    },
+    {
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "test/chat_remote_submit_failure_test.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "test_chat_remote_submit_failure_test",
+      "target": "package_hermes_android_core_services_connection_manager_dart"
+    },
+    {
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "test/chat_turn_notification_wiring_test.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "test_chat_turn_notification_wiring_test",
+      "target": "package_hermes_android_core_services_connection_manager_dart"
+    },
+    {
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "test/chat_turn_recovery_test.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "test_chat_turn_recovery_test",
+      "target": "package_hermes_android_core_services_connection_manager_dart"
+    },
+    {
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "test/chat_voice_composer_test.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "test_chat_voice_composer_test",
+      "target": "package_hermes_android_core_services_connection_manager_dart"
+    },
+    {
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "test/config_backup_service_test.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "test_config_backup_service_test",
+      "target": "package_hermes_android_core_services_connection_manager_dart"
+    },
+    {
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "test/connection_manager_test.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "test_connection_manager_test",
+      "target": "package_hermes_android_core_services_connection_manager_dart"
+    },
+    {
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "test/home_config_restore_test.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "test_home_config_restore_test",
+      "target": "package_hermes_android_core_services_connection_manager_dart"
+    },
+    {
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "test/remote_files_client_test.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "test_remote_files_client_test",
+      "target": "package_hermes_android_core_services_connection_manager_dart"
+    },
+    {
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "test/secure_connection_storage_test.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "test_secure_connection_storage_test",
+      "target": "package_hermes_android_core_services_connection_manager_dart"
+    },
+    {
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "test/text_size_preference_test.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "test_text_size_preference_test",
+      "target": "package_hermes_android_core_services_connection_manager_dart"
+    },
+    {
       "relation": "references",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
@@ -81212,16 +82423,6 @@
       "source_location": null,
       "weight": 1.0,
       "source": "test_chat_history_scroll_test",
-      "target": "package_hermes_android_core_services_connection_manager_dart"
-    },
-    {
-      "relation": "imports",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "test/chat_history_scroll_test.dart",
-      "source_location": null,
-      "weight": 1.0,
-      "source": "test_chat_history_scroll_test",
       "target": "package_hermes_android_core_utils_chat_history_scroll_dart"
     },
     {
@@ -81599,16 +82800,6 @@
       "target": "textfield"
     },
     {
-      "relation": "inherits",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "test/chat_history_scroll_test.dart",
-      "source_location": null,
-      "weight": 1.0,
-      "source": "test_chat_history_scroll_test_controlledchathttpclient",
-      "target": "http_baseclient"
-    },
-    {
       "relation": "calls",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
@@ -81618,56 +82809,6 @@
       "context": "emit_state",
       "source": "test_chat_history_scroll_test_controlledchathttpclient",
       "target": "token"
-    },
-    {
-      "relation": "inherits",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "test/chat_remote_submit_failure_test.dart",
-      "source_location": null,
-      "weight": 1.0,
-      "source": "test_chat_remote_submit_failure_test_emptychathttpclient",
-      "target": "http_baseclient"
-    },
-    {
-      "relation": "inherits",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "test/chat_turn_notification_wiring_test.dart",
-      "source_location": null,
-      "weight": 1.0,
-      "source": "test_chat_turn_notification_wiring_test_emptychathttpclient",
-      "target": "http_baseclient"
-    },
-    {
-      "relation": "inherits",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "test/chat_turn_recovery_test.dart",
-      "source_location": null,
-      "weight": 1.0,
-      "source": "test_chat_turn_recovery_test_emptychathttpclient",
-      "target": "http_baseclient"
-    },
-    {
-      "relation": "inherits",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "test/chat_voice_composer_test.dart",
-      "source_location": null,
-      "weight": 1.0,
-      "source": "test_chat_voice_composer_test_emptychathttpclient",
-      "target": "http_baseclient"
-    },
-    {
-      "relation": "inherits",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "test/connection_manager_test.dart",
-      "source_location": null,
-      "weight": 1.0,
-      "source": "test_connection_manager_test_blockingstreamingclient",
-      "target": "http_baseclient"
     },
     {
       "relation": "references",
@@ -81741,106 +82882,6 @@
       "target": "package_hermes_android_core_screens_chat_screen_dart"
     },
     {
-      "relation": "imports",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "test/chat_remote_submit_failure_test.dart",
-      "source_location": null,
-      "weight": 1.0,
-      "source": "test_chat_remote_submit_failure_test",
-      "target": "package_hermes_android_core_services_connection_manager_dart"
-    },
-    {
-      "relation": "imports",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "test/chat_turn_notification_wiring_test.dart",
-      "source_location": null,
-      "weight": 1.0,
-      "source": "test_chat_turn_notification_wiring_test",
-      "target": "package_hermes_android_core_services_connection_manager_dart"
-    },
-    {
-      "relation": "imports",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "test/chat_turn_recovery_test.dart",
-      "source_location": null,
-      "weight": 1.0,
-      "source": "test_chat_turn_recovery_test",
-      "target": "package_hermes_android_core_services_connection_manager_dart"
-    },
-    {
-      "relation": "imports",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "test/chat_voice_composer_test.dart",
-      "source_location": null,
-      "weight": 1.0,
-      "source": "test_chat_voice_composer_test",
-      "target": "package_hermes_android_core_services_connection_manager_dart"
-    },
-    {
-      "relation": "imports",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "test/config_backup_service_test.dart",
-      "source_location": null,
-      "weight": 1.0,
-      "source": "test_config_backup_service_test",
-      "target": "package_hermes_android_core_services_connection_manager_dart"
-    },
-    {
-      "relation": "imports",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "test/connection_manager_test.dart",
-      "source_location": null,
-      "weight": 1.0,
-      "source": "test_connection_manager_test",
-      "target": "package_hermes_android_core_services_connection_manager_dart"
-    },
-    {
-      "relation": "imports",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "test/home_config_restore_test.dart",
-      "source_location": null,
-      "weight": 1.0,
-      "source": "test_home_config_restore_test",
-      "target": "package_hermes_android_core_services_connection_manager_dart"
-    },
-    {
-      "relation": "imports",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "test/remote_files_client_test.dart",
-      "source_location": null,
-      "weight": 1.0,
-      "source": "test_remote_files_client_test",
-      "target": "package_hermes_android_core_services_connection_manager_dart"
-    },
-    {
-      "relation": "imports",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "test/secure_connection_storage_test.dart",
-      "source_location": null,
-      "weight": 1.0,
-      "source": "test_secure_connection_storage_test",
-      "target": "package_hermes_android_core_services_connection_manager_dart"
-    },
-    {
-      "relation": "imports",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "test/text_size_preference_test.dart",
-      "source_location": null,
-      "weight": 1.0,
-      "source": "test_text_size_preference_test",
-      "target": "package_hermes_android_core_services_connection_manager_dart"
-    },
-    {
       "relation": "references",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
@@ -81882,6 +82923,17 @@
       "weight": 1.0,
       "context": "type_lookup",
       "source": "test_gateway_sensitive_prompt_test",
+      "target": "textfield"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "test/home_config_restore_test.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "context": "type_lookup",
+      "source": "test_home_config_restore_test",
       "target": "textfield"
     },
     {
@@ -82186,6 +83238,16 @@
       "source_location": null,
       "weight": 1.0,
       "source": "test_quick_chat_lifecycle_test",
+      "target": "package_hermes_android_core_models_session_dart"
+    },
+    {
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "test/session_model_test.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "test_session_model_test",
       "target": "package_hermes_android_core_models_session_dart"
     },
     {
@@ -88689,6 +89751,16 @@
       "relation": "defines",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
+      "source_file": "test/session_model_test.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "test_session_model_test",
+      "target": "test_session_model_test_main"
+    },
+    {
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
       "source_file": "test/session_name_dialog_test.dart",
       "source_location": null,
       "weight": 1.0,
@@ -90073,6 +91145,16 @@
       "weight": 1.0,
       "source": "test_workspace_screen_test",
       "target": "test_workspace_screen_test_firesessionbound"
+    },
+    {
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "test/workspace_screen_test.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "test_workspace_screen_test",
+      "target": "test_workspace_screen_test_hangoverview"
     },
     {
       "relation": "defines",
@@ -95124,9 +96206,9 @@
       "source_file": "docs/ANDROID_FINAL_UI_SPEC_DRAFT.md",
       "source_location": "L1",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "docs_android_final_ui_spec_draft",
-      "target": "docs_android_final_ui_spec_draft_hermes_android_sch\u00e9ma_de_l_interface_finale",
-      "confidence_score": 1.0
+      "target": "docs_android_final_ui_spec_draft_hermes_android_sch\u00e9ma_de_l_interface_finale"
     },
     {
       "relation": "contains",
@@ -95134,9 +96216,9 @@
       "source_file": "docs/ANDROID_FINAL_UI_SPEC_DRAFT.md",
       "source_location": "L5",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "docs_android_final_ui_spec_draft_hermes_android_sch\u00e9ma_de_l_interface_finale",
-      "target": "docs_android_final_ui_spec_draft_1_principe_directeur",
-      "confidence_score": 1.0
+      "target": "docs_android_final_ui_spec_draft_1_principe_directeur"
     },
     {
       "relation": "contains",
@@ -95144,9 +96226,9 @@
       "source_file": "docs/ANDROID_FINAL_UI_SPEC_DRAFT.md",
       "source_location": "L20",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "docs_android_final_ui_spec_draft_hermes_android_sch\u00e9ma_de_l_interface_finale",
-      "target": "docs_android_final_ui_spec_draft_2_navigation_globale",
-      "confidence_score": 1.0
+      "target": "docs_android_final_ui_spec_draft_2_navigation_globale"
     },
     {
       "relation": "contains",
@@ -95154,9 +96236,9 @@
       "source_file": "docs/ANDROID_FINAL_UI_SPEC_DRAFT.md",
       "source_location": "L57",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "docs_android_final_ui_spec_draft_hermes_android_sch\u00e9ma_de_l_interface_finale",
-      "target": "docs_android_final_ui_spec_draft_3_carte_compl\u00e8te_des_\u00e9crans",
-      "confidence_score": 1.0
+      "target": "docs_android_final_ui_spec_draft_3_carte_compl\u00e8te_des_\u00e9crans"
     },
     {
       "relation": "contains",
@@ -95164,9 +96246,9 @@
       "source_file": "docs/ANDROID_FINAL_UI_SPEC_DRAFT.md",
       "source_location": "L102",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "docs_android_final_ui_spec_draft_hermes_android_sch\u00e9ma_de_l_interface_finale",
-      "target": "docs_android_final_ui_spec_draft_4_\u00e9crans_propos\u00e9s",
-      "confidence_score": 1.0
+      "target": "docs_android_final_ui_spec_draft_4_\u00e9crans_propos\u00e9s"
     },
     {
       "relation": "contains",
@@ -95174,9 +96256,9 @@
       "source_file": "docs/ANDROID_FINAL_UI_SPEC_DRAFT.md",
       "source_location": "L357",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "docs_android_final_ui_spec_draft_hermes_android_sch\u00e9ma_de_l_interface_finale",
-      "target": "docs_android_final_ui_spec_draft_5_\u00e9tats_obligatoires_pour_chaque_\u00e9cran",
-      "confidence_score": 1.0
+      "target": "docs_android_final_ui_spec_draft_5_\u00e9tats_obligatoires_pour_chaque_\u00e9cran"
     },
     {
       "relation": "contains",
@@ -95184,9 +96266,9 @@
       "source_file": "docs/ANDROID_FINAL_UI_SPEC_DRAFT.md",
       "source_location": "L373",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "docs_android_final_ui_spec_draft_hermes_android_sch\u00e9ma_de_l_interface_finale",
-      "target": "docs_android_final_ui_spec_draft_6_d\u00e9cisions_valid\u00e9es_avec_carlos_2026_08_30",
-      "confidence_score": 1.0
+      "target": "docs_android_final_ui_spec_draft_6_d\u00e9cisions_valid\u00e9es_avec_carlos_2026_08_30"
     },
     {
       "relation": "contains",
@@ -95194,9 +96276,9 @@
       "source_file": "docs/ANDROID_FINAL_UI_SPEC_DRAFT.md",
       "source_location": "L42",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "docs_android_final_ui_spec_draft_2_navigation_globale",
-      "target": "docs_android_final_ui_spec_draft_tablette_pliable",
-      "confidence_score": 1.0
+      "target": "docs_android_final_ui_spec_draft_tablette_pliable"
     },
     {
       "relation": "contains",
@@ -95204,9 +96286,9 @@
       "source_file": "docs/ANDROID_FINAL_UI_SPEC_DRAFT.md",
       "source_location": "L22",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "docs_android_final_ui_spec_draft_2_navigation_globale",
-      "target": "docs_android_final_ui_spec_draft_t\u00e9l\u00e9phone",
-      "confidence_score": 1.0
+      "target": "docs_android_final_ui_spec_draft_t\u00e9l\u00e9phone"
     },
     {
       "relation": "contains",
@@ -95214,9 +96296,9 @@
       "source_file": "docs/ANDROID_FINAL_UI_SPEC_DRAFT.md",
       "source_location": "L335",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "docs_android_final_ui_spec_draft_4_\u00e9crans_propos\u00e9s",
-      "target": "docs_android_final_ui_spec_draft_4_10_cr\u00e9ation_d_un_chat",
-      "confidence_score": 1.0
+      "target": "docs_android_final_ui_spec_draft_4_10_cr\u00e9ation_d_un_chat"
     },
     {
       "relation": "contains",
@@ -95224,9 +96306,9 @@
       "source_file": "docs/ANDROID_FINAL_UI_SPEC_DRAFT.md",
       "source_location": "L104",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "docs_android_final_ui_spec_draft_4_\u00e9crans_propos\u00e9s",
-      "target": "docs_android_final_ui_spec_draft_4_1_connexions",
-      "confidence_score": 1.0
+      "target": "docs_android_final_ui_spec_draft_4_1_connexions"
     },
     {
       "relation": "contains",
@@ -95234,9 +96316,9 @@
       "source_file": "docs/ANDROID_FINAL_UI_SPEC_DRAFT.md",
       "source_location": "L125",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "docs_android_final_ui_spec_draft_4_\u00e9crans_propos\u00e9s",
-      "target": "docs_android_final_ui_spec_draft_4_2_accueil",
-      "confidence_score": 1.0
+      "target": "docs_android_final_ui_spec_draft_4_2_accueil"
     },
     {
       "relation": "contains",
@@ -95244,9 +96326,9 @@
       "source_file": "docs/ANDROID_FINAL_UI_SPEC_DRAFT.md",
       "source_location": "L158",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "docs_android_final_ui_spec_draft_4_\u00e9crans_propos\u00e9s",
-      "target": "docs_android_final_ui_spec_draft_4_3_chats_remplacement_complet_de_l_ancienne_interface",
-      "confidence_score": 1.0
+      "target": "docs_android_final_ui_spec_draft_4_3_chats_remplacement_complet_de_l_ancienne_interface"
     },
     {
       "relation": "contains",
@@ -95254,9 +96336,9 @@
       "source_file": "docs/ANDROID_FINAL_UI_SPEC_DRAFT.md",
       "source_location": "L204",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "docs_android_final_ui_spec_draft_4_\u00e9crans_propos\u00e9s",
-      "target": "docs_android_final_ui_spec_draft_4_4_recherche_globale",
-      "confidence_score": 1.0
+      "target": "docs_android_final_ui_spec_draft_4_4_recherche_globale"
     },
     {
       "relation": "contains",
@@ -95264,9 +96346,9 @@
       "source_file": "docs/ANDROID_FINAL_UI_SPEC_DRAFT.md",
       "source_location": "L223",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "docs_android_final_ui_spec_draft_4_\u00e9crans_propos\u00e9s",
-      "target": "docs_android_final_ui_spec_draft_4_5_projets",
-      "confidence_score": 1.0
+      "target": "docs_android_final_ui_spec_draft_4_5_projets"
     },
     {
       "relation": "contains",
@@ -95274,9 +96356,9 @@
       "source_file": "docs/ANDROID_FINAL_UI_SPEC_DRAFT.md",
       "source_location": "L245",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "docs_android_final_ui_spec_draft_4_\u00e9crans_propos\u00e9s",
-      "target": "docs_android_final_ui_spec_draft_4_6_d\u00e9tail_d_un_project",
-      "confidence_score": 1.0
+      "target": "docs_android_final_ui_spec_draft_4_6_d\u00e9tail_d_un_project"
     },
     {
       "relation": "contains",
@@ -95284,9 +96366,9 @@
       "source_file": "docs/ANDROID_FINAL_UI_SPEC_DRAFT.md",
       "source_location": "L268",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "docs_android_final_ui_spec_draft_4_\u00e9crans_propos\u00e9s",
-      "target": "docs_android_final_ui_spec_draft_4_7_activit\u00e9",
-      "confidence_score": 1.0
+      "target": "docs_android_final_ui_spec_draft_4_7_activit\u00e9"
     },
     {
       "relation": "contains",
@@ -95294,9 +96376,9 @@
       "source_file": "docs/ANDROID_FINAL_UI_SPEC_DRAFT.md",
       "source_location": "L289",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "docs_android_final_ui_spec_draft_4_\u00e9crans_propos\u00e9s",
-      "target": "docs_android_final_ui_spec_draft_4_8_plus",
-      "confidence_score": 1.0
+      "target": "docs_android_final_ui_spec_draft_4_8_plus"
     },
     {
       "relation": "contains",
@@ -95304,9 +96386,9 @@
       "source_file": "docs/ANDROID_FINAL_UI_SPEC_DRAFT.md",
       "source_location": "L308",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "docs_android_final_ui_spec_draft_4_\u00e9crans_propos\u00e9s",
-      "target": "docs_android_final_ui_spec_draft_4_9_chat_plein_\u00e9cran",
-      "confidence_score": 1.0
+      "target": "docs_android_final_ui_spec_draft_4_9_chat_plein_\u00e9cran"
     },
     {
       "relation": "contains",
@@ -95404,9 +96486,9 @@
       "source_file": "docs/ANDROID_PHASE1_COHERENCE_GOAL.md",
       "source_location": "L1",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "docs_android_phase1_coherence_goal",
-      "target": "docs_android_phase1_coherence_goal_goal_hermes_android_sessions_first_organization_that_helps",
-      "confidence_score": 1.0
+      "target": "docs_android_phase1_coherence_goal_goal_hermes_android_sessions_first_organization_that_helps"
     },
     {
       "relation": "contains",
@@ -95414,9 +96496,9 @@
       "source_file": "docs/ANDROID_PHASE1_COHERENCE_GOAL.md",
       "source_location": "L59",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "docs_android_phase1_coherence_goal_goal_hermes_android_sessions_first_organization_that_helps",
-      "target": "docs_android_phase1_coherence_goal_acceptance_criteria",
-      "confidence_score": 1.0
+      "target": "docs_android_phase1_coherence_goal_acceptance_criteria"
     },
     {
       "relation": "contains",
@@ -95424,9 +96506,9 @@
       "source_file": "docs/ANDROID_PHASE1_COHERENCE_GOAL.md",
       "source_location": "L49",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "docs_android_phase1_coherence_goal_goal_hermes_android_sessions_first_organization_that_helps",
-      "target": "docs_android_phase1_coherence_goal_contract_gated_follow_ons_north_star_server_work_required",
-      "confidence_score": 1.0
+      "target": "docs_android_phase1_coherence_goal_contract_gated_follow_ons_north_star_server_work_required"
     },
     {
       "relation": "contains",
@@ -95434,9 +96516,9 @@
       "source_file": "docs/ANDROID_PHASE1_COHERENCE_GOAL.md",
       "source_location": "L21",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "docs_android_phase1_coherence_goal_goal_hermes_android_sessions_first_organization_that_helps",
-      "target": "docs_android_phase1_coherence_goal_in_scope_changes_kept",
-      "confidence_score": 1.0
+      "target": "docs_android_phase1_coherence_goal_in_scope_changes_kept"
     },
     {
       "relation": "contains",
@@ -95444,9 +96526,9 @@
       "source_file": "docs/ANDROID_PHASE1_COHERENCE_GOAL.md",
       "source_location": "L7",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "docs_android_phase1_coherence_goal_goal_hermes_android_sessions_first_organization_that_helps",
-      "target": "docs_android_phase1_coherence_goal_outcome",
-      "confidence_score": 1.0
+      "target": "docs_android_phase1_coherence_goal_outcome"
     },
     {
       "relation": "contains",
@@ -95454,9 +96536,9 @@
       "source_file": "docs/ANDROID_PHASE1_COHERENCE_GOAL.md",
       "source_location": "L11",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "docs_android_phase1_coherence_goal_goal_hermes_android_sessions_first_organization_that_helps",
-      "target": "docs_android_phase1_coherence_goal_product_rules",
-      "confidence_score": 1.0
+      "target": "docs_android_phase1_coherence_goal_product_rules"
     },
     {
       "relation": "contains",
@@ -95464,9 +96546,9 @@
       "source_file": "docs/ANDROID_PHASE1_COHERENCE_GOAL.md",
       "source_location": "L38",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "docs_android_phase1_coherence_goal_goal_hermes_android_sessions_first_organization_that_helps",
-      "target": "docs_android_phase1_coherence_goal_reverted_after_device_feedback",
-      "confidence_score": 1.0
+      "target": "docs_android_phase1_coherence_goal_reverted_after_device_feedback"
     },
     {
       "relation": "contains",
@@ -95474,9 +96556,9 @@
       "source_file": "docs/ANDROID_PHASE1_COHERENCE_GOAL.md",
       "source_location": "L76",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "docs_android_phase1_coherence_goal_goal_hermes_android_sessions_first_organization_that_helps",
-      "target": "docs_android_phase1_coherence_goal_shipping_rule",
-      "confidence_score": 1.0
+      "target": "docs_android_phase1_coherence_goal_shipping_rule"
     },
     {
       "relation": "contains",
@@ -95484,9 +96566,9 @@
       "source_file": "docs/ANDROID_PHASE1_COHERENCE_GOAL.md",
       "source_location": "L43",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "docs_android_phase1_coherence_goal_goal_hermes_android_sessions_first_organization_that_helps",
-      "target": "docs_android_phase1_coherence_goal_superseded_2026_08_30_workspace_unique_validated_by_carlos",
-      "confidence_score": 1.0
+      "target": "docs_android_phase1_coherence_goal_superseded_2026_08_30_workspace_unique_validated_by_carlos"
     },
     {
       "relation": "contains",
@@ -95494,9 +96576,9 @@
       "source_file": "docs/ANDROID_PHASE1_COHERENCE_GOAL.md",
       "source_location": "L34",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "docs_android_phase1_coherence_goal_in_scope_changes_kept",
-      "target": "docs_android_phase1_coherence_goal_interface_coherence_and_accessibility",
-      "confidence_score": 1.0
+      "target": "docs_android_phase1_coherence_goal_interface_coherence_and_accessibility"
     },
     {
       "relation": "contains",
@@ -95504,9 +96586,9 @@
       "source_file": "docs/ANDROID_PHASE1_COHERENCE_GOAL.md",
       "source_location": "L23",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "docs_android_phase1_coherence_goal_in_scope_changes_kept",
-      "target": "docs_android_phase1_coherence_goal_project_lifecycle",
-      "confidence_score": 1.0
+      "target": "docs_android_phase1_coherence_goal_project_lifecycle"
     },
     {
       "relation": "contains",
@@ -95514,9 +96596,9 @@
       "source_file": "docs/ANDROID_PHASE1_COHERENCE_GOAL.md",
       "source_location": "L29",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "docs_android_phase1_coherence_goal_in_scope_changes_kept",
-      "target": "docs_android_phase1_coherence_goal_workspace_smart_views_secondary_behind_the_drawer",
-      "confidence_score": 1.0
+      "target": "docs_android_phase1_coherence_goal_workspace_smart_views_secondary_behind_the_drawer"
     },
     {
       "relation": "contains",
@@ -95804,9 +96886,9 @@
       "source_file": "docs/HERMES_ANDROID_INDISPENSABLE_PRODUCT_SPEC.md",
       "source_location": "L1",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "docs_hermes_android_indispensable_product_spec",
-      "target": "docs_hermes_android_indispensable_product_spec_hermes_android_produit_indispensable",
-      "confidence_score": 1.0
+      "target": "docs_hermes_android_indispensable_product_spec_hermes_android_produit_indispensable"
     },
     {
       "relation": "contains",
@@ -95814,9 +96896,9 @@
       "source_file": "docs/HERMES_ANDROID_INDISPENSABLE_PRODUCT_SPEC.md",
       "source_location": "L328",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "docs_hermes_android_indispensable_product_spec_hermes_android_produit_indispensable",
-      "target": "docs_hermes_android_indispensable_product_spec_d\u00e9finition_de_termin\u00e9_pour_chaque_tranche",
-      "confidence_score": 1.0
+      "target": "docs_hermes_android_indispensable_product_spec_d\u00e9finition_de_termin\u00e9_pour_chaque_tranche"
     },
     {
       "relation": "contains",
@@ -95824,9 +96906,9 @@
       "source_file": "docs/HERMES_ANDROID_INDISPENSABLE_PRODUCT_SPEC.md",
       "source_location": "L246",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "docs_hermes_android_indispensable_product_spec_hermes_android_produit_indispensable",
-      "target": "docs_hermes_android_indispensable_product_spec_pilier_10_mod\u00e8les_co\u00fbts_et_profils",
-      "confidence_score": 1.0
+      "target": "docs_hermes_android_indispensable_product_spec_pilier_10_mod\u00e8les_co\u00fbts_et_profils"
     },
     {
       "relation": "contains",
@@ -95834,9 +96916,9 @@
       "source_file": "docs/HERMES_ANDROID_INDISPENSABLE_PRODUCT_SPEC.md",
       "source_location": "L263",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "docs_hermes_android_indispensable_product_spec_hermes_android_produit_indispensable",
-      "target": "docs_hermes_android_indispensable_product_spec_pilier_11_s\u00e9curit\u00e9",
-      "confidence_score": 1.0
+      "target": "docs_hermes_android_indispensable_product_spec_pilier_11_s\u00e9curit\u00e9"
     },
     {
       "relation": "contains",
@@ -95844,9 +96926,9 @@
       "source_file": "docs/HERMES_ANDROID_INDISPENSABLE_PRODUCT_SPEC.md",
       "source_location": "L275",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "docs_hermes_android_indispensable_product_spec_hermes_android_produit_indispensable",
-      "target": "docs_hermes_android_indispensable_product_spec_pilier_12_automatisations",
-      "confidence_score": 1.0
+      "target": "docs_hermes_android_indispensable_product_spec_pilier_12_automatisations"
     },
     {
       "relation": "contains",
@@ -95854,9 +96936,9 @@
       "source_file": "docs/HERMES_ANDROID_INDISPENSABLE_PRODUCT_SPEC.md",
       "source_location": "L27",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "docs_hermes_android_indispensable_product_spec_hermes_android_produit_indispensable",
-      "target": "docs_hermes_android_indispensable_product_spec_pilier_1_workspace_et_chats",
-      "confidence_score": 1.0
+      "target": "docs_hermes_android_indispensable_product_spec_pilier_1_workspace_et_chats"
     },
     {
       "relation": "contains",
@@ -95864,9 +96946,9 @@
       "source_file": "docs/HERMES_ANDROID_INDISPENSABLE_PRODUCT_SPEC.md",
       "source_location": "L53",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "docs_hermes_android_indispensable_product_spec_hermes_android_produit_indispensable",
-      "target": "docs_hermes_android_indispensable_product_spec_pilier_2_centre_d_actions_et_notifications",
-      "confidence_score": 1.0
+      "target": "docs_hermes_android_indispensable_product_spec_pilier_2_centre_d_actions_et_notifications"
     },
     {
       "relation": "contains",
@@ -95874,9 +96956,9 @@
       "source_file": "docs/HERMES_ANDROID_INDISPENSABLE_PRODUCT_SPEC.md",
       "source_location": "L91",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "docs_hermes_android_indispensable_product_spec_hermes_android_produit_indispensable",
-      "target": "docs_hermes_android_indispensable_product_spec_pilier_3_mission_control",
-      "confidence_score": 1.0
+      "target": "docs_hermes_android_indispensable_product_spec_pilier_3_mission_control"
     },
     {
       "relation": "contains",
@@ -95884,9 +96966,9 @@
       "source_file": "docs/HERMES_ANDROID_INDISPENSABLE_PRODUCT_SPEC.md",
       "source_location": "L120",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "docs_hermes_android_indispensable_product_spec_hermes_android_produit_indispensable",
-      "target": "docs_hermes_android_indispensable_product_spec_pilier_4_partager_vers_hermes",
-      "confidence_score": 1.0
+      "target": "docs_hermes_android_indispensable_product_spec_pilier_4_partager_vers_hermes"
     },
     {
       "relation": "contains",
@@ -95894,9 +96976,9 @@
       "source_file": "docs/HERMES_ANDROID_INDISPENSABLE_PRODUCT_SPEC.md",
       "source_location": "L151",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "docs_hermes_android_indispensable_product_spec_hermes_android_produit_indispensable",
-      "target": "docs_hermes_android_indispensable_product_spec_pilier_5_voix",
-      "confidence_score": 1.0
+      "target": "docs_hermes_android_indispensable_product_spec_pilier_5_voix"
     },
     {
       "relation": "contains",
@@ -95904,9 +96986,9 @@
       "source_file": "docs/HERMES_ANDROID_INDISPENSABLE_PRODUCT_SPEC.md",
       "source_location": "L172",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "docs_hermes_android_indispensable_product_spec_hermes_android_produit_indispensable",
-      "target": "docs_hermes_android_indispensable_product_spec_pilier_6_intelligence_des_projects",
-      "confidence_score": 1.0
+      "target": "docs_hermes_android_indispensable_product_spec_pilier_6_intelligence_des_projects"
     },
     {
       "relation": "contains",
@@ -95914,9 +96996,9 @@
       "source_file": "docs/HERMES_ANDROID_INDISPENSABLE_PRODUCT_SPEC.md",
       "source_location": "L197",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "docs_hermes_android_indispensable_product_spec_hermes_android_produit_indispensable",
-      "target": "docs_hermes_android_indispensable_product_spec_pilier_7_fichiers_artefacts_et_r\u00e9sultats",
-      "confidence_score": 1.0
+      "target": "docs_hermes_android_indispensable_product_spec_pilier_7_fichiers_artefacts_et_r\u00e9sultats"
     },
     {
       "relation": "contains",
@@ -95924,9 +97006,9 @@
       "source_file": "docs/HERMES_ANDROID_INDISPENSABLE_PRODUCT_SPEC.md",
       "source_location": "L218",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "docs_hermes_android_indispensable_product_spec_hermes_android_produit_indispensable",
-      "target": "docs_hermes_android_indispensable_product_spec_pilier_8_continuit\u00e9_et_mode_d\u00e9grad\u00e9",
-      "confidence_score": 1.0
+      "target": "docs_hermes_android_indispensable_product_spec_pilier_8_continuit\u00e9_et_mode_d\u00e9grad\u00e9"
     },
     {
       "relation": "contains",
@@ -95934,9 +97016,9 @@
       "source_file": "docs/HERMES_ANDROID_INDISPENSABLE_PRODUCT_SPEC.md",
       "source_location": "L234",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "docs_hermes_android_indispensable_product_spec_hermes_android_produit_indispensable",
-      "target": "docs_hermes_android_indispensable_product_spec_pilier_9_acc\u00e8s_instantan\u00e9_android",
-      "confidence_score": 1.0
+      "target": "docs_hermes_android_indispensable_product_spec_pilier_9_acc\u00e8s_instantan\u00e9_android"
     },
     {
       "relation": "contains",
@@ -95944,9 +97026,9 @@
       "source_file": "docs/HERMES_ANDROID_INDISPENSABLE_PRODUCT_SPEC.md",
       "source_location": "L286",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "docs_hermes_android_indispensable_product_spec_hermes_android_produit_indispensable",
-      "target": "docs_hermes_android_indispensable_product_spec_plan_de_livraison",
-      "confidence_score": 1.0
+      "target": "docs_hermes_android_indispensable_product_spec_plan_de_livraison"
     },
     {
       "relation": "contains",
@@ -95954,9 +97036,9 @@
       "source_file": "docs/HERMES_ANDROID_INDISPENSABLE_PRODUCT_SPEC.md",
       "source_location": "L13",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "docs_hermes_android_indispensable_product_spec_hermes_android_produit_indispensable",
-      "target": "docs_hermes_android_indispensable_product_spec_principes_non_n\u00e9gociables",
-      "confidence_score": 1.0
+      "target": "docs_hermes_android_indispensable_product_spec_principes_non_n\u00e9gociables"
     },
     {
       "relation": "contains",
@@ -95964,9 +97046,9 @@
       "source_file": "docs/HERMES_ANDROID_INDISPENSABLE_PRODUCT_SPEC.md",
       "source_location": "L7",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "docs_hermes_android_indispensable_product_spec_hermes_android_produit_indispensable",
-      "target": "docs_hermes_android_indispensable_product_spec_vision",
-      "confidence_score": 1.0
+      "target": "docs_hermes_android_indispensable_product_spec_vision"
     },
     {
       "relation": "contains",
@@ -95974,9 +97056,9 @@
       "source_file": "docs/HERMES_ANDROID_INDISPENSABLE_PRODUCT_SPEC.md",
       "source_location": "L41",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "docs_hermes_android_indispensable_product_spec_pilier_1_workspace_et_chats",
-      "target": "docs_hermes_android_indispensable_product_spec_crit\u00e8res_d_acceptation",
-      "confidence_score": 1.0
+      "target": "docs_hermes_android_indispensable_product_spec_crit\u00e8res_d_acceptation"
     },
     {
       "relation": "contains",
@@ -95984,9 +97066,9 @@
       "source_file": "docs/HERMES_ANDROID_INDISPENSABLE_PRODUCT_SPEC.md",
       "source_location": "L29",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "docs_hermes_android_indispensable_product_spec_pilier_1_workspace_et_chats",
-      "target": "docs_hermes_android_indispensable_product_spec_objectif",
-      "confidence_score": 1.0
+      "target": "docs_hermes_android_indispensable_product_spec_objectif"
     },
     {
       "relation": "contains",
@@ -95994,9 +97076,9 @@
       "source_file": "docs/HERMES_ANDROID_INDISPENSABLE_PRODUCT_SPEC.md",
       "source_location": "L33",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "docs_hermes_android_indispensable_product_spec_pilier_1_workspace_et_chats",
-      "target": "docs_hermes_android_indispensable_product_spec_surface",
-      "confidence_score": 1.0
+      "target": "docs_hermes_android_indispensable_product_spec_surface"
     },
     {
       "relation": "contains",
@@ -96004,9 +97086,9 @@
       "source_file": "docs/HERMES_ANDROID_INDISPENSABLE_PRODUCT_SPEC.md",
       "source_location": "L82",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "docs_hermes_android_indispensable_product_spec_pilier_2_centre_d_actions_et_notifications",
-      "target": "docs_hermes_android_indispensable_product_spec_crit\u00e8res_d_acceptation_82",
-      "confidence_score": 1.0
+      "target": "docs_hermes_android_indispensable_product_spec_crit\u00e8res_d_acceptation_82"
     },
     {
       "relation": "contains",
@@ -96014,9 +97096,9 @@
       "source_file": "docs/HERMES_ANDROID_INDISPENSABLE_PRODUCT_SPEC.md",
       "source_location": "L78",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "docs_hermes_android_indispensable_product_spec_pilier_2_centre_d_actions_et_notifications",
-      "target": "docs_hermes_android_indispensable_product_spec_d\u00e9pendance_serveur",
-      "confidence_score": 1.0
+      "target": "docs_hermes_android_indispensable_product_spec_d\u00e9pendance_serveur"
     },
     {
       "relation": "contains",
@@ -96024,9 +97106,9 @@
       "source_file": "docs/HERMES_ANDROID_INDISPENSABLE_PRODUCT_SPEC.md",
       "source_location": "L69",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "docs_hermes_android_indispensable_product_spec_pilier_2_centre_d_actions_et_notifications",
-      "target": "docs_hermes_android_indispensable_product_spec_exp\u00e9rience",
-      "confidence_score": 1.0
+      "target": "docs_hermes_android_indispensable_product_spec_exp\u00e9rience"
     },
     {
       "relation": "contains",
@@ -96034,9 +97116,9 @@
       "source_file": "docs/HERMES_ANDROID_INDISPENSABLE_PRODUCT_SPEC.md",
       "source_location": "L55",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "docs_hermes_android_indispensable_product_spec_pilier_2_centre_d_actions_et_notifications",
-      "target": "docs_hermes_android_indispensable_product_spec_objectif_55",
-      "confidence_score": 1.0
+      "target": "docs_hermes_android_indispensable_product_spec_objectif_55"
     },
     {
       "relation": "contains",
@@ -96044,9 +97126,9 @@
       "source_file": "docs/HERMES_ANDROID_INDISPENSABLE_PRODUCT_SPEC.md",
       "source_location": "L59",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "docs_hermes_android_indispensable_product_spec_pilier_2_centre_d_actions_et_notifications",
-      "target": "docs_hermes_android_indispensable_product_spec_\u00e9v\u00e9nements",
-      "confidence_score": 1.0
+      "target": "docs_hermes_android_indispensable_product_spec_\u00e9v\u00e9nements"
     },
     {
       "relation": "contains",
@@ -96054,9 +97136,9 @@
       "source_file": "docs/HERMES_ANDROID_INDISPENSABLE_PRODUCT_SPEC.md",
       "source_location": "L111",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "docs_hermes_android_indispensable_product_spec_pilier_3_mission_control",
-      "target": "docs_hermes_android_indispensable_product_spec_crit\u00e8res_d_acceptation_111",
-      "confidence_score": 1.0
+      "target": "docs_hermes_android_indispensable_product_spec_crit\u00e8res_d_acceptation_111"
     },
     {
       "relation": "contains",
@@ -96064,9 +97146,9 @@
       "source_file": "docs/HERMES_ANDROID_INDISPENSABLE_PRODUCT_SPEC.md",
       "source_location": "L107",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "docs_hermes_android_indispensable_product_spec_pilier_3_mission_control",
-      "target": "docs_hermes_android_indispensable_product_spec_d\u00e9pendance_serveur_107",
-      "confidence_score": 1.0
+      "target": "docs_hermes_android_indispensable_product_spec_d\u00e9pendance_serveur_107"
     },
     {
       "relation": "contains",
@@ -96074,9 +97156,9 @@
       "source_file": "docs/HERMES_ANDROID_INDISPENSABLE_PRODUCT_SPEC.md",
       "source_location": "L93",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "docs_hermes_android_indispensable_product_spec_pilier_3_mission_control",
-      "target": "docs_hermes_android_indispensable_product_spec_objectif_93",
-      "confidence_score": 1.0
+      "target": "docs_hermes_android_indispensable_product_spec_objectif_93"
     },
     {
       "relation": "contains",
@@ -96084,9 +97166,9 @@
       "source_file": "docs/HERMES_ANDROID_INDISPENSABLE_PRODUCT_SPEC.md",
       "source_location": "L97",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "docs_hermes_android_indispensable_product_spec_pilier_3_mission_control",
-      "target": "docs_hermes_android_indispensable_product_spec_surface_97",
-      "confidence_score": 1.0
+      "target": "docs_hermes_android_indispensable_product_spec_surface_97"
     },
     {
       "relation": "contains",
@@ -96094,9 +97176,9 @@
       "source_file": "docs/HERMES_ANDROID_INDISPENSABLE_PRODUCT_SPEC.md",
       "source_location": "L138",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "docs_hermes_android_indispensable_product_spec_pilier_4_partager_vers_hermes",
-      "target": "docs_hermes_android_indispensable_product_spec_actions_favorites",
-      "confidence_score": 1.0
+      "target": "docs_hermes_android_indispensable_product_spec_actions_favorites"
     },
     {
       "relation": "contains",
@@ -96104,9 +97186,9 @@
       "source_file": "docs/HERMES_ANDROID_INDISPENSABLE_PRODUCT_SPEC.md",
       "source_location": "L142",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "docs_hermes_android_indispensable_product_spec_pilier_4_partager_vers_hermes",
-      "target": "docs_hermes_android_indispensable_product_spec_crit\u00e8res_d_acceptation_142",
-      "confidence_score": 1.0
+      "target": "docs_hermes_android_indispensable_product_spec_crit\u00e8res_d_acceptation_142"
     },
     {
       "relation": "contains",
@@ -96114,9 +97196,9 @@
       "source_file": "docs/HERMES_ANDROID_INDISPENSABLE_PRODUCT_SPEC.md",
       "source_location": "L126",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "docs_hermes_android_indispensable_product_spec_pilier_4_partager_vers_hermes",
-      "target": "docs_hermes_android_indispensable_product_spec_entr\u00e9es",
-      "confidence_score": 1.0
+      "target": "docs_hermes_android_indispensable_product_spec_entr\u00e9es"
     },
     {
       "relation": "contains",
@@ -96124,9 +97206,9 @@
       "source_file": "docs/HERMES_ANDROID_INDISPENSABLE_PRODUCT_SPEC.md",
       "source_location": "L130",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "docs_hermes_android_indispensable_product_spec_pilier_4_partager_vers_hermes",
-      "target": "docs_hermes_android_indispensable_product_spec_flux",
-      "confidence_score": 1.0
+      "target": "docs_hermes_android_indispensable_product_spec_flux"
     },
     {
       "relation": "contains",
@@ -96134,9 +97216,9 @@
       "source_file": "docs/HERMES_ANDROID_INDISPENSABLE_PRODUCT_SPEC.md",
       "source_location": "L122",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "docs_hermes_android_indispensable_product_spec_pilier_4_partager_vers_hermes",
-      "target": "docs_hermes_android_indispensable_product_spec_objectif_122",
-      "confidence_score": 1.0
+      "target": "docs_hermes_android_indispensable_product_spec_objectif_122"
     },
     {
       "relation": "contains",
@@ -96144,9 +97226,9 @@
       "source_file": "docs/HERMES_ANDROID_INDISPENSABLE_PRODUCT_SPEC.md",
       "source_location": "L166",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "docs_hermes_android_indispensable_product_spec_pilier_5_voix",
-      "target": "docs_hermes_android_indispensable_product_spec_d\u00e9pendances",
-      "confidence_score": 1.0
+      "target": "docs_hermes_android_indispensable_product_spec_d\u00e9pendances"
     },
     {
       "relation": "contains",
@@ -96154,9 +97236,9 @@
       "source_file": "docs/HERMES_ANDROID_INDISPENSABLE_PRODUCT_SPEC.md",
       "source_location": "L157",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "docs_hermes_android_indispensable_product_spec_pilier_5_voix",
-      "target": "docs_hermes_android_indispensable_product_spec_fonctions",
-      "confidence_score": 1.0
+      "target": "docs_hermes_android_indispensable_product_spec_fonctions"
     },
     {
       "relation": "contains",
@@ -96164,9 +97246,9 @@
       "source_file": "docs/HERMES_ANDROID_INDISPENSABLE_PRODUCT_SPEC.md",
       "source_location": "L153",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "docs_hermes_android_indispensable_product_spec_pilier_5_voix",
-      "target": "docs_hermes_android_indispensable_product_spec_objectif_153",
-      "confidence_score": 1.0
+      "target": "docs_hermes_android_indispensable_product_spec_objectif_153"
     },
     {
       "relation": "contains",
@@ -96174,9 +97256,9 @@
       "source_file": "docs/HERMES_ANDROID_INDISPENSABLE_PRODUCT_SPEC.md",
       "source_location": "L181",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "docs_hermes_android_indispensable_product_spec_pilier_6_intelligence_des_projects",
-      "target": "docs_hermes_android_indispensable_product_spec_aper\u00e7u_intelligent",
-      "confidence_score": 1.0
+      "target": "docs_hermes_android_indispensable_product_spec_aper\u00e7u_intelligent"
     },
     {
       "relation": "contains",
@@ -96184,9 +97266,9 @@
       "source_file": "docs/HERMES_ANDROID_INDISPENSABLE_PRODUCT_SPEC.md",
       "source_location": "L191",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "docs_hermes_android_indispensable_product_spec_pilier_6_intelligence_des_projects",
-      "target": "docs_hermes_android_indispensable_product_spec_d\u00e9pendance_serveur_191",
-      "confidence_score": 1.0
+      "target": "docs_hermes_android_indispensable_product_spec_d\u00e9pendance_serveur_191"
     },
     {
       "relation": "contains",
@@ -96194,9 +97276,9 @@
       "source_file": "docs/HERMES_ANDROID_INDISPENSABLE_PRODUCT_SPEC.md",
       "source_location": "L174",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "docs_hermes_android_indispensable_product_spec_pilier_6_intelligence_des_projects",
-      "target": "docs_hermes_android_indispensable_product_spec_politique_valid\u00e9e",
-      "confidence_score": 1.0
+      "target": "docs_hermes_android_indispensable_product_spec_politique_valid\u00e9e"
     },
     {
       "relation": "contains",
@@ -96204,9 +97286,9 @@
       "source_file": "docs/HERMES_ANDROID_INDISPENSABLE_PRODUCT_SPEC.md",
       "source_location": "L212",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "docs_hermes_android_indispensable_product_spec_pilier_7_fichiers_artefacts_et_r\u00e9sultats",
-      "target": "docs_hermes_android_indispensable_product_spec_d\u00e9pendance_serveur_212",
-      "confidence_score": 1.0
+      "target": "docs_hermes_android_indispensable_product_spec_d\u00e9pendance_serveur_212"
     },
     {
       "relation": "contains",
@@ -96214,9 +97296,9 @@
       "source_file": "docs/HERMES_ANDROID_INDISPENSABLE_PRODUCT_SPEC.md",
       "source_location": "L203",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "docs_hermes_android_indispensable_product_spec_pilier_7_fichiers_artefacts_et_r\u00e9sultats",
-      "target": "docs_hermes_android_indispensable_product_spec_fonctions_203",
-      "confidence_score": 1.0
+      "target": "docs_hermes_android_indispensable_product_spec_fonctions_203"
     },
     {
       "relation": "contains",
@@ -96224,9 +97306,9 @@
       "source_file": "docs/HERMES_ANDROID_INDISPENSABLE_PRODUCT_SPEC.md",
       "source_location": "L199",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "docs_hermes_android_indispensable_product_spec_pilier_7_fichiers_artefacts_et_r\u00e9sultats",
-      "target": "docs_hermes_android_indispensable_product_spec_objectif_199",
-      "confidence_score": 1.0
+      "target": "docs_hermes_android_indispensable_product_spec_objectif_199"
     },
     {
       "relation": "contains",
@@ -96234,9 +97316,9 @@
       "source_file": "docs/HERMES_ANDROID_INDISPENSABLE_PRODUCT_SPEC.md",
       "source_location": "L257",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "docs_hermes_android_indispensable_product_spec_pilier_10_mod\u00e8les_co\u00fbts_et_profils",
-      "target": "docs_hermes_android_indispensable_product_spec_principe",
-      "confidence_score": 1.0
+      "target": "docs_hermes_android_indispensable_product_spec_principe"
     },
     {
       "relation": "contains",
@@ -96244,9 +97326,9 @@
       "source_file": "docs/HERMES_ANDROID_INDISPENSABLE_PRODUCT_SPEC.md",
       "source_location": "L248",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "docs_hermes_android_indispensable_product_spec_pilier_10_mod\u00e8les_co\u00fbts_et_profils",
-      "target": "docs_hermes_android_indispensable_product_spec_surface_simple",
-      "confidence_score": 1.0
+      "target": "docs_hermes_android_indispensable_product_spec_surface_simple"
     },
     {
       "relation": "contains",
@@ -96254,9 +97336,9 @@
       "source_file": "docs/HERMES_ANDROID_INDISPENSABLE_PRODUCT_SPEC.md",
       "source_location": "L288",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "docs_hermes_android_indispensable_product_spec_plan_de_livraison",
-      "target": "docs_hermes_android_indispensable_product_spec_phase_a_fondation_indispensable",
-      "confidence_score": 1.0
+      "target": "docs_hermes_android_indispensable_product_spec_phase_a_fondation_indispensable"
     },
     {
       "relation": "contains",
@@ -96264,9 +97346,9 @@
       "source_file": "docs/HERMES_ANDROID_INDISPENSABLE_PRODUCT_SPEC.md",
       "source_location": "L296",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "docs_hermes_android_indispensable_product_spec_plan_de_livraison",
-      "target": "docs_hermes_android_indispensable_product_spec_phase_b_action_mobile",
-      "confidence_score": 1.0
+      "target": "docs_hermes_android_indispensable_product_spec_phase_b_action_mobile"
     },
     {
       "relation": "contains",
@@ -96274,9 +97356,9 @@
       "source_file": "docs/HERMES_ANDROID_INDISPENSABLE_PRODUCT_SPEC.md",
       "source_location": "L304",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "docs_hermes_android_indispensable_product_spec_plan_de_livraison",
-      "target": "docs_hermes_android_indispensable_product_spec_phase_c_pilotage_autonome",
-      "confidence_score": 1.0
+      "target": "docs_hermes_android_indispensable_product_spec_phase_c_pilotage_autonome"
     },
     {
       "relation": "contains",
@@ -96284,9 +97366,9 @@
       "source_file": "docs/HERMES_ANDROID_INDISPENSABLE_PRODUCT_SPEC.md",
       "source_location": "L311",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "docs_hermes_android_indispensable_product_spec_plan_de_livraison",
-      "target": "docs_hermes_android_indispensable_product_spec_phase_d_assistant_personnel",
-      "confidence_score": 1.0
+      "target": "docs_hermes_android_indispensable_product_spec_phase_d_assistant_personnel"
     },
     {
       "relation": "contains",
@@ -96294,8 +97376,98 @@
       "source_file": "docs/HERMES_ANDROID_INDISPENSABLE_PRODUCT_SPEC.md",
       "source_location": "L319",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "docs_hermes_android_indispensable_product_spec_plan_de_livraison",
-      "target": "docs_hermes_android_indispensable_product_spec_phase_e_plateforme_s\u00e9curis\u00e9e",
+      "target": "docs_hermes_android_indispensable_product_spec_phase_e_plateforme_s\u00e9curis\u00e9e"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/plans/2026-08-30-chats-enrichi.md",
+      "source_location": "L1",
+      "weight": 1.0,
+      "source": "plans_2026_08_30_chats_enrichi",
+      "target": "plans_2026_08_30_chats_enrichi_chats_enrichi_filtres_regroupement_lignes_riches",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/plans/2026-08-30-chats-enrichi.md",
+      "source_location": "L9",
+      "weight": 1.0,
+      "source": "plans_2026_08_30_chats_enrichi_chats_enrichi_filtres_regroupement_lignes_riches",
+      "target": "plans_2026_08_30_chats_enrichi_donn\u00e9es_disponibles_v\u00e9rifi\u00e9_api_r\u00e9elle",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/plans/2026-08-30-chats-enrichi.md",
+      "source_location": "L5",
+      "weight": 1.0,
+      "source": "plans_2026_08_30_chats_enrichi_chats_enrichi_filtres_regroupement_lignes_riches",
+      "target": "plans_2026_08_30_chats_enrichi_objectif",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/plans/2026-08-30-chats-enrichi.md",
+      "source_location": "L14",
+      "weight": 1.0,
+      "source": "plans_2026_08_30_chats_enrichi_chats_enrichi_filtres_regroupement_lignes_riches",
+      "target": "plans_2026_08_30_chats_enrichi_tranches",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/plans/2026-08-30-chats-enrichi.md",
+      "source_location": "L38",
+      "weight": 1.0,
+      "source": "plans_2026_08_30_chats_enrichi_tranches",
+      "target": "plans_2026_08_30_chats_enrichi_porte_qualit\u00e9",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/plans/2026-08-30-chats-enrichi.md",
+      "source_location": "L16",
+      "weight": 1.0,
+      "source": "plans_2026_08_30_chats_enrichi_tranches",
+      "target": "plans_2026_08_30_chats_enrichi_task_1_mod\u00e8le_session_enrichi",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/plans/2026-08-30-chats-enrichi.md",
+      "source_location": "L20",
+      "weight": 1.0,
+      "source": "plans_2026_08_30_chats_enrichi_tranches",
+      "target": "plans_2026_08_30_chats_enrichi_task_2_logique_pure_filtres_dates",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/plans/2026-08-30-chats-enrichi.md",
+      "source_location": "L27",
+      "weight": 1.0,
+      "source": "plans_2026_08_30_chats_enrichi_tranches",
+      "target": "plans_2026_08_30_chats_enrichi_task_3_ui_chats",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/plans/2026-08-30-chats-enrichi.md",
+      "source_location": "L33",
+      "weight": 1.0,
+      "source": "plans_2026_08_30_chats_enrichi_tranches",
+      "target": "plans_2026_08_30_chats_enrichi_task_4_mapping_projet_best_effort",
       "confidence_score": 1.0
     },
     {
@@ -96304,8 +97476,28 @@
       "source_file": "docs/plans/2026-08-30-workspace-unique-chats.md",
       "source_location": "L1",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "plans_2026_08_30_workspace_unique_chats",
-      "target": "plans_2026_08_30_workspace_unique_chats_workspace_unique_chats_implementation_plan",
+      "target": "plans_2026_08_30_workspace_unique_chats_workspace_unique_chats_implementation_plan"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/plans/2026-08-30-workspace-unique-chats.md",
+      "source_location": "L5",
+      "weight": 1.0,
+      "source": "plans_2026_08_30_workspace_unique_chats_workspace_unique_chats_implementation_plan",
+      "target": "plans_2026_08_30_workspace_unique_chats_bugs_discovered_and_fixed_during_on_device_verification",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/plans/2026-08-30-workspace-unique-chats.md",
+      "source_location": "L11",
+      "weight": 1.0,
+      "source": "plans_2026_08_30_workspace_unique_chats_workspace_unique_chats_implementation_plan",
+      "target": "plans_2026_08_30_workspace_unique_chats_live_verification_emulator_restored_real_config",
       "confidence_score": 1.0
     },
     {
@@ -96314,9 +97506,9 @@
       "source_file": "docs/plans/2026-08-30-workspace-unique-chats.md",
       "source_location": "L13",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "plans_2026_08_30_workspace_unique_chats_workspace_unique_chats_implementation_plan",
-      "target": "plans_2026_08_30_workspace_unique_chats_task_1_lock_the_five_destination_shell_contract",
-      "confidence_score": 1.0
+      "target": "plans_2026_08_30_workspace_unique_chats_task_1_lock_the_five_destination_shell_contract"
     },
     {
       "relation": "contains",
@@ -96324,9 +97516,9 @@
       "source_file": "docs/plans/2026-08-30-workspace-unique-chats.md",
       "source_location": "L37",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "plans_2026_08_30_workspace_unique_chats_workspace_unique_chats_implementation_plan",
-      "target": "plans_2026_08_30_workspace_unique_chats_task_2_embed_the_conversation_browser_in_workspace",
-      "confidence_score": 1.0
+      "target": "plans_2026_08_30_workspace_unique_chats_task_2_embed_the_conversation_browser_in_workspace"
     },
     {
       "relation": "contains",
@@ -96334,9 +97526,9 @@
       "source_file": "docs/plans/2026-08-30-workspace-unique-chats.md",
       "source_location": "L61",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "plans_2026_08_30_workspace_unique_chats_workspace_unique_chats_implementation_plan",
-      "target": "plans_2026_08_30_workspace_unique_chats_task_3_wire_chats_to_real_workspace_data",
-      "confidence_score": 1.0
+      "target": "plans_2026_08_30_workspace_unique_chats_task_3_wire_chats_to_real_workspace_data"
     },
     {
       "relation": "contains",
@@ -96344,9 +97536,9 @@
       "source_file": "docs/plans/2026-08-30-workspace-unique-chats.md",
       "source_location": "L91",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "plans_2026_08_30_workspace_unique_chats_workspace_unique_chats_implementation_plan",
-      "target": "plans_2026_08_30_workspace_unique_chats_task_4_make_workspace_the_connection_launch_surface",
-      "confidence_score": 1.0
+      "target": "plans_2026_08_30_workspace_unique_chats_task_4_make_workspace_the_connection_launch_surface"
     },
     {
       "relation": "contains",
@@ -96354,9 +97546,9 @@
       "source_file": "docs/plans/2026-08-30-workspace-unique-chats.md",
       "source_location": "L116",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "plans_2026_08_30_workspace_unique_chats_workspace_unique_chats_implementation_plan",
-      "target": "plans_2026_08_30_workspace_unique_chats_task_5_remove_normal_legacy_navigation_and_stale_claims",
-      "confidence_score": 1.0
+      "target": "plans_2026_08_30_workspace_unique_chats_task_5_remove_normal_legacy_navigation_and_stale_claims"
     },
     {
       "relation": "contains",
@@ -96364,7 +97556,67 @@
       "source_file": "docs/plans/2026-08-30-workspace-unique-chats.md",
       "source_location": "L136",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "plans_2026_08_30_workspace_unique_chats_workspace_unique_chats_implementation_plan",
+      "target": "plans_2026_08_30_workspace_unique_chats_task_6_full_quality_and_device_gate"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/plans/2026-08-30-workspace-unique-chats.md",
+      "source_location": "L20",
+      "weight": 1.0,
+      "source": "plans_2026_08_30_workspace_unique_chats_live_verification_emulator_restored_real_config",
+      "target": "plans_2026_08_30_workspace_unique_chats_task_1_lock_the_five_destination_shell_contract",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/plans/2026-08-30-workspace-unique-chats.md",
+      "source_location": "L44",
+      "weight": 1.0,
+      "source": "plans_2026_08_30_workspace_unique_chats_live_verification_emulator_restored_real_config",
+      "target": "plans_2026_08_30_workspace_unique_chats_task_2_embed_the_conversation_browser_in_workspace",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/plans/2026-08-30-workspace-unique-chats.md",
+      "source_location": "L68",
+      "weight": 1.0,
+      "source": "plans_2026_08_30_workspace_unique_chats_live_verification_emulator_restored_real_config",
+      "target": "plans_2026_08_30_workspace_unique_chats_task_3_wire_chats_to_real_workspace_data",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/plans/2026-08-30-workspace-unique-chats.md",
+      "source_location": "L98",
+      "weight": 1.0,
+      "source": "plans_2026_08_30_workspace_unique_chats_live_verification_emulator_restored_real_config",
+      "target": "plans_2026_08_30_workspace_unique_chats_task_4_make_workspace_the_connection_launch_surface",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/plans/2026-08-30-workspace-unique-chats.md",
+      "source_location": "L123",
+      "weight": 1.0,
+      "source": "plans_2026_08_30_workspace_unique_chats_live_verification_emulator_restored_real_config",
+      "target": "plans_2026_08_30_workspace_unique_chats_task_5_remove_normal_legacy_navigation_and_stale_claims",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/plans/2026-08-30-workspace-unique-chats.md",
+      "source_location": "L143",
+      "weight": 1.0,
+      "source": "plans_2026_08_30_workspace_unique_chats_live_verification_emulator_restored_real_config",
       "target": "plans_2026_08_30_workspace_unique_chats_task_6_full_quality_and_device_gate",
       "confidence_score": 1.0
     },
@@ -96410,5 +97662,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "2b8e39c37c57adf67478922c3b7d11412d157c85"
+  "built_at_commit": "31a56c33f9bea1624c96a5f7cd8e68dad0e4a6a8"
 }
