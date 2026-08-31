@@ -152,7 +152,55 @@ void main() {
 
     expect(find.byType(ChatScreen), findsOneWidget);
     expect(find.byKey(const Key('chat-message-composer')), findsOneWidget);
-    expect(shareIntents.pendingText.value, isNull);
+    expect(shareIntents.pendingShare.value, isNull);
+  });
+
+  testWidgets('a cold-start file-only share opens the review sheet', (
+    tester,
+  ) async {
+    const channel = MethodChannel(AndroidShareIntentService.channelName);
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(
+          channel,
+          (_) async => {
+            'files': [
+              {
+                'path': '/cache/shared/report.pdf',
+                'name': 'report.pdf',
+                'mediaType': 'application/pdf',
+                'byteLength': 42,
+              },
+            ],
+          },
+        );
+    addTearDown(
+      () => TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, null),
+    );
+
+    final shareIntents = AndroidShareIntentService();
+    await shareIntents.initialize();
+    addTearDown(shareIntents.dispose);
+    final manager = await buildManager();
+    await manager.saveConnection('Miniserver', 'host', 8642, 'key');
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: HomeScreen(
+          connManager: manager,
+          turnApplicationController: GatewayTurnApplicationController(
+            sessionFactory: (_) => InertTurnApplicationSession(),
+          ),
+          shareIntents: shareIntents,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    expect(find.text('Share to Hermes'), findsOneWidget);
+    expect(find.text('report.pdf'), findsOneWidget);
+    expect(shareIntents.pendingShare.value, isNull);
   });
 
   testWidgets('restore stays reachable once connections exist', (tester) async {

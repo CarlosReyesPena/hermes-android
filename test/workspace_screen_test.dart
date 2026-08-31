@@ -2,11 +2,13 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hermes_android/core/models/attachment_draft.dart';
 import 'package:hermes_android/core/models/connection.dart';
 import 'package:hermes_android/core/models/session.dart';
 import 'package:hermes_android/core/screens/chat_screen.dart';
 import 'package:hermes_android/core/screens/workspace_screen.dart';
 import 'package:hermes_android/core/screens/workspace_sessions_screen.dart';
+import 'package:hermes_android/core/services/android_share_intent_service.dart';
 import 'package:hermes_android/core/services/chat_space_store.dart';
 import 'package:hermes_android/core/services/gateway_turn_application_controller.dart';
 import 'package:hermes_android/core/services/gateway_turn_coordinator.dart';
@@ -168,6 +170,8 @@ Future<void> _pump(
   NewChatSessionIdFactory? newChatSessionIdFactory,
   GatewayTurnApplicationController? turnApplicationController,
   String? initialSharedText,
+  AndroidSharePayload? initialSharedPayload,
+  SharedAttachmentPreparer? sharedAttachmentPreparer,
   Size size = const Size(400, 800),
 }) async {
   tester.view.physicalSize = size;
@@ -198,6 +202,8 @@ Future<void> _pump(
         newChatSessionIdFactory: newChatSessionIdFactory,
         turnApplicationController: turnApplicationController,
         initialSharedText: initialSharedText,
+        initialSharedPayload: initialSharedPayload,
+        sharedAttachmentPreparer: sharedAttachmentPreparer,
         onOpenDashboard: openedDashboards == null
             ? null
             : (url) async => openedDashboards.add(url),
@@ -1404,6 +1410,56 @@ void main() {
       expect(assignments, [
         {'session_id': 'shared-project-chat', 'project_id': 'p1'},
       ]);
+    });
+    testWidgets('shared files arrive as confirmed composer attachments', (
+      tester,
+    ) async {
+      tester.view.padding = const FakeViewPadding(top: 44);
+      addTearDown(tester.view.resetPadding);
+
+      final prepared = AttachmentDraft(
+        id: 'shared-report',
+        cachedPath: '/cache/report.pdf',
+        name: 'report.pdf',
+        byteLength: 2048,
+        mediaType: 'application/pdf',
+        kind: AttachmentDraftKind.genericFile,
+      );
+      await _pump(
+        tester,
+        connection: _connection(),
+        sessions: const [],
+        initialSharedPayload: const AndroidSharePayload(
+          files: [
+            AndroidSharedFile(
+              path: '/native-cache/report.pdf',
+              name: 'report.pdf',
+              mediaType: 'application/pdf',
+              byteLength: 2048,
+            ),
+          ],
+        ),
+        sharedAttachmentPreparer: (_) async => [prepared],
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(find.text('1 attachment'), findsOneWidget);
+      expect(find.text('report.pdf'), findsOneWidget);
+      expect(
+        tester.getTopLeft(find.text('Share to Hermes')).dy,
+        greaterThanOrEqualTo(44),
+      );
+      await tester.tap(find.text('Continue'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(find.byType(ChatScreen), findsOneWidget);
+      expect(find.text('report.pdf'), findsOneWidget);
+      final composer = tester.widget<TextField>(
+        find.byKey(const Key('chat-message-composer')),
+      );
+      expect(composer.controller?.text, 'Review the attached content.');
     });
   });
 

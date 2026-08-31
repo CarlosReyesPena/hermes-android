@@ -14,7 +14,10 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../models/attachment_draft.dart';
 import '../models/hermes_project.dart';
+import '../services/android_share_intent_service.dart';
+import '../services/attachment_draft_service.dart';
 import '../services/chat_space_store.dart';
 import '../services/connection_manager.dart';
 import '../services/desktop_gateway_client.dart';
@@ -23,6 +26,7 @@ import '../services/gateway_turn_journal.dart';
 import '../services/projects_repository.dart';
 import '../services/quick_chat_store.dart';
 import '../services/remote_files_client.dart';
+import '../services/shared_attachment_preparer.dart';
 import '../theme/hermes_theme.dart';
 import '../utils/activity_feed.dart';
 import '../utils/home_turn_signals.dart';
@@ -84,6 +88,8 @@ const Key kWorkspaceNewChatButtonKey = Key('workspace-new-chat');
 /// Generates the id a new chat is created under. Injectable so a test can pin
 /// it; the app uses the same generator the session list already uses.
 typedef NewChatSessionIdFactory = String Function();
+typedef SharedAttachmentPreparer =
+    Future<List<AttachmentDraft>> Function(List<AndroidSharedFile> files);
 
 /// The chat screen a Home row opens by default.
 ///
@@ -96,6 +102,7 @@ Widget buildWorkspaceChatScreen({
   required Session session,
   String? projectName,
   String? initialComposerText,
+  List<AttachmentDraft> initialAttachmentDrafts = const [],
   GatewayTurnApplicationController? turnApplicationController,
 }) {
   return ChatScreen(
@@ -103,6 +110,7 @@ Widget buildWorkspaceChatScreen({
     session: session,
     projectName: projectName,
     initialComposerText: initialComposerText,
+    initialAttachmentDrafts: initialAttachmentDrafts,
     turnApplicationController: turnApplicationController,
   );
 }
@@ -148,9 +156,15 @@ class WorkspaceScreen extends StatefulWidget {
   /// Overrides the id a new chat is created under.
   final NewChatSessionIdFactory? newChatSessionIdFactory;
 
-  /// Text received through Android's share sheet. It opens as a Quick chat
-  /// draft and is never submitted without an explicit user tap.
+  /// Text received through Android's share sheet. Kept for callers that only
+  /// support the original text-only contract.
   final String? initialSharedText;
+
+  /// Text and files received through Android's ACTION_SEND contract.
+  final AndroidSharePayload? initialSharedPayload;
+
+  /// Converts native-cached shared files into validated composer drafts.
+  final SharedAttachmentPreparer? sharedAttachmentPreparer;
 
   /// Overrides how the Hermes dashboard fallback is opened.
   final DashboardLauncher? onOpenDashboard;
@@ -169,6 +183,8 @@ class WorkspaceScreen extends StatefulWidget {
     this.onNewChat,
     this.newChatSessionIdFactory,
     this.initialSharedText,
+    this.initialSharedPayload,
+    this.sharedAttachmentPreparer,
     this.onOpenDashboard,
     super.key,
   });
@@ -422,18 +438,24 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
   void initState() {
     super.initState();
     _initialization = _initialize();
-    final sharedText = widget.initialSharedText?.trim();
-    if (sharedText != null && sharedText.isNotEmpty) {
+    final legacyText = widget.initialSharedText?.trim();
+    final sharedPayload =
+        widget.initialSharedPayload ??
+        (legacyText == null || legacyText.isEmpty
+            ? null
+            : AndroidSharePayload(text: legacyText));
+    if (sharedPayload != null && !sharedPayload.isEmpty) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) unawaited(_startSharedChat(sharedText));
+        if (mounted) unawaited(_startSharedChat(sharedPayload));
       });
     }
   }
 
-  Future<void> _startSharedChat(String text) async {
+  Future<void> _startSharedChat(AndroidSharePayload payload) async {
     await _initialization;
     if (!mounted) return;
 
+    final text = payload.text ?? '';
     final projectsView = await _projectsForNewChat();
     if (!mounted) return;
     final activeProjects = projectsView.projects
@@ -442,8 +464,10 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
     final decision = await showModalBottomSheet<ShareTextDecision>(
       context: context,
       isScrollControlled: true,
+      useSafeArea: true,
       builder: (_) => ShareTextReviewSheet(
         sharedText: text,
+        sharedFiles: payload.files,
         projectChatEnabled: activeProjects.isNotEmpty,
       ),
     );
@@ -460,6 +484,28 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
             );
       if (project == null || !mounted) return;
     }
+
+    List<AttachmentDraft> attachments;
+    try {
+      attachments = payload.files.isEmpty
+          ? const []
+          : await (widget.sharedAttachmentPreparer ??
+                    (files) => prepareAndroidSharedFiles(files))
+                .call(payload.files);
+    } on AttachmentDraftException catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error.message)));
+      return;
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Couldn’t prepare the shared files.')),
+      );
+      return;
+    }
+    if (!mounted) return;
 
     final draft = buildNewChatDraft(
       mode: decision.mode,
@@ -480,7 +526,12 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
     if (!mounted) return;
     await _finishNewChat(
       draft,
-      initialComposerText: buildSharedPrompt(decision.action, text),
+      initialComposerText: buildSharedPrompt(
+        decision.action,
+        text,
+        hasAttachments: attachments.isNotEmpty,
+      ),
+      initialAttachmentDrafts: attachments,
     );
   }
 
@@ -652,6 +703,7 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
     Session session, {
     String? projectName,
     String? initialComposerText,
+    List<AttachmentDraft> initialAttachmentDrafts = const [],
   }) async {
     final report = widget.onOpenSession;
     if (report != null) {
@@ -669,6 +721,7 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
               session: session,
               projectName: projectName,
               initialComposerText: initialComposerText,
+              initialAttachmentDrafts: initialAttachmentDrafts,
               turnApplicationController: widget.turnApplicationController,
             ),
       ),
@@ -853,6 +906,7 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
   Future<void> _finishNewChat(
     NewChatDraft draft, {
     String? initialComposerText,
+    List<AttachmentDraft> initialAttachmentDrafts = const [],
   }) async {
     final projectId = draft.projectId;
     if (projectId != null) {
@@ -876,7 +930,11 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
             action: SnackBarAction(
               label: 'Retry',
               onPressed: () => unawaited(
-                _finishNewChat(draft, initialComposerText: initialComposerText),
+                _finishNewChat(
+                  draft,
+                  initialComposerText: initialComposerText,
+                  initialAttachmentDrafts: initialAttachmentDrafts,
+                ),
               ),
             ),
           ),
@@ -895,6 +953,7 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
       draft.session,
       projectName: draft.projectName,
       initialComposerText: initialComposerText,
+      initialAttachmentDrafts: initialAttachmentDrafts,
     );
   }
 

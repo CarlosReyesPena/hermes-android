@@ -125,6 +125,9 @@ class ChatScreen extends StatefulWidget {
   /// composer; sending remains an explicit user action.
   final String? initialComposerText;
 
+  /// Validated app-private files supplied by Android's share sheet.
+  final List<AttachmentDraft> initialAttachmentDrafts;
+
   final GatewayTurnApplicationController? turnApplicationController;
 
   @visibleForTesting
@@ -161,6 +164,7 @@ class ChatScreen extends StatefulWidget {
     required this.session,
     this.projectName,
     this.initialComposerText,
+    this.initialAttachmentDrafts = const [],
     this.turnApplicationController,
     this.testTurnApplicationSession,
     this.testApiClient,
@@ -281,7 +285,9 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
       adapter:
           widget.testVoiceComposerAdapter ?? SpeechToTextVoiceComposerAdapter(),
     )..addListener(_onVoiceComposerChanged);
-    _attachmentDrafts.addAll(widget.testInitialAttachmentDrafts);
+    _attachmentDrafts
+      ..addAll(widget.initialAttachmentDrafts)
+      ..addAll(widget.testInitialAttachmentDrafts);
     _gatewayNotices = List<GatewayNotice>.from(
       _savedGatewayNotices[_gatewayNoticeIdentity] ?? const [],
     );

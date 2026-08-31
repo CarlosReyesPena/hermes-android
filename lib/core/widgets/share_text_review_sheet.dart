@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../services/android_share_intent_service.dart';
 import '../theme/hermes_theme.dart';
 import '../utils/new_chat_options.dart';
 
@@ -17,8 +18,27 @@ enum ShareFavoriteAction {
   const ShareFavoriteAction(this.label, this.icon);
 }
 
-String buildSharedPrompt(ShareFavoriteAction action, String source) {
+String buildSharedPrompt(
+  ShareFavoriteAction action,
+  String source, {
+  bool hasAttachments = false,
+}) {
   final text = source.trim();
+  if (text.isEmpty && hasAttachments) {
+    return switch (action) {
+      ShareFavoriteAction.useAsIs => 'Review the attached content.',
+      ShareFavoriteAction.summarize => 'Summarize the attached content.',
+      ShareFavoriteAction.explain => 'Explain the attached content clearly.',
+      ShareFavoriteAction.research =>
+        'Research the attached content, verify the important claims, and cite sources.',
+      ShareFavoriteAction.extractTasks =>
+        'Extract the decisions, deadlines, owners, and actionable action items from the attached content.',
+      ShareFavoriteAction.remember =>
+        'Save the durable facts from the attached content to memory, then confirm what was retained.',
+      ShareFavoriteAction.fillFromDocument =>
+        'Use the attached content to identify and fill the relevant document or form fields. Ask before submitting anything.',
+    };
+  }
   return switch (action) {
     ShareFavoriteAction.useAsIs => text,
     ShareFavoriteAction.summarize => 'Summarize this content:\n\n$text',
@@ -43,10 +63,12 @@ class ShareTextDecision {
 
 class ShareTextReviewSheet extends StatefulWidget {
   final String sharedText;
+  final List<AndroidSharedFile> sharedFiles;
   final bool projectChatEnabled;
 
   const ShareTextReviewSheet({
     required this.sharedText,
+    this.sharedFiles = const [],
     required this.projectChatEnabled,
     super.key,
   });
@@ -82,11 +104,37 @@ class _ShareTextReviewSheetState extends State<ShareTextReviewSheet> {
                     ),
                     const SizedBox(height: HermesSpacing.sm),
                     Text(
-                      widget.sharedText,
+                      widget.sharedText.trim().isEmpty
+                          ? 'No text shared'
+                          : widget.sharedText,
                       maxLines: 4,
                       overflow: TextOverflow.ellipsis,
                       style: Theme.of(context).textTheme.bodySmall,
                     ),
+                    if (widget.sharedFiles.isNotEmpty) ...[
+                      const SizedBox(height: HermesSpacing.md),
+                      Text(
+                        '${widget.sharedFiles.length} ${widget.sharedFiles.length == 1 ? 'attachment' : 'attachments'}',
+                        style: Theme.of(context).textTheme.titleSmall,
+                      ),
+                      const SizedBox(height: HermesSpacing.xs),
+                      for (final file in widget.sharedFiles)
+                        ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          dense: true,
+                          leading: Icon(
+                            file.isImage
+                                ? Icons.image_outlined
+                                : Icons.insert_drive_file_outlined,
+                          ),
+                          title: Text(
+                            file.name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          subtitle: Text(file.mediaType),
+                        ),
+                    ],
                     const SizedBox(height: HermesSpacing.lg),
                     Text(
                       'Action',

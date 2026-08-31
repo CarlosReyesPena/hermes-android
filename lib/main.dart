@@ -255,12 +255,12 @@ class HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _refresh();
-    widget.shareIntents?.pendingText.addListener(_onSharedText);
+    widget.shareIntents?.pendingShare.addListener(_onSharedText);
     WidgetsBinding.instance.addPostFrameCallback((_) => _onSharedText());
   }
 
   void _onSharedText() {
-    if (!mounted || widget.shareIntents?.pendingText.value == null) return;
+    if (!mounted || widget.shareIntents?.pendingShare.value == null) return;
     final lastId = widget.connManager.prefs.getString(_lastConnectionKey);
     final preferred = _connections
         .where((connection) => connection.id == lastId)
@@ -274,7 +274,7 @@ class HomeScreenState extends State<HomeScreen> {
 
   @override
   void dispose() {
-    widget.shareIntents?.pendingText.removeListener(_onSharedText);
+    widget.shareIntents?.pendingShare.removeListener(_onSharedText);
     super.dispose();
   }
 
@@ -290,7 +290,7 @@ class HomeScreenState extends State<HomeScreen> {
   void _maybeAutoNavigate() {
     // The share listener owns this route so the regular last-connection
     // auto-navigation cannot stack a second Workspace above the shared draft.
-    if (widget.shareIntents?.pendingText.value != null) return;
+    if (widget.shareIntents?.pendingShare.value != null) return;
     final lastId = widget.connManager.prefs.getString(_lastConnectionKey);
     if (lastId == null) return;
     final conn = _connections.where((c) => c.id == lastId).firstOrNull;
@@ -302,14 +302,14 @@ class HomeScreenState extends State<HomeScreen> {
 
   void _navigateToWorkspace(SavedConnection conn) {
     widget.connManager.prefs.setString(_lastConnectionKey, conn.id);
-    final sharedText = widget.shareIntents?.takePending();
+    final sharedPayload = widget.shareIntents?.takePendingShare();
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (_) => WorkspaceScreen(
           connection: conn,
           turnApplicationController: widget.turnApplicationController,
-          initialSharedText: sharedText,
+          initialSharedPayload: sharedPayload,
         ),
       ),
     );

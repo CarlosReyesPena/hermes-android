@@ -10,8 +10,8 @@
     "semantic_hash": ""
   },
   "android/app/src/main/kotlin/com/hermesagent/hermes_android/MainActivity.kt": {
-    "mtime": 1788153854.7612982,
-    "ast_hash": "f5f543a532e4e5cae8544fdb4eff2eaa",
+    "mtime": 1788167541.0308077,
+    "ast_hash": "f207f9a574ec8e720ea979b999d306aa",
     "semantic_hash": ""
   },
   "android/build.gradle.kts": {
@@ -145,8 +145,8 @@
     "semantic_hash": ""
   },
   "lib/core/screens/chat_screen.dart": {
-    "mtime": 1788153559.2735796,
-    "ast_hash": "54145043d4c18666988e0c4b8ac43857",
+    "mtime": 1788168107.2061887,
+    "ast_hash": "05dc17767f0be4a27e307141225d6c33",
     "semantic_hash": ""
   },
   "lib/core/screens/cron_screen.dart": {
@@ -185,8 +185,8 @@
     "semantic_hash": ""
   },
   "lib/core/services/attachment_draft_service.dart": {
-    "mtime": 1787513018.505842,
-    "ast_hash": "fa7027baab999ecbf820da69acdb3fb5",
+    "mtime": 1788167224.909747,
+    "ast_hash": "204fe68ecf591058cdab759efadf5fd3",
     "semantic_hash": ""
   },
   "lib/core/services/chat_model_override_store.dart": {
@@ -325,8 +325,8 @@
     "semantic_hash": ""
   },
   "lib/main.dart": {
-    "mtime": 1788154410.8533235,
-    "ast_hash": "2d932c3d9e1e404dca83e641296bac23",
+    "mtime": 1788168474.9878004,
+    "ast_hash": "5145d0892ae3aebdadadad409b26bad1",
     "semantic_hash": ""
   },
   "test/ai_search_query_rewriter_test.dart": {
@@ -335,8 +335,8 @@
     "semantic_hash": ""
   },
   "test/attachment_draft_service_test.dart": {
-    "mtime": 1787513018.514842,
-    "ast_hash": "980bc49556cbd5cb1e77b8a58a101548",
+    "mtime": 1788167125.596457,
+    "ast_hash": "81ea49a1f3ff8a7305647143571458da",
     "semantic_hash": ""
   },
   "test/attachment_draft_tile_test.dart": {
@@ -860,13 +860,13 @@
     "semantic_hash": ""
   },
   "lib/core/screens/workspace_screen.dart": {
-    "mtime": 1788158261.587295,
-    "ast_hash": "fdf0f83cb3222aa6c53b4de5316956ec",
+    "mtime": 1788169720.7500205,
+    "ast_hash": "fe7746fca3a1d46e21e796a1917f08ee",
     "semantic_hash": ""
   },
   "test/workspace_screen_test.dart": {
-    "mtime": 1788158406.901323,
-    "ast_hash": "865f3a40eed4e059ea20c49dc1b169ce",
+    "mtime": 1788169621.878706,
+    "ast_hash": "064668f582e8c63f41677451f3861a56",
     "semantic_hash": ""
   },
   "lib/core/widgets/space_migration_preview.dart": {
@@ -1050,8 +1050,8 @@
     "semantic_hash": ""
   },
   "test/home_config_restore_test.dart": {
-    "mtime": 1788158662.419889,
-    "ast_hash": "ee446a3448c9525c221b0277ced13558",
+    "mtime": 1788168648.4350562,
+    "ast_hash": "a71804a1e924a28cc233ba924420d6fb",
     "semantic_hash": ""
   },
   "lib/core/models/project_sessions_tree.dart": {
@@ -1225,23 +1225,38 @@
     "semantic_hash": ""
   },
   "lib/core/services/android_share_intent_service.dart": {
-    "mtime": 1788153647.4736896,
-    "ast_hash": "3e8c8af668f9c0824736097197d3d7a3",
+    "mtime": 1788168624.7247486,
+    "ast_hash": "5ad71200efa1f659e046da6966af9ade",
     "semantic_hash": ""
   },
   "test/android_share_intent_service_test.dart": {
-    "mtime": 1788153614.513275,
-    "ast_hash": "47ebaa6f5f2c9c041b6fbcdcb8b1e7c6",
+    "mtime": 1788166758.911694,
+    "ast_hash": "6b4969252e67da14fb515a0b359b457d",
     "semantic_hash": ""
   },
   "lib/core/widgets/share_text_review_sheet.dart": {
-    "mtime": 1788158784.7525961,
-    "ast_hash": "782ddab377afa1a4956bcb161be5a937",
+    "mtime": 1788167041.8563693,
+    "ast_hash": "aa732282ebb605682b41a5ece608bd99",
     "semantic_hash": ""
   },
   "test/share_text_review_sheet_test.dart": {
-    "mtime": 1788158823.6131387,
-    "ast_hash": "f71398e936c7c697d93f11ddc541fcb7",
+    "mtime": 1788166891.9224217,
+    "ast_hash": "67a5bc2a59b3165588c9c6896b60d49e",
+    "semantic_hash": ""
+  },
+  "lib/core/services/shared_attachment_preparer.dart": {
+    "mtime": 1788167362.035528,
+    "ast_hash": "533e8ca1c1a4e3283409019421dfd6c4",
+    "semantic_hash": ""
+  },
+  "test/android_share_platform_contract_test.dart": {
+    "mtime": 1788168722.5070174,
+    "ast_hash": "fd0238422e12784ff5c92c1034a04bec",
+    "semantic_hash": ""
+  },
+  "test/shared_attachment_preparer_test.dart": {
+    "mtime": 1788167312.9198902,
+    "ast_hash": "b09f1a6d1f13eca81cc0bb73103fe5fb",
     "semantic_hash": ""
   }
 }

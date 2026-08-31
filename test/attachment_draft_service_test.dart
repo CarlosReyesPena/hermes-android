@@ -79,6 +79,7 @@ void main() {
         final draft = await service.prepareGenericFile(
           sourcePath: source.path,
           displayName: 'report.txt',
+          mediaType: 'text/plain',
           existingDrafts: const [],
         );
 
@@ -86,6 +87,7 @@ void main() {
         expect(await File(draft.cachedPath).readAsString(), 'synthetic report');
         expect(draft.byteLength, await source.length());
         expect(draft.kind, AttachmentDraftKind.genericFile);
+        expect(draft.mediaType, 'text/plain');
 
         final modelSource = await File(
           'lib/core/models/attachment_draft.dart',

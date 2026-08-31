@@ -19,6 +19,17 @@ const maxGenericAttachmentBytes = 16 * 1024 * 1024;
 /// The legacy REST transport remains single-image and proxy-budgeted.
 const maxRestImageBytes = 680 * 1024;
 
+final _mediaTypePattern = RegExp(
+  r'^[a-zA-Z0-9][a-zA-Z0-9!#$&^_.+-]*/[a-zA-Z0-9][a-zA-Z0-9!#$&^_.+-]*$',
+);
+
+String _safeMediaType(String value) {
+  final normalized = value.trim().toLowerCase();
+  return _mediaTypePattern.hasMatch(normalized)
+      ? normalized
+      : 'application/octet-stream';
+}
+
 enum AttachmentDraftMode { remoteGateway, rest }
 
 bool allowsMultipleImageSelection(AttachmentDraftMode mode) =>
@@ -230,6 +241,7 @@ class AttachmentDraftService {
   Future<AttachmentDraft> prepareGenericFile({
     required String sourcePath,
     required String displayName,
+    String mediaType = 'application/octet-stream',
     required Iterable<AttachmentDraft> existingDrafts,
   }) async {
     _ensureRemoteSlot(existingDrafts);
@@ -266,7 +278,7 @@ class AttachmentDraftService {
         cachedPath: destination.path,
         name: displayName,
         byteLength: copiedSize,
-        mediaType: 'application/octet-stream',
+        mediaType: _safeMediaType(mediaType),
         kind: AttachmentDraftKind.genericFile,
       );
     } catch (_) {
