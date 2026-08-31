@@ -41,6 +41,7 @@ import 'cron_screen.dart';
 import 'memory_screen.dart';
 import 'settings_screen.dart';
 import 'skills_screen.dart';
+import '../widgets/share_text_review_sheet.dart';
 import 'workspace_sessions_screen.dart';
 
 /// Builds the Projects repository for a connection. Injectable for tests.
@@ -184,6 +185,7 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
   ApiClient? _sessionsApi;
   bool _ownsRepository = false;
   bool _initialized = false;
+  late final Future<void> _initialization;
 
   /// Quick chats past their retention deadline, recomputed on every session
   /// read. Held here rather than derived inside [HomePane] so the store is
@@ -419,7 +421,7 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
   @override
   void initState() {
     super.initState();
-    unawaited(_initialize());
+    _initialization = _initialize();
     final sharedText = widget.initialSharedText?.trim();
     if (sharedText != null && sharedText.isNotEmpty) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -429,23 +431,57 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
   }
 
   Future<void> _startSharedChat(String text) async {
+    await _initialization;
+    if (!mounted) return;
+
+    final projectsView = await _projectsForNewChat();
+    if (!mounted) return;
+    final activeProjects = projectsView.projects
+        .where((project) => !project.archived)
+        .toList();
+    final decision = await showModalBottomSheet<ShareTextDecision>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => ShareTextReviewSheet(
+        sharedText: text,
+        projectChatEnabled: activeProjects.isNotEmpty,
+      ),
+    );
+    if (decision == null || !mounted) return;
+
+    HermesProject? project;
+    if (decision.mode == NewChatMode.projectChat) {
+      project = activeProjects.length == 1
+          ? activeProjects.single
+          : await showModalBottomSheet<HermesProject>(
+              context: context,
+              isScrollControlled: true,
+              builder: (_) => ProjectPickerSheet(projects: activeProjects),
+            );
+      if (project == null || !mounted) return;
+    }
+
     final draft = buildNewChatDraft(
-      mode: NewChatMode.quickChat,
+      mode: decision.mode,
       sessionId:
           (widget.newChatSessionIdFactory ??
                   GatewayChatClient.generateSessionId)
               .call(),
       now: DateTime.now(),
+      project: project,
     );
     final expiresAt = draft.expiresAt;
-    if (expiresAt != null) {
+    if (draft.isQuick && expiresAt != null) {
       try {
         final store = await _quickChatStore();
         await store.record(draft.session.id, expiresAt: expiresAt);
       } catch (_) {}
     }
     if (!mounted) return;
-    await _finishNewChat(draft, initialComposerText: text);
+    await _finishNewChat(
+      draft,
+      initialComposerText: buildSharedPrompt(decision.action, text),
+    );
   }
 
   @override

@@ -1342,23 +1342,68 @@ void main() {
       expect(find.byType(ChatScreen), findsOneWidget);
     });
 
-    testWidgets('shared text opens a Quick chat with the composer prefilled', (
+    testWidgets(
+      'shared text is reviewed before opening a prefilled Quick chat',
+      (tester) async {
+        await _pump(
+          tester,
+          connection: _connection(),
+          sessions: const [],
+          initialSharedText: 'https://example.com/story',
+        );
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 500));
+
+        expect(find.text('Share to Hermes'), findsOneWidget);
+        expect(find.byType(ChatScreen), findsNothing);
+        await tester.tap(find.text('Summarize'));
+        await tester.ensureVisible(find.text('Continue'));
+        await tester.tap(find.text('Continue'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 500));
+
+        expect(find.byType(ChatScreen), findsOneWidget);
+        final composer = tester.widget<TextField>(
+          find.byKey(const Key('chat-message-composer')),
+        );
+        expect(composer.controller?.text, contains('Summarize this content'));
+        expect(
+          composer.controller?.text,
+          contains('https://example.com/story'),
+        );
+      },
+    );
+
+    testWidgets('shared text can commit directly into an active Project', (
       tester,
     ) async {
+      final opened = <NewChatDraft>[];
+      final assignments = <Map<String, dynamic>>[];
+      final repository = await _repository([
+        _projectJson(id: 'p1', name: 'Hermes Android'),
+      ], assignments: assignments);
       await _pump(
         tester,
-        connection: _connection(),
+        connection: _connection(desktopGatewayUrl: 'https://host:8642'),
+        repository: repository,
         sessions: const [],
-        initialSharedText: 'Summarize https://example.com/story',
+        initialSharedText: 'Project source material',
+        newChatSessionIdFactory: () => 'shared-project-chat',
+        onNewChat: opened.add,
       );
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 500));
 
-      expect(find.byType(ChatScreen), findsOneWidget);
-      final composer = tester.widget<TextField>(
-        find.byKey(const Key('chat-message-composer')),
-      );
-      expect(composer.controller?.text, 'Summarize https://example.com/story');
+      await tester.ensureVisible(find.text('Project chat'));
+      await tester.tap(find.text('Project chat'));
+      await tester.ensureVisible(find.text('Continue'));
+      await tester.tap(find.text('Continue'));
+      await tester.pumpAndSettle();
+
+      expect(opened.single.projectId, 'p1');
+      expect(assignments, [
+        {'session_id': 'shared-project-chat', 'project_id': 'p1'},
+      ]);
     });
   });
 

@@ -143,6 +143,11 @@ void main() {
     );
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
+
+    expect(find.text('Share to Hermes'), findsOneWidget);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Continue'));
+    await tester.pump();
     await tester.pump(const Duration(seconds: 2));
 
     expect(find.byType(ChatScreen), findsOneWidget);
