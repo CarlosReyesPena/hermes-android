@@ -167,6 +167,7 @@ Future<void> _pump(
   ValueChanged<NewChatDraft>? onNewChat,
   NewChatSessionIdFactory? newChatSessionIdFactory,
   GatewayTurnApplicationController? turnApplicationController,
+  String? initialSharedText,
   Size size = const Size(400, 800),
 }) async {
   tester.view.physicalSize = size;
@@ -196,6 +197,7 @@ Future<void> _pump(
         onNewChat: onNewChat,
         newChatSessionIdFactory: newChatSessionIdFactory,
         turnApplicationController: turnApplicationController,
+        initialSharedText: initialSharedText,
         onOpenDashboard: openedDashboards == null
             ? null
             : (url) async => openedDashboards.add(url),
@@ -1338,6 +1340,25 @@ void main() {
       await tester.pump(const Duration(milliseconds: 400));
 
       expect(find.byType(ChatScreen), findsOneWidget);
+    });
+
+    testWidgets('shared text opens a Quick chat with the composer prefilled', (
+      tester,
+    ) async {
+      await _pump(
+        tester,
+        connection: _connection(),
+        sessions: const [],
+        initialSharedText: 'Summarize https://example.com/story',
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(find.byType(ChatScreen), findsOneWidget);
+      final composer = tester.widget<TextField>(
+        find.byKey(const Key('chat-message-composer')),
+      );
+      expect(composer.controller?.text, 'Summarize https://example.com/story');
     });
   });
 

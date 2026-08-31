@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hermes_android/core/screens/chat_screen.dart';
 import 'package:hermes_android/core/screens/session_list_screen.dart';
 import 'package:hermes_android/core/screens/workspace_screen.dart';
+import 'package:hermes_android/core/services/android_share_intent_service.dart';
 import 'package:hermes_android/core/services/config_backup_service.dart';
 import 'package:hermes_android/core/services/connection_manager.dart';
 import 'package:hermes_android/core/services/gateway_turn_application_controller.dart';
@@ -56,6 +59,7 @@ Future<void> pumpHome(
   Future<String?> Function()? pickBackupFile,
   Future<ConfigImportResult> Function(String, String, ConfigImportMode)?
   importBackup,
+  AndroidShareIntentService? shareIntents,
 }) async {
   await tester.pumpWidget(
     MaterialApp(
@@ -64,6 +68,7 @@ Future<void> pumpHome(
         turnApplicationController: GatewayTurnApplicationController(
           sessionFactory: (_) => InertTurnApplicationSession(),
         ),
+        shareIntents: shareIntents,
         pickBackupFile: pickBackupFile,
         importBackup: importBackup,
       ),
@@ -103,6 +108,46 @@ void main() {
     for (final destination in HermesDestination.values) {
       expect(find.text(destination.label), findsWidgets);
     }
+  });
+
+  testWidgets('a cold-start share uses the saved connection exactly once', (
+    tester,
+  ) async {
+    const channel = MethodChannel(AndroidShareIntentService.channelName);
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(
+          channel,
+          (_) async => 'Summarize https://example.com/shared',
+        );
+    addTearDown(
+      () => TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, null),
+    );
+
+    final shareIntents = AndroidShareIntentService();
+    await shareIntents.initialize();
+    addTearDown(shareIntents.dispose);
+    final manager = await buildManager();
+    await manager.saveConnection('Miniserver', 'host', 8642, 'key');
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: HomeScreen(
+          connManager: manager,
+          turnApplicationController: GatewayTurnApplicationController(
+            sessionFactory: (_) => InertTurnApplicationSession(),
+          ),
+          shareIntents: shareIntents,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+    await tester.pump(const Duration(seconds: 2));
+
+    expect(find.byType(ChatScreen), findsOneWidget);
+    expect(find.byKey(const Key('chat-message-composer')), findsOneWidget);
+    expect(shareIntents.pendingText.value, isNull);
   });
 
   testWidgets('restore stays reachable once connections exist', (tester) async {

@@ -10,8 +10,8 @@
     "semantic_hash": ""
   },
   "android/app/src/main/kotlin/com/hermesagent/hermes_android/MainActivity.kt": {
-    "mtime": 1787513018.470546,
-    "ast_hash": "a1a550d0039ab5809a9d58115543d8e3",
+    "mtime": 1788153854.7612982,
+    "ast_hash": "f5f543a532e4e5cae8544fdb4eff2eaa",
     "semantic_hash": ""
   },
   "android/build.gradle.kts": {
@@ -145,8 +145,8 @@
     "semantic_hash": ""
   },
   "lib/core/screens/chat_screen.dart": {
-    "mtime": 1788139340.8699179,
-    "ast_hash": "6d66642cdd29667cfdc2a8f8867e3bfe",
+    "mtime": 1788153559.2735796,
+    "ast_hash": "54145043d4c18666988e0c4b8ac43857",
     "semantic_hash": ""
   },
   "lib/core/screens/cron_screen.dart": {
@@ -325,8 +325,8 @@
     "semantic_hash": ""
   },
   "lib/main.dart": {
-    "mtime": 1788081912.810902,
-    "ast_hash": "c4bb03619b5f8b84f722bf1ad9508efe",
+    "mtime": 1788154410.8533235,
+    "ast_hash": "2d932c3d9e1e404dca83e641296bac23",
     "semantic_hash": ""
   },
   "test/ai_search_query_rewriter_test.dart": {
@@ -860,13 +860,13 @@
     "semantic_hash": ""
   },
   "lib/core/screens/workspace_screen.dart": {
-    "mtime": 1788139431.5850763,
-    "ast_hash": "c33fb2d80163d1bd3da77299c9ad45b9",
+    "mtime": 1788153578.9018266,
+    "ast_hash": "66681ec88c9f561ec7ced153ac2dccc0",
     "semantic_hash": ""
   },
   "test/workspace_screen_test.dart": {
-    "mtime": 1788084479.9911313,
-    "ast_hash": "988be2daa8e2d945a7c96a7effc51fa7",
+    "mtime": 1788153579.16383,
+    "ast_hash": "f6df07e41e9db26fc394b9aa994d8407",
     "semantic_hash": ""
   },
   "lib/core/widgets/space_migration_preview.dart": {
@@ -1050,8 +1050,8 @@
     "semantic_hash": ""
   },
   "test/home_config_restore_test.dart": {
-    "mtime": 1788082643.2443588,
-    "ast_hash": "9475f3ceb6c2cbf611f2234f2b841ec8",
+    "mtime": 1788154639.1772141,
+    "ast_hash": "861e36bdec0c0d5aae7ba4045522ef85",
     "semantic_hash": ""
   },
   "lib/core/models/project_sessions_tree.dart": {
@@ -1222,6 +1222,16 @@
   "docs/plans/2026-08-30-chat-ui-context-composer.md": {
     "mtime": 1788137460.2130308,
     "ast_hash": "b55a445c3bd3f43cba47824ad2b6f81e",
+    "semantic_hash": ""
+  },
+  "lib/core/services/android_share_intent_service.dart": {
+    "mtime": 1788153647.4736896,
+    "ast_hash": "3e8c8af668f9c0824736097197d3d7a3",
+    "semantic_hash": ""
+  },
+  "test/android_share_intent_service_test.dart": {
+    "mtime": 1788153614.513275,
+    "ast_hash": "47ebaa6f5f2c9c041b6fbcdcb8b1e7c6",
     "semantic_hash": ""
   }
 }

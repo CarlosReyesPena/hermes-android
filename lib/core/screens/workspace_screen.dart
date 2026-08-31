@@ -94,12 +94,14 @@ Widget buildWorkspaceChatScreen({
   required SavedConnection connection,
   required Session session,
   String? projectName,
+  String? initialComposerText,
   GatewayTurnApplicationController? turnApplicationController,
 }) {
   return ChatScreen(
     connection: connection,
     session: session,
     projectName: projectName,
+    initialComposerText: initialComposerText,
     turnApplicationController: turnApplicationController,
   );
 }
@@ -145,6 +147,10 @@ class WorkspaceScreen extends StatefulWidget {
   /// Overrides the id a new chat is created under.
   final NewChatSessionIdFactory? newChatSessionIdFactory;
 
+  /// Text received through Android's share sheet. It opens as a Quick chat
+  /// draft and is never submitted without an explicit user tap.
+  final String? initialSharedText;
+
   /// Overrides how the Hermes dashboard fallback is opened.
   final DashboardLauncher? onOpenDashboard;
 
@@ -161,6 +167,7 @@ class WorkspaceScreen extends StatefulWidget {
     this.activityFeedLoader,
     this.onNewChat,
     this.newChatSessionIdFactory,
+    this.initialSharedText,
     this.onOpenDashboard,
     super.key,
   });
@@ -413,6 +420,32 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
   void initState() {
     super.initState();
     unawaited(_initialize());
+    final sharedText = widget.initialSharedText?.trim();
+    if (sharedText != null && sharedText.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) unawaited(_startSharedChat(sharedText));
+      });
+    }
+  }
+
+  Future<void> _startSharedChat(String text) async {
+    final draft = buildNewChatDraft(
+      mode: NewChatMode.quickChat,
+      sessionId:
+          (widget.newChatSessionIdFactory ??
+                  GatewayChatClient.generateSessionId)
+              .call(),
+      now: DateTime.now(),
+    );
+    final expiresAt = draft.expiresAt;
+    if (expiresAt != null) {
+      try {
+        final store = await _quickChatStore();
+        await store.record(draft.session.id, expiresAt: expiresAt);
+      } catch (_) {}
+    }
+    if (!mounted) return;
+    await _finishNewChat(draft, initialComposerText: text);
   }
 
   @override
@@ -579,7 +612,11 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
   /// this screen must not also push a route underneath it. Otherwise it opens
   /// the chat itself and re-reads Home on return, because the reason a chat
   /// was blocked usually stops being true while the user is inside it.
-  Future<void> _openSession(Session session, {String? projectName}) async {
+  Future<void> _openSession(
+    Session session, {
+    String? projectName,
+    String? initialComposerText,
+  }) async {
     final report = widget.onOpenSession;
     if (report != null) {
       report(session);
@@ -595,6 +632,7 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
               connection: widget.connection,
               session: session,
               projectName: projectName,
+              initialComposerText: initialComposerText,
               turnApplicationController: widget.turnApplicationController,
             ),
       ),
@@ -776,7 +814,10 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
   /// `projects.assign_session` is idempotent, so Retry can safely reuse the
   /// same session id. A failed write never opens an Unassigned chat under the
   /// guise of the Project the user chose.
-  Future<void> _finishNewChat(NewChatDraft draft) async {
+  Future<void> _finishNewChat(
+    NewChatDraft draft, {
+    String? initialComposerText,
+  }) async {
     final projectId = draft.projectId;
     if (projectId != null) {
       // Remember the intent so the stored-id reconciliation below can re-write
@@ -798,7 +839,9 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
             content: const Text('Couldn’t create Project chat'),
             action: SnackBarAction(
               label: 'Retry',
-              onPressed: () => unawaited(_finishNewChat(draft)),
+              onPressed: () => unawaited(
+                _finishNewChat(draft, initialComposerText: initialComposerText),
+              ),
             ),
           ),
         );
@@ -812,7 +855,11 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
       report(draft);
       return;
     }
-    await _openSession(draft.session, projectName: draft.projectName);
+    await _openSession(
+      draft.session,
+      projectName: draft.projectName,
+      initialComposerText: initialComposerText,
+    );
   }
 
   /// Re-writes a Project chat's assignment under its durable stored id.

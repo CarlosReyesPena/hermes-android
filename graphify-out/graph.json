@@ -49,7 +49,7 @@
       "source_file": "android/app/src/main/java/io/flutter/plugins/GeneratedPluginRegistrant.java",
       "source_location": "L17",
       "_origin": "ast",
-      "id": "flutterengine",
+      "id": "android_app_src_main_java_io_flutter_plugins_generatedpluginregistrant_java_flutterengine",
       "community": 79,
       "norm_label": "flutterengine"
     },
@@ -67,7 +67,7 @@
       "label": "MainActivity",
       "file_type": "code",
       "source_file": "android/app/src/main/kotlin/com/hermesagent/hermes_android/MainActivity.kt",
-      "source_location": "L5",
+      "source_location": "L9",
       "_origin": "ast",
       "id": "hermes_android_mainactivity_mainactivity",
       "community": 83,
@@ -82,6 +82,96 @@
       "id": "flutteractivity",
       "community": 83,
       "norm_label": "flutteractivity"
+    },
+    {
+      "label": "MethodChannel",
+      "file_type": "code",
+      "source_file": "android/app/src/main/kotlin/com/hermesagent/hermes_android/MainActivity.kt",
+      "source_location": "L11",
+      "_origin": "ast",
+      "id": "methodchannel",
+      "community": 83,
+      "norm_label": "methodchannel"
+    },
+    {
+      "label": "String",
+      "file_type": "code",
+      "source_file": "android/app/src/main/kotlin/com/hermesagent/hermes_android/MainActivity.kt",
+      "source_location": "L12",
+      "_origin": "ast",
+      "id": "android_app_src_main_kotlin_com_hermesagent_hermes_android_mainactivity_kt_string",
+      "community": 83,
+      "norm_label": "string"
+    },
+    {
+      "label": ".onCreate()",
+      "file_type": "code",
+      "source_file": "android/app/src/main/kotlin/com/hermesagent/hermes_android/MainActivity.kt",
+      "source_location": "L14",
+      "_origin": "ast",
+      "id": "hermes_android_mainactivity_mainactivity_oncreate",
+      "community": 83,
+      "norm_label": ".oncreate()"
+    },
+    {
+      "label": "Bundle",
+      "file_type": "code",
+      "source_file": "android/app/src/main/kotlin/com/hermesagent/hermes_android/MainActivity.kt",
+      "source_location": "L14",
+      "_origin": "ast",
+      "id": "bundle",
+      "community": 83,
+      "norm_label": "bundle"
+    },
+    {
+      "label": ".configureFlutterEngine()",
+      "file_type": "code",
+      "source_file": "android/app/src/main/kotlin/com/hermesagent/hermes_android/MainActivity.kt",
+      "source_location": "L19",
+      "_origin": "ast",
+      "id": "hermes_android_mainactivity_mainactivity_configureflutterengine",
+      "community": 83,
+      "norm_label": ".configureflutterengine()"
+    },
+    {
+      "label": "FlutterEngine",
+      "file_type": "code",
+      "source_file": "android/app/src/main/kotlin/com/hermesagent/hermes_android/MainActivity.kt",
+      "source_location": "L19",
+      "_origin": "ast",
+      "id": "android_app_src_main_kotlin_com_hermesagent_hermes_android_mainactivity_kt_flutterengine",
+      "community": 83,
+      "norm_label": "flutterengine"
+    },
+    {
+      "label": ".onNewIntent()",
+      "file_type": "code",
+      "source_file": "android/app/src/main/kotlin/com/hermesagent/hermes_android/MainActivity.kt",
+      "source_location": "L34",
+      "_origin": "ast",
+      "id": "hermes_android_mainactivity_mainactivity_onnewintent",
+      "community": 83,
+      "norm_label": ".onnewintent()"
+    },
+    {
+      "label": "Intent",
+      "file_type": "code",
+      "source_file": "android/app/src/main/kotlin/com/hermesagent/hermes_android/MainActivity.kt",
+      "source_location": "L34",
+      "_origin": "ast",
+      "id": "intent",
+      "community": 83,
+      "norm_label": "intent"
+    },
+    {
+      "label": ".extractSharedText()",
+      "file_type": "code",
+      "source_file": "android/app/src/main/kotlin/com/hermesagent/hermes_android/MainActivity.kt",
+      "source_location": "L42",
+      "_origin": "ast",
+      "id": "hermes_android_mainactivity_mainactivity_extractsharedtext",
+      "community": 83,
+      "norm_label": ".extractsharedtext()"
     },
     {
       "label": "build.gradle.kts",
@@ -448,7 +538,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "controllers_voice_composer_controller_voicecomposercontroller",
-      "community": 167,
+      "community": 111,
       "norm_label": "voicecomposercontroller"
     },
     {
@@ -458,7 +548,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "changenotifier",
-      "community": 167,
+      "community": 111,
       "norm_label": "changenotifier"
     },
     {
@@ -642,23 +732,13 @@
       "norm_label": "_status"
     },
     {
-      "label": "String?",
-      "file_type": "code",
-      "source_file": null,
-      "source_location": null,
-      "_origin": "ast",
-      "id": "string",
-      "community": 70,
-      "norm_label": "string?"
-    },
-    {
       "label": "bool get",
       "file_type": "code",
       "source_file": null,
       "source_location": null,
       "_origin": "ast",
       "id": "bool_get",
-      "community": 43,
+      "community": 183,
       "norm_label": "bool get"
     },
     {
@@ -858,7 +938,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "dart_async",
-      "community": 123,
+      "community": 184,
       "norm_label": "dart:async"
     },
     {
@@ -1068,7 +1148,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "models_connection",
-      "community": 81,
+      "community": 126,
       "norm_label": "connection.dart"
     },
     {
@@ -1078,7 +1158,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "models_connection_normalizedconnectionhost",
-      "community": 81,
+      "community": 126,
       "norm_label": "normalizedconnectionhost"
     },
     {
@@ -1098,7 +1178,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "models_connection_host",
-      "community": 81,
+      "community": 126,
       "norm_label": "host"
     },
     {
@@ -1108,7 +1188,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "models_connection_port",
-      "community": 81,
+      "community": 126,
       "norm_label": "port"
     },
     {
@@ -1118,7 +1198,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "models_connection_usehttps",
-      "community": 81,
+      "community": 126,
       "norm_label": "usehttps"
     },
     {
@@ -1128,7 +1208,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "models_connection_id",
-      "community": 81,
+      "community": 126,
       "norm_label": "id"
     },
     {
@@ -1138,7 +1218,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "models_connection_label",
-      "community": 81,
+      "community": 126,
       "norm_label": "label"
     },
     {
@@ -1148,7 +1228,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "models_connection_apikey",
-      "community": 81,
+      "community": 126,
       "norm_label": "apikey"
     },
     {
@@ -1158,7 +1238,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "models_connection_gatewayprefix",
-      "community": 81,
+      "community": 126,
       "norm_label": "gatewayprefix"
     },
     {
@@ -1168,7 +1248,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "models_connection_dashboardprefix",
-      "community": 81,
+      "community": 126,
       "norm_label": "dashboardprefix"
     },
     {
@@ -1178,7 +1258,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "models_connection_dashboardproxied",
-      "community": 81,
+      "community": 126,
       "norm_label": "dashboardproxied"
     },
     {
@@ -1188,7 +1268,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "models_connection_desktopgatewayurl",
-      "community": 81,
+      "community": 126,
       "norm_label": "desktopgatewayurl"
     },
     {
@@ -1198,7 +1278,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "models_connection_dashboardportoverride",
-      "community": 81,
+      "community": 126,
       "norm_label": "dashboardportoverride"
     },
     {
@@ -1208,7 +1288,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "models_connection_dashboardusername",
-      "community": 81,
+      "community": 126,
       "norm_label": "dashboardusername"
     },
     {
@@ -1218,7 +1298,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "models_connection_dashboardpassword",
-      "community": 81,
+      "community": 126,
       "norm_label": "dashboardpassword"
     },
     {
@@ -1228,7 +1308,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "models_connection_dashboardport",
-      "community": 81,
+      "community": 126,
       "norm_label": "dashboardport"
     },
     {
@@ -1238,7 +1318,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "int_get",
-      "community": 81,
+      "community": 126,
       "norm_label": "int get"
     },
     {
@@ -1248,7 +1328,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "models_connection_joinbaseurl",
-      "community": 81,
+      "community": 126,
       "norm_label": "joinbaseurl"
     },
     {
@@ -1258,7 +1338,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "models_connection_normalizehostandport",
-      "community": 81,
+      "community": 126,
       "norm_label": "normalizehostandport"
     },
     {
@@ -1268,7 +1348,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "models_connection_tomap",
-      "community": 81,
+      "community": 126,
       "norm_label": "tomap"
     },
     {
@@ -1278,7 +1358,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "models_connection_frommap",
-      "community": 81,
+      "community": 126,
       "norm_label": "frommap"
     },
     {
@@ -1288,7 +1368,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "models_connection_copywith",
-      "community": 81,
+      "community": 126,
       "norm_label": "copywith"
     },
     {
@@ -1538,7 +1618,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "models_gateway_activity_duration",
-      "community": 131,
+      "community": 101,
       "norm_label": "_duration"
     },
     {
@@ -1588,7 +1668,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "models_gateway_approval_gatewayapprovalchoice",
-      "community": 180,
+      "community": 48,
       "norm_label": "gatewayapprovalchoice"
     },
     {
@@ -1598,7 +1678,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "models_gateway_approval_gatewayapprovalrequest",
-      "community": 180,
+      "community": 48,
       "norm_label": "gatewayapprovalrequest"
     },
     {
@@ -1698,7 +1778,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "models_gateway_clarify_gatewayclarifyrequest",
-      "community": 112,
+      "community": 183,
       "norm_label": "gatewayclarifyrequest"
     },
     {
@@ -4388,7 +4468,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "models_session_dart",
-      "community": 70,
+      "community": 170,
       "norm_label": "../models/session.dart"
     },
     {
@@ -4628,7 +4708,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "typedef",
-      "community": 48,
+      "community": 58,
       "norm_label": "typedef"
     },
     {
@@ -4690,6 +4770,16 @@
       "id": "screens_chat_screen_projectname",
       "community": 0,
       "norm_label": "projectname"
+    },
+    {
+      "label": "initialComposerText",
+      "file_type": "code",
+      "source_file": "lib/core/screens/chat_screen.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "screens_chat_screen_initialcomposertext",
+      "community": 0,
+      "norm_label": "initialcomposertext"
     },
     {
       "label": "turnApplicationController",
@@ -6258,7 +6348,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_flutter_services_dart",
-      "community": 59,
+      "community": 116,
       "norm_label": "package:flutter/services.dart"
     },
     {
@@ -6988,7 +7078,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "valuechanged",
-      "community": 130,
+      "community": 167,
       "norm_label": "valuechanged"
     },
     {
@@ -8078,7 +8168,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "models_session_search_hit_dart",
-      "community": 126,
+      "community": 36,
       "norm_label": "../models/session_search_hit.dart"
     },
     {
@@ -8268,7 +8358,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "screens_settings_screen_themetoggle",
-      "community": 34,
+      "community": 15,
       "norm_label": "_themetoggle"
     },
     {
@@ -8278,7 +8368,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "screens_settings_screen_themetogglestate",
-      "community": 34,
+      "community": 15,
       "norm_label": "_themetogglestate"
     },
     {
@@ -9282,6 +9372,16 @@
       "norm_label": "projectname"
     },
     {
+      "label": "initialComposerText",
+      "file_type": "code",
+      "source_file": "lib/core/screens/workspace_screen.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "screens_workspace_screen_initialcomposertext",
+      "community": 124,
+      "norm_label": "initialcomposertext"
+    },
+    {
       "label": "turnApplicationController",
       "file_type": "code",
       "source_file": "lib/core/screens/workspace_screen.dart",
@@ -9380,6 +9480,16 @@
       "id": "screens_workspace_screen_onnewchat",
       "community": 124,
       "norm_label": "onnewchat"
+    },
+    {
+      "label": "initialSharedText",
+      "file_type": "code",
+      "source_file": "lib/core/screens/workspace_screen.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "screens_workspace_screen_initialsharedtext",
+      "community": 124,
+      "norm_label": "initialsharedtext"
     },
     {
       "label": "onOpenDashboard",
@@ -9740,6 +9850,16 @@
       "id": "screens_workspace_screen_initstate",
       "community": 124,
       "norm_label": "initstate"
+    },
+    {
+      "label": "_startSharedChat",
+      "file_type": "code",
+      "source_file": "lib/core/screens/workspace_screen.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "screens_workspace_screen_startsharedchat",
+      "community": 124,
+      "norm_label": "_startsharedchat"
     },
     {
       "label": "dispose",
@@ -10698,7 +10818,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "services_ai_search_query_rewriter",
-      "community": 126,
+      "community": 36,
       "norm_label": "ai_search_query_rewriter.dart"
     },
     {
@@ -10708,7 +10828,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "services_ai_search_query_rewriter_aisearchqueryrewriter",
-      "community": 126,
+      "community": 36,
       "norm_label": "aisearchqueryrewriter"
     },
     {
@@ -10728,7 +10848,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "services_ai_search_query_rewriter_http",
-      "community": 126,
+      "community": 36,
       "norm_label": "_http"
     },
     {
@@ -10738,7 +10858,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "client",
-      "community": 126,
+      "community": 36,
       "norm_label": "client"
     },
     {
@@ -10748,7 +10868,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "services_ai_search_query_rewriter_baseurl",
-      "community": 126,
+      "community": 36,
       "norm_label": "_baseurl"
     },
     {
@@ -10758,7 +10878,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "services_ai_search_query_rewriter_apikey",
-      "community": 126,
+      "community": 36,
       "norm_label": "_apikey"
     },
     {
@@ -10768,7 +10888,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "services_ai_search_query_rewriter_message",
-      "community": 126,
+      "community": 36,
       "norm_label": "message"
     },
     {
@@ -10778,7 +10898,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "services_ai_search_query_rewriter_rewrite",
-      "community": 126,
+      "community": 36,
       "norm_label": "rewrite"
     },
     {
@@ -10788,7 +10908,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "services_ai_search_query_rewriter_errormessage",
-      "community": 126,
+      "community": 36,
       "norm_label": "_errormessage"
     },
     {
@@ -10798,7 +10918,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "services_ai_search_query_rewriter_joinbaseurl",
-      "community": 126,
+      "community": 36,
       "norm_label": "_joinbaseurl"
     },
     {
@@ -10808,7 +10928,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "services_ai_search_query_rewriter_close",
-      "community": 126,
+      "community": 36,
       "norm_label": "close"
     },
     {
@@ -10818,7 +10938,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "services_ai_search_query_rewriter_tostring",
-      "community": 126,
+      "community": 36,
       "norm_label": "tostring"
     },
     {
@@ -10840,6 +10960,136 @@
       "id": "package_http_http_dart",
       "community": 36,
       "norm_label": "package:http/http.dart"
+    },
+    {
+      "label": "android_share_intent_service.dart",
+      "file_type": "code",
+      "source_file": "lib/core/services/android_share_intent_service.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "services_android_share_intent_service",
+      "community": 81,
+      "norm_label": "android_share_intent_service.dart"
+    },
+    {
+      "label": "AndroidShareIntentService",
+      "file_type": "code",
+      "source_file": "lib/core/services/android_share_intent_service.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "services_android_share_intent_service_androidshareintentservice",
+      "community": 81,
+      "norm_label": "androidshareintentservice"
+    },
+    {
+      "label": "channelName",
+      "file_type": "code",
+      "source_file": "lib/core/services/android_share_intent_service.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "services_android_share_intent_service_channelname",
+      "community": 81,
+      "norm_label": "channelname"
+    },
+    {
+      "label": "_channel",
+      "file_type": "code",
+      "source_file": "lib/core/services/android_share_intent_service.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "services_android_share_intent_service_channel",
+      "community": 81,
+      "norm_label": "_channel"
+    },
+    {
+      "label": "pendingText",
+      "file_type": "code",
+      "source_file": "lib/core/services/android_share_intent_service.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "services_android_share_intent_service_pendingtext",
+      "community": 81,
+      "norm_label": "pendingtext"
+    },
+    {
+      "label": "ValueNotifier",
+      "file_type": "code",
+      "source_file": null,
+      "source_location": null,
+      "_origin": "ast",
+      "id": "valuenotifier",
+      "community": 81,
+      "norm_label": "valuenotifier"
+    },
+    {
+      "label": "_initialized",
+      "file_type": "code",
+      "source_file": "lib/core/services/android_share_intent_service.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "services_android_share_intent_service_initialized",
+      "community": 81,
+      "norm_label": "_initialized"
+    },
+    {
+      "label": "initialize",
+      "file_type": "code",
+      "source_file": "lib/core/services/android_share_intent_service.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "services_android_share_intent_service_initialize",
+      "community": 81,
+      "norm_label": "initialize"
+    },
+    {
+      "label": "takePending",
+      "file_type": "code",
+      "source_file": "lib/core/services/android_share_intent_service.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "services_android_share_intent_service_takepending",
+      "community": 81,
+      "norm_label": "takepending"
+    },
+    {
+      "label": "_handleMethodCall",
+      "file_type": "code",
+      "source_file": "lib/core/services/android_share_intent_service.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "services_android_share_intent_service_handlemethodcall",
+      "community": 81,
+      "norm_label": "_handlemethodcall"
+    },
+    {
+      "label": "_publish",
+      "file_type": "code",
+      "source_file": "lib/core/services/android_share_intent_service.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "services_android_share_intent_service_publish",
+      "community": 81,
+      "norm_label": "_publish"
+    },
+    {
+      "label": "dispose",
+      "file_type": "code",
+      "source_file": "lib/core/services/android_share_intent_service.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "services_android_share_intent_service_dispose",
+      "community": 81,
+      "norm_label": "dispose"
+    },
+    {
+      "label": "package:flutter/foundation.dart",
+      "file_type": "code",
+      "source_file": null,
+      "source_location": null,
+      "_origin": "ast",
+      "id": "package_flutter_foundation_dart",
+      "community": 81,
+      "norm_label": "package:flutter/foundation.dart"
     },
     {
       "label": "attachment_draft_service.dart",
@@ -11368,7 +11618,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "services_capability_registry_capabilityregistry",
-      "community": 167,
+      "community": 111,
       "norm_label": "capabilityregistry"
     },
     {
@@ -11570,16 +11820,6 @@
       "id": "services_capability_registry_stringmap",
       "community": 111,
       "norm_label": "_stringmap"
-    },
-    {
-      "label": "package:flutter/foundation.dart",
-      "file_type": "code",
-      "source_file": null,
-      "source_location": null,
-      "_origin": "ast",
-      "id": "package_flutter_foundation_dart",
-      "community": 111,
-      "norm_label": "package:flutter/foundation.dart"
     },
     {
       "label": "ws_client.dart",
@@ -12138,7 +12378,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "static_const_int",
-      "community": 126,
+      "community": 36,
       "norm_label": "static const int"
     },
     {
@@ -14348,7 +14588,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "services_gateway_turn_application_controller_gatewayturnapplicationsession",
-      "community": 38,
+      "community": 141,
       "norm_label": "gatewayturnapplicationsession"
     },
     {
@@ -14368,7 +14608,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "services_gateway_turn_application_controller_coordinatorgatewayturnapplicationsession",
-      "community": 38,
+      "community": 141,
       "norm_label": "_coordinatorgatewayturnapplicationsession"
     },
     {
@@ -15958,7 +16198,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "services_gateway_turn_journal_gatewayturnjournal",
-      "community": 124,
+      "community": 2,
       "norm_label": "gatewayturnjournal"
     },
     {
@@ -17628,7 +17868,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "services_projects_gateway_client_list",
-      "community": 183,
+      "community": 180,
       "norm_label": "list"
     },
     {
@@ -17838,7 +18078,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "services_projects_repository_projectsessionsview",
-      "community": 128,
+      "community": 184,
       "norm_label": "projectsessionsview"
     },
     {
@@ -18968,7 +19208,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "services_session_search_client",
-      "community": 126,
+      "community": 36,
       "norm_label": "session_search_client.dart"
     },
     {
@@ -18988,7 +19228,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "services_session_search_client_sessionsearchclient",
-      "community": 126,
+      "community": 36,
       "norm_label": "sessionsearchclient"
     },
     {
@@ -18998,7 +19238,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "services_session_search_client_message",
-      "community": 126,
+      "community": 36,
       "norm_label": "message"
     },
     {
@@ -19008,7 +19248,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "services_session_search_client_maxlimit",
-      "community": 126,
+      "community": 36,
       "norm_label": "maxlimit"
     },
     {
@@ -19018,7 +19258,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "services_session_search_client_http",
-      "community": 126,
+      "community": 36,
       "norm_label": "_http"
     },
     {
@@ -19028,7 +19268,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "services_session_search_client_baseurl",
-      "community": 126,
+      "community": 36,
       "norm_label": "_baseurl"
     },
     {
@@ -19038,7 +19278,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "services_session_search_client_tostring",
-      "community": 126,
+      "community": 36,
       "norm_label": "tostring"
     },
     {
@@ -19048,7 +19288,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "services_session_search_client_search",
-      "community": 126,
+      "community": 36,
       "norm_label": "search"
     },
     {
@@ -19058,7 +19298,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "services_session_search_client_decodehits",
-      "community": 126,
+      "community": 36,
       "norm_label": "_decodehits"
     },
     {
@@ -19068,7 +19308,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "services_session_search_client_close",
-      "community": 126,
+      "community": 36,
       "norm_label": "close"
     },
     {
@@ -19448,7 +19688,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "double_get",
-      "community": 137,
+      "community": 193,
       "norm_label": "double get"
     },
     {
@@ -21288,7 +21528,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "brightness",
-      "community": 130,
+      "community": 128,
       "norm_label": "brightness"
     },
     {
@@ -22038,7 +22278,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "utils_chat_display_items_chatreasoningitem",
-      "community": 141,
+      "community": 146,
       "norm_label": "chatreasoningitem"
     },
     {
@@ -23378,7 +23618,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "utils_project_session_filter",
-      "community": 70,
+      "community": 170,
       "norm_label": "project_session_filter.dart"
     },
     {
@@ -23388,7 +23628,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "utils_project_session_filter_needle",
-      "community": 70,
+      "community": 170,
       "norm_label": "needle"
     },
     {
@@ -23398,7 +23638,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "utils_project_session_filter_sessions",
-      "community": 70,
+      "community": 170,
       "norm_label": "sessions"
     },
     {
@@ -23408,7 +23648,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "utils_project_session_filter_filterprojectsessions",
-      "community": 70,
+      "community": 170,
       "norm_label": "filterprojectsessions"
     },
     {
@@ -23578,7 +23818,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "widgets_activity_pane_offlinebanner",
-      "community": 119,
+      "community": 144,
       "norm_label": "_offlinebanner"
     },
     {
@@ -25118,7 +25358,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "widgets_hermes_components_emptystate",
-      "community": 39,
+      "community": 119,
       "norm_label": "emptystate"
     },
     {
@@ -25628,7 +25868,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "widgets_home_pane_homepane",
-      "community": 65,
+      "community": 34,
       "norm_label": "homepane"
     },
     {
@@ -25638,7 +25878,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "widgets_home_pane_homepanestate",
-      "community": 65,
+      "community": 34,
       "norm_label": "homepanestate"
     },
     {
@@ -27882,6 +28122,16 @@
       "norm_label": "connmanager"
     },
     {
+      "label": "shareIntents",
+      "file_type": "code",
+      "source_file": "lib/main.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "lib_main_shareintents",
+      "community": 10,
+      "norm_label": "shareintents"
+    },
+    {
       "label": "_turnApplicationController",
       "file_type": "code",
       "source_file": "lib/main.dart",
@@ -28122,6 +28372,16 @@
       "norm_label": "main"
     },
     {
+      "label": "initialize",
+      "file_type": "code",
+      "source_file": "lib/main.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "lib_main_initialize",
+      "community": 10,
+      "norm_label": "initialize"
+    },
+    {
       "label": "createState",
       "file_type": "code",
       "source_file": "lib/main.dart",
@@ -28252,6 +28512,16 @@
       "norm_label": "_closedialogandrefresh"
     },
     {
+      "label": "_onSharedText",
+      "file_type": "code",
+      "source_file": "lib/main.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "lib_main_onsharedtext",
+      "community": 10,
+      "norm_label": "_onsharedtext"
+    },
+    {
       "label": "didChangeDependencies",
       "file_type": "code",
       "source_file": "lib/main.dart",
@@ -28350,6 +28620,16 @@
       "id": "lib_main_validateandsave",
       "community": 10,
       "norm_label": "_validateandsave"
+    },
+    {
+      "label": "core/services/android_share_intent_service.dart",
+      "file_type": "code",
+      "source_file": null,
+      "source_location": null,
+      "_origin": "ast",
+      "id": "core_services_android_share_intent_service_dart",
+      "community": 10,
+      "norm_label": "core/services/android_share_intent_service.dart"
     },
     {
       "label": "core/services/config_backup.dart",
@@ -28738,7 +29018,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_flutter_test_flutter_test_dart",
-      "community": 153,
+      "community": 146,
       "norm_label": "package:flutter_test/flutter_test.dart"
     },
     {
@@ -28768,7 +29048,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_hermes_android_core_services_gateway_turn_recovery_dart",
-      "community": 33,
+      "community": 156,
       "norm_label": "package:hermes_android/core/services/gateway_turn_recovery.dart"
     },
     {
@@ -28778,7 +29058,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_hermes_android_core_theme_hermes_theme_dart",
-      "community": 130,
+      "community": 194,
       "norm_label": "package:hermes_android/core/theme/hermes_theme.dart"
     },
     {
@@ -28988,7 +29268,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_hermes_android_core_widgets_hermes_components_dart",
-      "community": 170,
+      "community": 137,
       "norm_label": "package:hermes_android/core/widgets/hermes_components.dart"
     },
     {
@@ -29030,6 +29310,46 @@
       "id": "package_http_testing_dart",
       "community": 36,
       "norm_label": "package:http/testing.dart"
+    },
+    {
+      "label": "android_share_intent_service_test.dart",
+      "file_type": "code",
+      "source_file": "test/android_share_intent_service_test.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "test_android_share_intent_service_test",
+      "community": 116,
+      "norm_label": "android_share_intent_service_test.dart"
+    },
+    {
+      "label": "channel",
+      "file_type": "code",
+      "source_file": "test/android_share_intent_service_test.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "test_android_share_intent_service_test_channel",
+      "community": 116,
+      "norm_label": "channel"
+    },
+    {
+      "label": "main",
+      "file_type": "code",
+      "source_file": "test/android_share_intent_service_test.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "test_android_share_intent_service_test_main",
+      "community": 116,
+      "norm_label": "main"
+    },
+    {
+      "label": "package:hermes_android/core/services/android_share_intent_service.dart",
+      "file_type": "code",
+      "source_file": null,
+      "source_location": null,
+      "_origin": "ast",
+      "id": "package_hermes_android_core_services_android_share_intent_service_dart",
+      "community": 116,
+      "norm_label": "package:hermes_android/core/services/android_share_intent_service.dart"
     },
     {
       "label": "api_client_timeout_test.dart",
@@ -29278,7 +29598,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_capability_registry_test",
-      "community": 123,
+      "community": 184,
       "norm_label": "capability_registry_test.dart"
     },
     {
@@ -29288,7 +29608,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_capability_registry_test_protocolname",
-      "community": 123,
+      "community": 184,
       "norm_label": "protocolname"
     },
     {
@@ -29298,7 +29618,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_capability_registry_test_protocolmajor",
-      "community": 123,
+      "community": 184,
       "norm_label": "protocolmajor"
     },
     {
@@ -29308,7 +29628,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_capability_registry_test_readyframe",
-      "community": 123,
+      "community": 184,
       "norm_label": "_readyframe"
     },
     {
@@ -29318,7 +29638,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_capability_registry_test_main",
-      "community": 123,
+      "community": 184,
       "norm_label": "main"
     },
     {
@@ -29328,7 +29648,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_hermes_android_core_services_capability_registry_dart",
-      "community": 151,
+      "community": 113,
       "norm_label": "package:hermes_android/core/services/capability_registry.dart"
     },
     {
@@ -29338,7 +29658,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_hermes_android_core_services_ws_client_dart",
-      "community": 184,
+      "community": 195,
       "norm_label": "package:hermes_android/core/services/ws_client.dart"
     },
     {
@@ -29418,7 +29738,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "size",
-      "community": 170,
+      "community": 137,
       "norm_label": "size"
     },
     {
@@ -29488,7 +29808,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_chat_display_items_test",
-      "community": 141,
+      "community": 146,
       "norm_label": "chat_display_items_test.dart"
     },
     {
@@ -29498,7 +29818,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_chat_display_items_test_notice",
-      "community": 141,
+      "community": 146,
       "norm_label": "_notice"
     },
     {
@@ -29508,7 +29828,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_chat_display_items_test_tool",
-      "community": 141,
+      "community": 146,
       "norm_label": "_tool"
     },
     {
@@ -29518,7 +29838,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_chat_display_items_test_subagent",
-      "community": 141,
+      "community": 146,
       "norm_label": "_subagent"
     },
     {
@@ -29528,7 +29848,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_chat_display_items_test_main",
-      "community": 141,
+      "community": 146,
       "norm_label": "main"
     },
     {
@@ -29548,7 +29868,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_hermes_android_core_models_gateway_insight_dart",
-      "community": 141,
+      "community": 146,
       "norm_label": "package:hermes_android/core/models/gateway_insight.dart"
     },
     {
@@ -29558,7 +29878,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_hermes_android_core_utils_chat_display_items_dart",
-      "community": 141,
+      "community": 146,
       "norm_label": "package:hermes_android/core/utils/chat_display_items.dart"
     },
     {
@@ -30158,7 +30478,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_chat_space_store_test",
-      "community": 153,
+      "community": 192,
       "norm_label": "chat_space_store_test.dart"
     },
     {
@@ -30168,7 +30488,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_chat_space_store_test_session",
-      "community": 153,
+      "community": 192,
       "norm_label": "session"
     },
     {
@@ -30178,7 +30498,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_chat_space_store_test_main",
-      "community": 153,
+      "community": 192,
       "norm_label": "main"
     },
     {
@@ -30188,7 +30508,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_hermes_android_core_models_session_dart",
-      "community": 153,
+      "community": 192,
       "norm_label": "package:hermes_android/core/models/session.dart"
     },
     {
@@ -30198,7 +30518,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_hermes_android_core_services_chat_space_store_dart",
-      "community": 153,
+      "community": 192,
       "norm_label": "package:hermes_android/core/services/chat_space_store.dart"
     },
     {
@@ -30218,7 +30538,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_chat_turn_notification_wiring_test_callbackcapturingturnsession",
-      "community": 38,
+      "community": 141,
       "norm_label": "_callbackcapturingturnsession"
     },
     {
@@ -30428,7 +30748,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_hermes_android_core_services_gateway_turn_application_controller_dart",
-      "community": 156,
+      "community": 116,
       "norm_label": "package:hermes_android/core/services/gateway_turn_application_controller.dart"
     },
     {
@@ -30438,7 +30758,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_hermes_android_core_services_gateway_turn_coordinator_dart",
-      "community": 184,
+      "community": 195,
       "norm_label": "package:hermes_android/core/services/gateway_turn_coordinator.dart"
     },
     {
@@ -30478,7 +30798,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_chat_turn_recovery_test_faketurnsession",
-      "community": 38,
+      "community": 141,
       "norm_label": "_faketurnsession"
     },
     {
@@ -31078,7 +31398,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_hermes_android_core_services_config_backup_service_dart",
-      "community": 155,
+      "community": 136,
       "norm_label": "package:hermes_android/core/services/config_backup_service.dart"
     },
     {
@@ -31878,7 +32198,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_gateway_insight_test",
-      "community": 141,
+      "community": 146,
       "norm_label": "gateway_insight_test.dart"
     },
     {
@@ -31888,7 +32208,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_gateway_insight_test_main",
-      "community": 141,
+      "community": 146,
       "norm_label": "main"
     },
     {
@@ -31898,7 +32218,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_hermes_android_core_widgets_gateway_insight_card_dart",
-      "community": 141,
+      "community": 146,
       "norm_label": "package:hermes_android/core/widgets/gateway_insight_card.dart"
     },
     {
@@ -31958,7 +32278,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_gateway_turn_application_controller_test_fakeapplicationsession",
-      "community": 38,
+      "community": 141,
       "norm_label": "_fakeapplicationsession"
     },
     {
@@ -33328,7 +33648,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_hermes_components_test",
-      "community": 170,
+      "community": 137,
       "norm_label": "hermes_components_test.dart"
     },
     {
@@ -33338,7 +33658,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_hermes_components_test_brightness",
-      "community": 170,
+      "community": 137,
       "norm_label": "brightness"
     },
     {
@@ -33348,7 +33668,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_hermes_components_test_textscale",
-      "community": 170,
+      "community": 137,
       "norm_label": "textscale"
     },
     {
@@ -33358,7 +33678,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_hermes_components_test_size",
-      "community": 170,
+      "community": 137,
       "norm_label": "size"
     },
     {
@@ -33368,7 +33688,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_hermes_components_test_pump",
-      "community": 170,
+      "community": 137,
       "norm_label": "_pump"
     },
     {
@@ -33378,7 +33698,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_hermes_components_test_pumpwidget",
-      "community": 170,
+      "community": 137,
       "norm_label": "pumpwidget"
     },
     {
@@ -33388,7 +33708,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_hermes_components_test_main",
-      "community": 170,
+      "community": 137,
       "norm_label": "main"
     },
     {
@@ -33398,7 +33718,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "container",
-      "community": 170,
+      "community": 137,
       "norm_label": "container"
     },
     {
@@ -33408,7 +33728,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "icon",
-      "community": 170,
+      "community": 137,
       "norm_label": "icon"
     },
     {
@@ -33768,7 +34088,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_hermes_android_main_dart",
-      "community": 137,
+      "community": 193,
       "norm_label": "package:hermes_android/main.dart"
     },
     {
@@ -33788,7 +34108,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_home_digest_test",
-      "community": 131,
+      "community": 130,
       "norm_label": "home_digest_test.dart"
     },
     {
@@ -33798,7 +34118,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_home_digest_test_now",
-      "community": 131,
+      "community": 130,
       "norm_label": "_now"
     },
     {
@@ -33808,7 +34128,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_home_digest_test_title",
-      "community": 131,
+      "community": 130,
       "norm_label": "title"
     },
     {
@@ -33818,7 +34138,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "required_string_id_string",
-      "community": 131,
+      "community": 130,
       "norm_label": "required string id,\n  string"
     },
     {
@@ -33828,7 +34148,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_home_digest_test_startedago",
-      "community": 131,
+      "community": 130,
       "norm_label": "startedago"
     },
     {
@@ -33838,7 +34158,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_home_digest_test_messagecount",
-      "community": 131,
+      "community": 130,
       "norm_label": "messagecount"
     },
     {
@@ -33848,7 +34168,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "duration_endedago_int",
-      "community": 131,
+      "community": 130,
       "norm_label": "duration? endedago,\n  int"
     },
     {
@@ -33858,7 +34178,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_home_digest_test_preview",
-      "community": 131,
+      "community": 130,
       "norm_label": "preview"
     },
     {
@@ -33868,7 +34188,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_home_digest_test_null",
-      "community": 131,
+      "community": 130,
       "norm_label": "null"
     },
     {
@@ -33878,7 +34198,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_home_digest_test_section",
-      "community": 131,
+      "community": 130,
       "norm_label": "section"
     },
     {
@@ -33888,7 +34208,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_home_digest_test_epoch",
-      "community": 131,
+      "community": 130,
       "norm_label": "_epoch"
     },
     {
@@ -33898,7 +34218,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_home_digest_test_session",
-      "community": 131,
+      "community": 130,
       "norm_label": "_session"
     },
     {
@@ -33908,7 +34228,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_home_digest_test_ids",
-      "community": 131,
+      "community": 130,
       "norm_label": "_ids"
     },
     {
@@ -33918,7 +34238,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_home_digest_test_main",
-      "community": 131,
+      "community": 130,
       "norm_label": "main"
     },
     {
@@ -33928,7 +34248,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_hermes_android_core_utils_home_digest_dart",
-      "community": 101,
+      "community": 130,
       "norm_label": "package:hermes_android/core/utils/home_digest.dart"
     },
     {
@@ -34348,7 +34668,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_message_content_test",
-      "community": 153,
+      "community": 146,
       "norm_label": "message_content_test.dart"
     },
     {
@@ -34358,7 +34678,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_message_content_test_main",
-      "community": 153,
+      "community": 146,
       "norm_label": "main"
     },
     {
@@ -34368,7 +34688,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_hermes_android_core_utils_message_content_dart",
-      "community": 153,
+      "community": 146,
       "norm_label": "package:hermes_android/core/utils/message_content.dart"
     },
     {
@@ -34378,7 +34698,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_more_pane_test",
-      "community": 130,
+      "community": 167,
       "norm_label": "more_pane_test.dart"
     },
     {
@@ -34388,7 +34708,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_more_pane_test_size",
-      "community": 130,
+      "community": 167,
       "norm_label": "size"
     },
     {
@@ -34398,7 +34718,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_more_pane_test_textscale",
-      "community": 130,
+      "community": 167,
       "norm_label": "textscale"
     },
     {
@@ -34408,7 +34728,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_more_pane_test_brightness",
-      "community": 130,
+      "community": 167,
       "norm_label": "brightness"
     },
     {
@@ -34418,7 +34738,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_more_pane_test_pumppane",
-      "community": 130,
+      "community": 167,
       "norm_label": "_pumppane"
     },
     {
@@ -34428,7 +34748,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_more_pane_test_pumpwidget",
-      "community": 130,
+      "community": 167,
       "norm_label": "pumpwidget"
     },
     {
@@ -34438,7 +34758,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_more_pane_test_pumpandsettle",
-      "community": 130,
+      "community": 167,
       "norm_label": "pumpandsettle"
     },
     {
@@ -34448,7 +34768,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_more_pane_test_main",
-      "community": 130,
+      "community": 167,
       "norm_label": "main"
     },
     {
@@ -34458,7 +34778,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_hermes_android_core_widgets_more_pane_dart",
-      "community": 130,
+      "community": 167,
       "norm_label": "package:hermes_android/core/widgets/more_pane.dart"
     },
     {
@@ -34588,7 +34908,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_project_detail_screen_test",
-      "community": 128,
+      "community": 184,
       "norm_label": "project_detail_screen_test.dart"
     },
     {
@@ -34598,7 +34918,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_project_detail_screen_test_projectid",
-      "community": 128,
+      "community": 184,
       "norm_label": "projectid"
     },
     {
@@ -34608,7 +34928,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_project_detail_screen_test_projectname",
-      "community": 128,
+      "community": 184,
       "norm_label": "projectname"
     },
     {
@@ -34618,7 +34938,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_project_detail_screen_test_projects",
-      "community": 128,
+      "community": 184,
       "norm_label": "projects"
     },
     {
@@ -34628,7 +34948,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_project_detail_screen_test_session",
-      "community": 128,
+      "community": 184,
       "norm_label": "_session"
     },
     {
@@ -34638,7 +34958,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_project_detail_screen_test_tree",
-      "community": 128,
+      "community": 184,
       "norm_label": "_tree"
     },
     {
@@ -34648,7 +34968,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_project_detail_screen_test_pump",
-      "community": 128,
+      "community": 184,
       "norm_label": "_pump"
     },
     {
@@ -34658,7 +34978,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_project_detail_screen_test_pumpwidget",
-      "community": 128,
+      "community": 184,
       "norm_label": "pumpwidget"
     },
     {
@@ -34668,7 +34988,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_project_detail_screen_test_main",
-      "community": 128,
+      "community": 184,
       "norm_label": "main"
     },
     {
@@ -34678,7 +34998,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_hermes_android_core_models_project_sessions_tree_dart",
-      "community": 128,
+      "community": 184,
       "norm_label": "package:hermes_android/core/models/project_sessions_tree.dart"
     },
     {
@@ -34688,7 +35008,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_hermes_android_core_widgets_project_detail_screen_dart",
-      "community": 128,
+      "community": 184,
       "norm_label": "package:hermes_android/core/widgets/project_detail_screen.dart"
     },
     {
@@ -34698,7 +35018,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_project_session_filter_test",
-      "community": 153,
+      "community": 192,
       "norm_label": "project_session_filter_test.dart"
     },
     {
@@ -34708,7 +35028,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_project_session_filter_test_session",
-      "community": 153,
+      "community": 192,
       "norm_label": "_session"
     },
     {
@@ -34718,7 +35038,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_project_session_filter_test_main",
-      "community": 153,
+      "community": 192,
       "norm_label": "main"
     },
     {
@@ -34728,7 +35048,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_hermes_android_core_utils_project_session_filter_dart",
-      "community": 153,
+      "community": 192,
       "norm_label": "package:hermes_android/core/utils/project_session_filter.dart"
     },
     {
@@ -35418,7 +35738,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_hermes_android_core_widgets_space_migration_preview_dart",
-      "community": 130,
+      "community": 128,
       "norm_label": "package:hermes_android/core/widgets/space_migration_preview.dart"
     },
     {
@@ -35908,7 +36228,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_release_identity_test",
-      "community": 153,
+      "community": 50,
       "norm_label": "release_identity_test.dart"
     },
     {
@@ -35918,7 +36238,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_release_identity_test_main",
-      "community": 153,
+      "community": 50,
       "norm_label": "main"
     },
     {
@@ -36248,7 +36568,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_session_model_test",
-      "community": 153,
+      "community": 146,
       "norm_label": "session_model_test.dart"
     },
     {
@@ -36258,7 +36578,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_session_model_test_main",
-      "community": 153,
+      "community": 146,
       "norm_label": "main"
     },
     {
@@ -36388,7 +36708,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_space_migration_preview_test",
-      "community": 130,
+      "community": 128,
       "norm_label": "space_migration_preview_test.dart"
     },
     {
@@ -36398,7 +36718,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_space_migration_preview_test_brightness",
-      "community": 130,
+      "community": 128,
       "norm_label": "brightness"
     },
     {
@@ -36408,7 +36728,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_space_migration_preview_test_textscale",
-      "community": 130,
+      "community": 128,
       "norm_label": "textscale"
     },
     {
@@ -36418,7 +36738,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_space_migration_preview_test_space",
-      "community": 130,
+      "community": 128,
       "norm_label": "_space"
     },
     {
@@ -36428,7 +36748,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_space_migration_preview_test_project",
-      "community": 130,
+      "community": 128,
       "norm_label": "_project"
     },
     {
@@ -36438,7 +36758,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_space_migration_preview_test_pump",
-      "community": 130,
+      "community": 128,
       "norm_label": "_pump"
     },
     {
@@ -36448,7 +36768,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_space_migration_preview_test_pumpwidget",
-      "community": 130,
+      "community": 128,
       "norm_label": "pumpwidget"
     },
     {
@@ -36458,7 +36778,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_space_migration_preview_test_main",
-      "community": 130,
+      "community": 128,
       "norm_label": "main"
     },
     {
@@ -37028,7 +37348,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "support_inert_turn_application_session_inertturnapplicationsession",
-      "community": 156,
+      "community": 141,
       "norm_label": "inertturnapplicationsession"
     },
     {
@@ -37388,7 +37708,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_text_size_preference_test",
-      "community": 137,
+      "community": 193,
       "norm_label": "text_size_preference_test.dart"
     },
     {
@@ -37408,7 +37728,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_text_size_preference_test_textscalefactor",
-      "community": 137,
+      "community": 193,
       "norm_label": "textscalefactor"
     },
     {
@@ -37418,7 +37738,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_text_size_preference_test_main",
-      "community": 137,
+      "community": 193,
       "norm_label": "main"
     },
     {
@@ -37428,7 +37748,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_text_size_preference_test_scale",
-      "community": 137,
+      "community": 193,
       "norm_label": "scale"
     },
     {
@@ -37438,7 +37758,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_hermes_android_core_services_text_size_preference_dart",
-      "community": 137,
+      "community": 193,
       "norm_label": "package:hermes_android/core/services/text_size_preference.dart"
     },
     {
@@ -37448,7 +37768,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_hermes_android_core_widgets_text_size_settings_card_dart",
-      "community": 137,
+      "community": 193,
       "norm_label": "package:hermes_android/core/widgets/text_size_settings_card.dart"
     },
     {
@@ -37498,7 +37818,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_turn_recovery_fallback_test",
-      "community": 184,
+      "community": 195,
       "norm_label": "turn_recovery_fallback_test.dart"
     },
     {
@@ -37508,7 +37828,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_turn_recovery_fallback_test_main",
-      "community": 184,
+      "community": 195,
       "norm_label": "main"
     },
     {
@@ -37518,7 +37838,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_hermes_android_core_utils_turn_recovery_fallback_dart",
-      "community": 184,
+      "community": 195,
       "norm_label": "package:hermes_android/core/utils/turn_recovery_fallback.dart"
     },
     {
@@ -37688,7 +38008,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_workspace_screen_test_controllableturnsession",
-      "community": 156,
+      "community": 141,
       "norm_label": "_controllableturnsession"
     },
     {
@@ -37772,14 +38092,14 @@
       "norm_label": "size"
     },
     {
-      "label": "GatewayTurnApplicationController? turnApplicationController,\n  Size",
+      "label": "String? initialSharedText,\n  Size",
       "file_type": "code",
       "source_file": null,
       "source_location": null,
       "_origin": "ast",
-      "id": "gatewayturnapplicationcontroller_turnapplicationcontroller_size",
+      "id": "string_initialsharedtext_size",
       "community": 64,
-      "norm_label": "gatewayturnapplicationcontroller? turnapplicationcontroller,\n  size"
+      "norm_label": "string? initialsharedtext,\n  size"
     },
     {
       "label": "boundCallback",
@@ -37898,7 +38218,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_hermes_android_core_screens_workspace_sessions_screen_dart",
-      "community": 130,
+      "community": 194,
       "norm_label": "package:hermes_android/core/screens/workspace_sessions_screen.dart"
     },
     {
@@ -37918,7 +38238,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_workspace_sessions_screen_test",
-      "community": 130,
+      "community": 194,
       "norm_label": "workspace_sessions_screen_test.dart"
     },
     {
@@ -37928,7 +38248,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_workspace_sessions_screen_test_session",
-      "community": 130,
+      "community": 194,
       "norm_label": "_session"
     },
     {
@@ -37938,7 +38258,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_workspace_sessions_screen_test_main",
-      "community": 130,
+      "community": 194,
       "norm_label": "main"
     },
     {
@@ -42132,7 +42452,7 @@
       "weight": 1.0,
       "confidence_score": 1.0,
       "source": "plugins_generatedpluginregistrant",
-      "target": "flutterengine"
+      "target": "android_app_src_main_java_io_flutter_plugins_generatedpluginregistrant_java_flutterengine"
     },
     {
       "relation": "contains",
@@ -42163,7 +42483,7 @@
       "context": "parameter_type",
       "confidence_score": 1.0,
       "source": "plugins_generatedpluginregistrant_generatedpluginregistrant_registerwith",
-      "target": "flutterengine"
+      "target": "android_app_src_main_java_io_flutter_plugins_generatedpluginregistrant_java_flutterengine"
     },
     {
       "relation": "contains",
@@ -42176,6 +42496,17 @@
       "target": "hermes_android_mainactivity_mainactivity"
     },
     {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "source_file": "android/app/src/main/kotlin/com/hermesagent/hermes_android/MainActivity.kt",
+      "source_location": "L12",
+      "weight": 1.0,
+      "context": "field",
+      "confidence_score": 1.0,
+      "source": "hermes_android_mainactivity_mainactivity",
+      "target": "android_app_src_main_kotlin_com_hermesagent_hermes_android_mainactivity_kt_string"
+    },
+    {
       "relation": "inherits",
       "confidence": "EXTRACTED",
       "source_file": "android/app/src/main/kotlin/com/hermesagent/hermes_android/MainActivity.kt",
@@ -42184,6 +42515,145 @@
       "confidence_score": 1.0,
       "source": "hermes_android_mainactivity_mainactivity",
       "target": "flutteractivity"
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "android/app/src/main/kotlin/com/hermesagent/hermes_android/MainActivity.kt",
+      "source_location": "L19",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "hermes_android_mainactivity_mainactivity",
+      "target": "hermes_android_mainactivity_mainactivity_configureflutterengine"
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "android/app/src/main/kotlin/com/hermesagent/hermes_android/MainActivity.kt",
+      "source_location": "L42",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "hermes_android_mainactivity_mainactivity",
+      "target": "hermes_android_mainactivity_mainactivity_extractsharedtext"
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "android/app/src/main/kotlin/com/hermesagent/hermes_android/MainActivity.kt",
+      "source_location": "L14",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "hermes_android_mainactivity_mainactivity",
+      "target": "hermes_android_mainactivity_mainactivity_oncreate"
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "android/app/src/main/kotlin/com/hermesagent/hermes_android/MainActivity.kt",
+      "source_location": "L34",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "hermes_android_mainactivity_mainactivity",
+      "target": "hermes_android_mainactivity_mainactivity_onnewintent"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "source_file": "android/app/src/main/kotlin/com/hermesagent/hermes_android/MainActivity.kt",
+      "source_location": "L11",
+      "weight": 1.0,
+      "context": "field",
+      "confidence_score": 1.0,
+      "source": "hermes_android_mainactivity_mainactivity",
+      "target": "methodchannel"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "android/app/src/main/kotlin/com/hermesagent/hermes_android/MainActivity.kt",
+      "source_location": "L21",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "hermes_android_mainactivity_mainactivity_configureflutterengine",
+      "target": "methodchannel"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "source_file": "android/app/src/main/kotlin/com/hermesagent/hermes_android/MainActivity.kt",
+      "source_location": "L42",
+      "weight": 1.0,
+      "context": "return_type",
+      "confidence_score": 1.0,
+      "source": "hermes_android_mainactivity_mainactivity_extractsharedtext",
+      "target": "android_app_src_main_kotlin_com_hermesagent_hermes_android_mainactivity_kt_string"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "source_file": "android/app/src/main/kotlin/com/hermesagent/hermes_android/MainActivity.kt",
+      "source_location": "L14",
+      "weight": 1.0,
+      "context": "parameter_type",
+      "confidence_score": 1.0,
+      "source": "hermes_android_mainactivity_mainactivity_oncreate",
+      "target": "bundle"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "android/app/src/main/kotlin/com/hermesagent/hermes_android/MainActivity.kt",
+      "source_location": "L15",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "hermes_android_mainactivity_mainactivity_oncreate",
+      "target": "hermes_android_mainactivity_mainactivity_extractsharedtext"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "source_file": "android/app/src/main/kotlin/com/hermesagent/hermes_android/MainActivity.kt",
+      "source_location": "L19",
+      "weight": 1.0,
+      "context": "parameter_type",
+      "confidence_score": 1.0,
+      "source": "hermes_android_mainactivity_mainactivity_configureflutterengine",
+      "target": "android_app_src_main_kotlin_com_hermesagent_hermes_android_mainactivity_kt_flutterengine"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "android/app/src/main/kotlin/com/hermesagent/hermes_android/MainActivity.kt",
+      "source_location": "L37",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "hermes_android_mainactivity_mainactivity_onnewintent",
+      "target": "hermes_android_mainactivity_mainactivity_extractsharedtext"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "source_file": "android/app/src/main/kotlin/com/hermesagent/hermes_android/MainActivity.kt",
+      "source_location": "L34",
+      "weight": 1.0,
+      "context": "parameter_type",
+      "confidence_score": 1.0,
+      "source": "hermes_android_mainactivity_mainactivity_onnewintent",
+      "target": "intent"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "source_file": "android/app/src/main/kotlin/com/hermesagent/hermes_android/MainActivity.kt",
+      "source_location": "L42",
+      "weight": 1.0,
+      "context": "parameter_type",
+      "confidence_score": 1.0,
+      "source": "hermes_android_mainactivity_mainactivity_extractsharedtext",
+      "target": "intent"
     },
     {
       "relation": "contains",
@@ -42857,17 +43327,6 @@
       "weight": 1.0,
       "context": "variable_type",
       "source": "controllers_voice_composer_controller",
-      "target": "string"
-    },
-    {
-      "relation": "references",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "lib/core/controllers/voice_composer_controller.dart",
-      "source_location": null,
-      "weight": 1.0,
-      "context": "variable_type",
-      "source": "controllers_voice_composer_controller",
       "target": "string_get"
     },
     {
@@ -43109,556 +43568,6 @@
       "context": "variable_type",
       "source": "widgets_hermes_components",
       "target": "int"
-    },
-    {
-      "relation": "references",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "lib/main.dart",
-      "source_location": null,
-      "weight": 1.0,
-      "context": "variable_type",
-      "source": "lib_main",
-      "target": "string"
-    },
-    {
-      "relation": "references",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "lib/core/models/attachment_draft.dart",
-      "source_location": null,
-      "weight": 1.0,
-      "context": "variable_type",
-      "source": "models_attachment_draft",
-      "target": "string"
-    },
-    {
-      "relation": "references",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "lib/core/models/connection.dart",
-      "source_location": null,
-      "weight": 1.0,
-      "context": "variable_type",
-      "source": "models_connection",
-      "target": "string"
-    },
-    {
-      "relation": "references",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "lib/core/models/gateway_activity.dart",
-      "source_location": null,
-      "weight": 1.0,
-      "context": "variable_type",
-      "source": "models_gateway_activity",
-      "target": "string"
-    },
-    {
-      "relation": "references",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "lib/core/models/gateway_insight.dart",
-      "source_location": null,
-      "weight": 1.0,
-      "context": "variable_type",
-      "source": "models_gateway_insight",
-      "target": "string"
-    },
-    {
-      "relation": "references",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "lib/core/models/hermes_project.dart",
-      "source_location": null,
-      "weight": 1.0,
-      "context": "variable_type",
-      "source": "models_hermes_project",
-      "target": "string"
-    },
-    {
-      "relation": "references",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "lib/core/models/project_sessions_tree.dart",
-      "source_location": null,
-      "weight": 1.0,
-      "context": "variable_type",
-      "source": "models_project_sessions_tree",
-      "target": "string"
-    },
-    {
-      "relation": "references",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "lib/core/models/projects_tree_overview.dart",
-      "source_location": null,
-      "weight": 1.0,
-      "context": "variable_type",
-      "source": "models_projects_tree_overview",
-      "target": "string"
-    },
-    {
-      "relation": "references",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "lib/core/models/session_search_hit.dart",
-      "source_location": null,
-      "weight": 1.0,
-      "context": "variable_type",
-      "source": "models_session_search_hit",
-      "target": "string"
-    },
-    {
-      "relation": "references",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "lib/core/screens/chat_screen.dart",
-      "source_location": null,
-      "weight": 1.0,
-      "context": "variable_type",
-      "source": "screens_chat_screen",
-      "target": "string"
-    },
-    {
-      "relation": "references",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "lib/core/screens/cron_screen.dart",
-      "source_location": null,
-      "weight": 1.0,
-      "context": "variable_type",
-      "source": "screens_cron_screen",
-      "target": "string"
-    },
-    {
-      "relation": "references",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "lib/core/screens/files_screen.dart",
-      "source_location": null,
-      "weight": 1.0,
-      "context": "variable_type",
-      "source": "screens_files_screen",
-      "target": "string"
-    },
-    {
-      "relation": "references",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "lib/core/screens/memory_screen.dart",
-      "source_location": null,
-      "weight": 1.0,
-      "context": "variable_type",
-      "source": "screens_memory_screen",
-      "target": "string"
-    },
-    {
-      "relation": "references",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "lib/core/screens/session_list_screen.dart",
-      "source_location": null,
-      "weight": 1.0,
-      "context": "variable_type",
-      "source": "screens_session_list_screen",
-      "target": "string"
-    },
-    {
-      "relation": "references",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "lib/core/screens/settings_screen.dart",
-      "source_location": null,
-      "weight": 1.0,
-      "context": "variable_type",
-      "source": "screens_settings_screen",
-      "target": "string"
-    },
-    {
-      "relation": "references",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "lib/core/screens/skills_screen.dart",
-      "source_location": null,
-      "weight": 1.0,
-      "context": "variable_type",
-      "source": "screens_skills_screen",
-      "target": "string"
-    },
-    {
-      "relation": "references",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "lib/core/services/capability_registry.dart",
-      "source_location": null,
-      "weight": 1.0,
-      "context": "variable_type",
-      "source": "services_capability_registry",
-      "target": "string"
-    },
-    {
-      "relation": "references",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "lib/core/services/chat_model_override_store.dart",
-      "source_location": null,
-      "weight": 1.0,
-      "context": "variable_type",
-      "source": "services_chat_model_override_store",
-      "target": "string"
-    },
-    {
-      "relation": "references",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "lib/core/services/chat_space_store.dart",
-      "source_location": null,
-      "weight": 1.0,
-      "context": "variable_type",
-      "source": "services_chat_space_store",
-      "target": "string"
-    },
-    {
-      "relation": "references",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "lib/core/services/connection_manager.dart",
-      "source_location": null,
-      "weight": 1.0,
-      "context": "variable_type",
-      "source": "services_connection_manager",
-      "target": "string"
-    },
-    {
-      "relation": "references",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "lib/core/services/gateway_turn_journal.dart",
-      "source_location": null,
-      "weight": 1.0,
-      "context": "variable_type",
-      "source": "services_gateway_turn_journal",
-      "target": "string"
-    },
-    {
-      "relation": "references",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "lib/core/services/gateway_turn_recovery.dart",
-      "source_location": null,
-      "weight": 1.0,
-      "context": "variable_type",
-      "source": "services_gateway_turn_recovery",
-      "target": "string"
-    },
-    {
-      "relation": "references",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "lib/core/services/gateway_turn_ui_projection.dart",
-      "source_location": null,
-      "weight": 1.0,
-      "context": "variable_type",
-      "source": "services_gateway_turn_ui_projection",
-      "target": "string"
-    },
-    {
-      "relation": "references",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "lib/core/services/projects_repository.dart",
-      "source_location": null,
-      "weight": 1.0,
-      "context": "variable_type",
-      "source": "services_projects_repository",
-      "target": "string"
-    },
-    {
-      "relation": "references",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "lib/core/services/remote_files_client.dart",
-      "source_location": null,
-      "weight": 1.0,
-      "context": "variable_type",
-      "source": "services_remote_files_client",
-      "target": "string"
-    },
-    {
-      "relation": "references",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "lib/core/services/ws_client.dart",
-      "source_location": null,
-      "weight": 1.0,
-      "context": "variable_type",
-      "source": "services_ws_client",
-      "target": "string"
-    },
-    {
-      "relation": "references",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "test/support/fake_voice_composer_adapter.dart",
-      "source_location": null,
-      "weight": 1.0,
-      "context": "variable_type",
-      "source": "support_fake_voice_composer_adapter",
-      "target": "string"
-    },
-    {
-      "relation": "references",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "test/support/memory_turn_journal_store.dart",
-      "source_location": null,
-      "weight": 1.0,
-      "context": "variable_type",
-      "source": "support_memory_turn_journal_store",
-      "target": "string"
-    },
-    {
-      "relation": "references",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "test/activity_feed_test.dart",
-      "source_location": null,
-      "weight": 1.0,
-      "context": "variable_type",
-      "source": "test_activity_feed_test",
-      "target": "string"
-    },
-    {
-      "relation": "references",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "test/chat_history_scroll_test.dart",
-      "source_location": null,
-      "weight": 1.0,
-      "context": "variable_type",
-      "source": "test_chat_history_scroll_test",
-      "target": "string"
-    },
-    {
-      "relation": "references",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "test/gateway_turn_coordinator_test.dart",
-      "source_location": null,
-      "weight": 1.0,
-      "context": "variable_type",
-      "source": "test_gateway_turn_coordinator_test",
-      "target": "string"
-    },
-    {
-      "relation": "references",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "test/gateway_turn_journal_test.dart",
-      "source_location": null,
-      "weight": 1.0,
-      "context": "variable_type",
-      "source": "test_gateway_turn_journal_test",
-      "target": "string"
-    },
-    {
-      "relation": "references",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "test/home_turn_signals_test.dart",
-      "source_location": null,
-      "weight": 1.0,
-      "context": "variable_type",
-      "source": "test_home_turn_signals_test",
-      "target": "string"
-    },
-    {
-      "relation": "references",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "test/projects_pane_test.dart",
-      "source_location": null,
-      "weight": 1.0,
-      "context": "variable_type",
-      "source": "test_projects_pane_test",
-      "target": "string"
-    },
-    {
-      "relation": "references",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "test/projects_repository_test.dart",
-      "source_location": null,
-      "weight": 1.0,
-      "context": "variable_type",
-      "source": "test_projects_repository_test",
-      "target": "string"
-    },
-    {
-      "relation": "references",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "test/space_migration_write_test.dart",
-      "source_location": null,
-      "weight": 1.0,
-      "context": "variable_type",
-      "source": "test_space_migration_write_test",
-      "target": "string"
-    },
-    {
-      "relation": "references",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "lib/core/utils/activity_feed.dart",
-      "source_location": null,
-      "weight": 1.0,
-      "context": "variable_type",
-      "source": "utils_activity_feed",
-      "target": "string"
-    },
-    {
-      "relation": "references",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "lib/core/utils/chat_display_items.dart",
-      "source_location": null,
-      "weight": 1.0,
-      "context": "variable_type",
-      "source": "utils_chat_display_items",
-      "target": "string"
-    },
-    {
-      "relation": "references",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "lib/core/utils/home_digest.dart",
-      "source_location": null,
-      "weight": 1.0,
-      "context": "variable_type",
-      "source": "utils_home_digest",
-      "target": "string"
-    },
-    {
-      "relation": "references",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "lib/core/utils/new_chat_options.dart",
-      "source_location": null,
-      "weight": 1.0,
-      "context": "variable_type",
-      "source": "utils_new_chat_options",
-      "target": "string"
-    },
-    {
-      "relation": "references",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "lib/core/widgets/chat_context_header.dart",
-      "source_location": null,
-      "weight": 1.0,
-      "context": "variable_type",
-      "source": "widgets_chat_context_header",
-      "target": "string"
-    },
-    {
-      "relation": "references",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "lib/core/widgets/config_backup_card.dart",
-      "source_location": null,
-      "weight": 1.0,
-      "context": "variable_type",
-      "source": "widgets_config_backup_card",
-      "target": "string"
-    },
-    {
-      "relation": "references",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "lib/core/widgets/gateway_approval_dialog.dart",
-      "source_location": null,
-      "weight": 1.0,
-      "context": "variable_type",
-      "source": "widgets_gateway_approval_dialog",
-      "target": "string"
-    },
-    {
-      "relation": "references",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "lib/core/widgets/gateway_clarify_dialog.dart",
-      "source_location": null,
-      "weight": 1.0,
-      "context": "variable_type",
-      "source": "widgets_gateway_clarify_dialog",
-      "target": "string"
-    },
-    {
-      "relation": "references",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "lib/core/widgets/gateway_sensitive_prompt_dialog.dart",
-      "source_location": null,
-      "weight": 1.0,
-      "context": "variable_type",
-      "source": "widgets_gateway_sensitive_prompt_dialog",
-      "target": "string"
-    },
-    {
-      "relation": "references",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "lib/core/widgets/hermes_components.dart",
-      "source_location": null,
-      "weight": 1.0,
-      "context": "variable_type",
-      "source": "widgets_hermes_components",
-      "target": "string"
-    },
-    {
-      "relation": "references",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "lib/core/widgets/markdown_code_block.dart",
-      "source_location": null,
-      "weight": 1.0,
-      "context": "variable_type",
-      "source": "widgets_markdown_code_block",
-      "target": "string"
-    },
-    {
-      "relation": "references",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "lib/core/widgets/more_pane.dart",
-      "source_location": null,
-      "weight": 1.0,
-      "context": "variable_type",
-      "source": "widgets_more_pane",
-      "target": "string"
-    },
-    {
-      "relation": "references",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "lib/core/widgets/project_detail_screen.dart",
-      "source_location": null,
-      "weight": 1.0,
-      "context": "variable_type",
-      "source": "widgets_project_detail_screen",
-      "target": "string"
-    },
-    {
-      "relation": "references",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "lib/core/widgets/projects_pane.dart",
-      "source_location": null,
-      "weight": 1.0,
-      "context": "variable_type",
-      "source": "widgets_projects_pane",
-      "target": "string"
     },
     {
       "relation": "references",
@@ -45374,6 +45283,17 @@
       "weight": 1.0,
       "context": "variable_type",
       "source": "screens_session_list_screen",
+      "target": "static_const"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/core/services/android_share_intent_service.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "context": "variable_type",
+      "source": "services_android_share_intent_service",
       "target": "static_const"
     },
     {
@@ -50242,6 +50162,16 @@
       "source_location": null,
       "weight": 1.0,
       "source": "screens_chat_screen",
+      "target": "screens_chat_screen_initialcomposertext"
+    },
+    {
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/core/screens/chat_screen.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "screens_chat_screen",
       "target": "screens_chat_screen_initialendframebudget"
     },
     {
@@ -53959,6 +53889,36 @@
       "weight": 1.0,
       "source": "widgets_voice_composer_controls",
       "target": "package_flutter_material_dart"
+    },
+    {
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/core/services/android_share_intent_service.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "services_android_share_intent_service",
+      "target": "package_flutter_services_dart"
+    },
+    {
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "test/android_share_intent_service_test.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "test_android_share_intent_service_test",
+      "target": "package_flutter_services_dart"
+    },
+    {
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "test/home_config_restore_test.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "test_home_config_restore_test",
+      "target": "package_flutter_services_dart"
     },
     {
       "relation": "imports",
@@ -58605,6 +58565,16 @@
       "source_location": null,
       "weight": 1.0,
       "source": "screens_workspace_screen",
+      "target": "screens_workspace_screen_initialcomposertext"
+    },
+    {
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/core/screens/workspace_screen.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "screens_workspace_screen",
       "target": "screens_workspace_screen_initialize"
     },
     {
@@ -58616,6 +58586,16 @@
       "weight": 1.0,
       "source": "screens_workspace_screen",
       "target": "screens_workspace_screen_initialized"
+    },
+    {
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/core/screens/workspace_screen.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "screens_workspace_screen",
+      "target": "screens_workspace_screen_initialsharedtext"
     },
     {
       "relation": "defines",
@@ -59128,6 +59108,16 @@
       "weight": 1.0,
       "source": "screens_workspace_screen",
       "target": "screens_workspace_screen_startprojectchat"
+    },
+    {
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/core/screens/workspace_screen.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "screens_workspace_screen",
+      "target": "screens_workspace_screen_startsharedchat"
     },
     {
       "relation": "defines",
@@ -61075,6 +61065,148 @@
       "relation": "imports",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
+      "source_file": "lib/core/services/android_share_intent_service.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "services_android_share_intent_service",
+      "target": "package_flutter_foundation_dart"
+    },
+    {
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/core/services/android_share_intent_service.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "services_android_share_intent_service",
+      "target": "services_android_share_intent_service_androidshareintentservice"
+    },
+    {
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/core/services/android_share_intent_service.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "services_android_share_intent_service",
+      "target": "services_android_share_intent_service_channel"
+    },
+    {
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/core/services/android_share_intent_service.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "services_android_share_intent_service",
+      "target": "services_android_share_intent_service_channelname"
+    },
+    {
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/core/services/android_share_intent_service.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "services_android_share_intent_service",
+      "target": "services_android_share_intent_service_dispose"
+    },
+    {
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/core/services/android_share_intent_service.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "services_android_share_intent_service",
+      "target": "services_android_share_intent_service_handlemethodcall"
+    },
+    {
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/core/services/android_share_intent_service.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "services_android_share_intent_service",
+      "target": "services_android_share_intent_service_initialize"
+    },
+    {
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/core/services/android_share_intent_service.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "services_android_share_intent_service",
+      "target": "services_android_share_intent_service_initialized"
+    },
+    {
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/core/services/android_share_intent_service.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "services_android_share_intent_service",
+      "target": "services_android_share_intent_service_pendingtext"
+    },
+    {
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/core/services/android_share_intent_service.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "services_android_share_intent_service",
+      "target": "services_android_share_intent_service_publish"
+    },
+    {
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/core/services/android_share_intent_service.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "services_android_share_intent_service",
+      "target": "services_android_share_intent_service_takepending"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/core/services/android_share_intent_service.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "context": "variable_type",
+      "source": "services_android_share_intent_service",
+      "target": "valuenotifier"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/main.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "context": "variable_type",
+      "source": "lib_main",
+      "target": "services_android_share_intent_service_androidshareintentservice"
+    },
+    {
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/core/services/capability_registry.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "services_capability_registry",
+      "target": "package_flutter_foundation_dart"
+    },
+    {
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
       "source_file": "lib/core/services/attachment_draft_service.dart",
       "source_location": null,
       "weight": 1.0,
@@ -61703,16 +61835,6 @@
       "weight": 1.0,
       "source": "services_config_backup_io",
       "target": "package_path_provider_path_provider_dart"
-    },
-    {
-      "relation": "imports",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "lib/core/services/capability_registry.dart",
-      "source_location": null,
-      "weight": 1.0,
-      "source": "services_capability_registry",
-      "target": "package_flutter_foundation_dart"
     },
     {
       "relation": "defines",
@@ -80183,6 +80305,16 @@
       "source_location": null,
       "weight": 1.0,
       "source": "lib_main",
+      "target": "core_services_android_share_intent_service_dart"
+    },
+    {
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/main.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "lib_main",
       "target": "core_services_config_backup_dart"
     },
     {
@@ -80573,6 +80705,16 @@
       "source_location": null,
       "weight": 1.0,
       "source": "lib_main",
+      "target": "lib_main_initialize"
+    },
+    {
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/main.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "lib_main",
       "target": "lib_main_initstate"
     },
     {
@@ -80643,6 +80785,16 @@
       "source_location": null,
       "weight": 1.0,
       "source": "lib_main",
+      "target": "lib_main_onsharedtext"
+    },
+    {
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/main.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "lib_main",
       "target": "lib_main_port"
     },
     {
@@ -80694,6 +80846,16 @@
       "weight": 1.0,
       "source": "lib_main",
       "target": "lib_main_setthememode"
+    },
+    {
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/main.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "lib_main",
+      "target": "lib_main_shareintents"
     },
     {
       "relation": "defines",
@@ -81229,6 +81391,16 @@
       "source_location": null,
       "weight": 1.0,
       "source": "test_ai_search_query_rewriter_test",
+      "target": "package_flutter_test_flutter_test_dart"
+    },
+    {
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "test/android_share_intent_service_test.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "test_android_share_intent_service_test",
       "target": "package_flutter_test_flutter_test_dart"
     },
     {
@@ -82601,6 +82773,46 @@
       "weight": 1.0,
       "source": "test_session_search_client_test",
       "target": "package_http_testing_dart"
+    },
+    {
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "test/android_share_intent_service_test.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "test_android_share_intent_service_test",
+      "target": "package_hermes_android_core_services_android_share_intent_service_dart"
+    },
+    {
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "test/android_share_intent_service_test.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "test_android_share_intent_service_test",
+      "target": "test_android_share_intent_service_test_channel"
+    },
+    {
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "test/android_share_intent_service_test.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "test_android_share_intent_service_test",
+      "target": "test_android_share_intent_service_test_main"
+    },
+    {
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "test/home_config_restore_test.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "test_home_config_restore_test",
+      "target": "package_hermes_android_core_services_android_share_intent_service_dart"
     },
     {
       "relation": "imports",
@@ -84044,6 +84256,16 @@
       "relation": "imports",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
+      "source_file": "test/home_config_restore_test.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "test_home_config_restore_test",
+      "target": "package_hermes_android_core_screens_chat_screen_dart"
+    },
+    {
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
       "source_file": "test/widget_test.dart",
       "source_location": null,
       "weight": 1.0,
@@ -84113,6 +84335,17 @@
       "weight": 1.0,
       "context": "type_lookup",
       "source": "test_home_config_restore_test",
+      "target": "textfield"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "test/workspace_screen_test.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "context": "type_lookup",
+      "source": "test_workspace_screen_test",
       "target": "textfield"
     },
     {
@@ -92247,17 +92480,6 @@
       "source_file": "test/workspace_screen_test.dart",
       "source_location": null,
       "weight": 1.0,
-      "context": "variable_type",
-      "source": "test_workspace_screen_test",
-      "target": "gatewayturnapplicationcontroller_turnapplicationcontroller_size"
-    },
-    {
-      "relation": "references",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "test/workspace_screen_test.dart",
-      "source_location": null,
-      "weight": 1.0,
       "context": "type_lookup",
       "source": "test_workspace_screen_test",
       "target": "listtile"
@@ -92282,6 +92504,17 @@
       "context": "variable_type",
       "source": "test_workspace_screen_test",
       "target": "string_desktopgatewayurl_string"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "test/workspace_screen_test.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "context": "variable_type",
+      "source": "test_workspace_screen_test",
+      "target": "string_initialsharedtext_size"
     },
     {
       "relation": "defines",
@@ -98593,9 +98826,9 @@
       "source_file": "docs/plans/2026-08-30-chat-ui-context-composer.md",
       "source_location": "L1",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "plans_2026_08_30_chat_ui_context_composer",
-      "target": "plans_2026_08_30_chat_ui_context_composer_chat_ui_en_t\u00eate_contextuel_et_composer_unifi\u00e9",
-      "confidence_score": 1.0
+      "target": "plans_2026_08_30_chat_ui_context_composer_chat_ui_en_t\u00eate_contextuel_et_composer_unifi\u00e9"
     },
     {
       "relation": "contains",
@@ -98603,9 +98836,9 @@
       "source_file": "docs/plans/2026-08-30-chat-ui-context-composer.md",
       "source_location": "L33",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "plans_2026_08_30_chat_ui_context_composer_chat_ui_en_t\u00eate_contextuel_et_composer_unifi\u00e9",
-      "target": "plans_2026_08_30_chat_ui_context_composer_tests",
-      "confidence_score": 1.0
+      "target": "plans_2026_08_30_chat_ui_context_composer_tests"
     },
     {
       "relation": "contains",
@@ -98613,9 +98846,9 @@
       "source_file": "docs/plans/2026-08-30-chat-ui-context-composer.md",
       "source_location": "L12",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "plans_2026_08_30_chat_ui_context_composer_chat_ui_en_t\u00eate_contextuel_et_composer_unifi\u00e9",
-      "target": "plans_2026_08_30_chat_ui_context_composer_tranche_1_en_t\u00eate_contextuel_collant",
-      "confidence_score": 1.0
+      "target": "plans_2026_08_30_chat_ui_context_composer_tranche_1_en_t\u00eate_contextuel_collant"
     },
     {
       "relation": "contains",
@@ -98623,9 +98856,9 @@
       "source_file": "docs/plans/2026-08-30-chat-ui-context-composer.md",
       "source_location": "L22",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "plans_2026_08_30_chat_ui_context_composer_chat_ui_en_t\u00eate_contextuel_et_composer_unifi\u00e9",
-      "target": "plans_2026_08_30_chat_ui_context_composer_tranche_2_composer_unifi\u00e9",
-      "confidence_score": 1.0
+      "target": "plans_2026_08_30_chat_ui_context_composer_tranche_2_composer_unifi\u00e9"
     },
     {
       "relation": "contains",
@@ -98633,9 +98866,9 @@
       "source_file": "docs/plans/2026-08-30-chat-ui-context-composer.md",
       "source_location": "L28",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "plans_2026_08_30_chat_ui_context_composer_chat_ui_en_t\u00eate_contextuel_et_composer_unifi\u00e9",
-      "target": "plans_2026_08_30_chat_ui_context_composer_tranche_3_cartes_d_outils",
-      "confidence_score": 1.0
+      "target": "plans_2026_08_30_chat_ui_context_composer_tranche_3_cartes_d_outils"
     },
     {
       "relation": "contains",
@@ -98643,9 +98876,9 @@
       "source_file": "docs/plans/2026-08-30-chat-ui-context-composer.md",
       "source_location": "L5",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "plans_2026_08_30_chat_ui_context_composer_chat_ui_en_t\u00eate_contextuel_et_composer_unifi\u00e9",
-      "target": "plans_2026_08_30_chat_ui_context_composer_\u00e9tat_actuel_confirm\u00e9",
-      "confidence_score": 1.0
+      "target": "plans_2026_08_30_chat_ui_context_composer_\u00e9tat_actuel_confirm\u00e9"
     },
     {
       "relation": "contains",
@@ -98989,5 +99222,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "5470cf65d5ae24b136886af30fc900919c08eedf"
+  "built_at_commit": "8260288d2cbfddc06c4dba0fb159e8642214da47"
 }

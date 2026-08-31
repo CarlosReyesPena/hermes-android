@@ -121,6 +121,10 @@ class ChatScreen extends StatefulWidget {
   /// `null` stays explicit as Unassigned in the sticky context header.
   final String? projectName;
 
+  /// Optional text supplied by Android's share sheet. It only prefills the
+  /// composer; sending remains an explicit user action.
+  final String? initialComposerText;
+
   final GatewayTurnApplicationController? turnApplicationController;
 
   @visibleForTesting
@@ -156,6 +160,7 @@ class ChatScreen extends StatefulWidget {
     required this.connection,
     required this.session,
     this.projectName,
+    this.initialComposerText,
     this.turnApplicationController,
     this.testTurnApplicationSession,
     this.testApiClient,
@@ -251,6 +256,10 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _textController.text = widget.initialComposerText ?? '';
+    _textController.selection = TextSelection.collapsed(
+      offset: _textController.text.length,
+    );
     _turnNotifications =
         widget.testTurnNotifications ?? TurnNotificationService();
     unawaited(_turnNotifications.ensureInitialized());
@@ -2843,6 +2852,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                     label: 'Message',
                     textField: true,
                     child: TextField(
+                      key: const Key('chat-message-composer'),
                       controller: _textController,
                       decoration: InputDecoration(
                         hintText: 'Message Hermes…',
