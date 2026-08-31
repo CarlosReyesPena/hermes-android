@@ -127,7 +127,7 @@ void main() {
       );
       await tester.pump(const Duration(milliseconds: 300));
 
-      expect(find.text('Hermes activity'), findsOneWidget);
+      expect(find.text('Tool activity'), findsOneWidget);
       expect(find.textContaining('Search files'), findsOneWidget);
       expect(find.text('Working'), findsOneWidget);
       expect(find.text('Scanning gateway event handlers'), findsOneWidget);

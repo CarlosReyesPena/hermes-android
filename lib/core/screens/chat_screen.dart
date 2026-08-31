@@ -39,6 +39,7 @@ import '../utils/responsive.dart';
 import '../utils/turn_recovery_fallback.dart';
 import 'files_screen.dart';
 import '../widgets/gateway_activity_card.dart';
+import '../widgets/chat_context_header.dart';
 import '../widgets/markdown_code_block.dart';
 import '../widgets/attachment_draft_tile.dart';
 import '../widgets/chat_end_affordance.dart';
@@ -115,6 +116,11 @@ class _PendingClarifyPrompt {
 class ChatScreen extends StatefulWidget {
   final SavedConnection connection;
   final Session session;
+
+  /// The server-owned Project this chat was opened from, when known.
+  /// `null` stays explicit as Unassigned in the sticky context header.
+  final String? projectName;
+
   final GatewayTurnApplicationController? turnApplicationController;
 
   @visibleForTesting
@@ -149,6 +155,7 @@ class ChatScreen extends StatefulWidget {
   const ChatScreen({
     required this.connection,
     required this.session,
+    this.projectName,
     this.turnApplicationController,
     this.testTurnApplicationSession,
     this.testApiClient,
@@ -2526,62 +2533,43 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     _scheduleStreamingFollow();
   }
 
+  ChatConnectionStatus get _chatConnectionStatus {
+    if (_desktopGateway == null) {
+      if (_loading) return ChatConnectionStatus.connecting;
+      return _error == null
+          ? ChatConnectionStatus.connected
+          : ChatConnectionStatus.offline;
+    }
+    return switch (_desktopConnectionState) {
+      DesktopConnectionState.connected => ChatConnectionStatus.connected,
+      DesktopConnectionState.connecting => ChatConnectionStatus.connecting,
+      DesktopConnectionState.reconnecting => ChatConnectionStatus.reconnecting,
+      DesktopConnectionState.disconnected => ChatConnectionStatus.offline,
+    };
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        centerTitle: true,
-        title: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              widget.session.title,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            const SizedBox(height: 2),
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 7,
-                  height: 7,
-                  decoration: BoxDecoration(
-                    color: _desktopGateway == null
-                        ? (_loading
-                              ? Colors.orange
-                              : _error == null
-                              ? Colors.green
-                              : Theme.of(context).colorScheme.error)
-                        : switch (_desktopConnectionState) {
-                            DesktopConnectionState.connected => Colors.green,
-                            DesktopConnectionState.connecting ||
-                            DesktopConnectionState.reconnecting =>
-                              Colors.orange,
-                            DesktopConnectionState.disconnected => Theme.of(
-                              context,
-                            ).colorScheme.error,
-                          },
-                    shape: BoxShape.circle,
-                  ),
-                ),
-                const SizedBox(width: 6),
-                Flexible(
-                  child: Text(
-                    '${widget.connection.label} • ${_desktopGateway == null ? (_loading
-                              ? 'connecting'
-                              : _error == null
-                              ? 'connected'
-                              : 'offline') : _desktopConnectionState.name}',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
-                ),
-              ],
-            ),
-          ],
+        centerTitle: false,
+        title: Text(
+          widget.session.title.trim().isEmpty
+              ? 'Untitled chat'
+              : widget.session.title,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(48),
+          child: ChatContextHeader(
+            projectName: widget.projectName,
+            model: _sessionModel ?? widget.session.model,
+            reasoningEffort: _sessionReasoningEffort ?? 'default',
+            connectionLabel: widget.connection.label,
+            connectionStatus: _chatConnectionStatus,
+          ),
         ),
         actions: [
           if (_streaming)
@@ -2857,7 +2845,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                     child: TextField(
                       controller: _textController,
                       decoration: InputDecoration(
-                        hintText: 'Type a message…',
+                        hintText: 'Message Hermes…',
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(24),
                         ),
@@ -2868,7 +2856,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                         isDense: true,
                       ),
                       minLines: 1,
-                      maxLines: 4,
+                      maxLines: 5,
                       textCapitalization: TextCapitalization.sentences,
                       keyboardType: TextInputType.multiline,
                       textInputAction: TextInputAction.send,

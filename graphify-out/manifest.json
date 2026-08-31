@@ -145,8 +145,8 @@
     "semantic_hash": ""
   },
   "lib/core/screens/chat_screen.dart": {
-    "mtime": 1787987782.2145529,
-    "ast_hash": "98401216790ef65380cc4ba5bee0d3b0",
+    "mtime": 1788139340.8699179,
+    "ast_hash": "6d66642cdd29667cfdc2a8f8867e3bfe",
     "semantic_hash": ""
   },
   "lib/core/screens/cron_screen.dart": {
@@ -290,8 +290,8 @@
     "semantic_hash": ""
   },
   "lib/core/widgets/gateway_activity_card.dart": {
-    "mtime": 1787987782.2145529,
-    "ast_hash": "155862d6da11a1b501728c55655d670f",
+    "mtime": 1788139053.6952507,
+    "ast_hash": "9dd95bd6710e70d4ce243c01f331c7c4",
     "semantic_hash": ""
   },
   "lib/core/widgets/gateway_approval_dialog.dart": {
@@ -345,8 +345,8 @@
     "semantic_hash": ""
   },
   "test/chat_history_scroll_test.dart": {
-    "mtime": 1787973053.1970613,
-    "ast_hash": "e2187a187d188846695d21754f5be79c",
+    "mtime": 1788139394.6026042,
+    "ast_hash": "092340031ff5889301843abcb8e9548e",
     "semantic_hash": ""
   },
   "test/chat_model_override_store_test.dart": {
@@ -385,8 +385,8 @@
     "semantic_hash": ""
   },
   "test/gateway_activity_test.dart": {
-    "mtime": 1787987782.2155528,
-    "ast_hash": "4e97b41b3c2ca03199c0476e277a06c3",
+    "mtime": 1788139533.596379,
+    "ast_hash": "c8e8e408b68bab9890a635d12dcc604b",
     "semantic_hash": ""
   },
   "test/gateway_approval_test.dart": {
@@ -860,8 +860,8 @@
     "semantic_hash": ""
   },
   "lib/core/screens/workspace_screen.dart": {
-    "mtime": 1788084378.0358088,
-    "ast_hash": "678dce71bd33d761c70cf16d8e65ff69",
+    "mtime": 1788139431.5850763,
+    "ast_hash": "c33fb2d80163d1bd3da77299c9ad45b9",
     "semantic_hash": ""
   },
   "test/workspace_screen_test.dart": {
@@ -980,8 +980,8 @@
     "semantic_hash": ""
   },
   "lib/core/utils/new_chat_options.dart": {
-    "mtime": 1787876722.283122,
-    "ast_hash": "9dae1b7afa191bb2c0c163b1a8f5463f",
+    "mtime": 1788138705.718807,
+    "ast_hash": "7d1a18c5f5abf936c59209540f1accb7",
     "semantic_hash": ""
   },
   "lib/core/widgets/new_chat_sheet.dart": {
@@ -990,8 +990,8 @@
     "semantic_hash": ""
   },
   "test/new_chat_options_test.dart": {
-    "mtime": 1788079784.11702,
-    "ast_hash": "e6b71a85cbee8a49d4c06206304ce975",
+    "mtime": 1788138817.7982383,
+    "ast_hash": "3df8d2f074eb730b20fe02e0c10fc7e4",
     "semantic_hash": ""
   },
   "lib/core/utils/activity_feed.dart": {
@@ -1165,8 +1165,8 @@
     "semantic_hash": ""
   },
   "docs/ANDROID_FINAL_UI_SPEC_DRAFT.md": {
-    "mtime": 1788079757.4837096,
-    "ast_hash": "03f13970c56cd5e92ecf7ca2ce4ec6c5",
+    "mtime": 1788087055.2232766,
+    "ast_hash": "00de5e619a90ba92bf248cccc7be3ce7",
     "semantic_hash": ""
   },
   "docs/HERMES_ANDROID_INDISPENSABLE_PRODUCT_SPEC.md": {
@@ -1202,6 +1202,26 @@
   "docs/plans/2026-08-30-project-detail-5-tabs.md": {
     "mtime": 1788086387.3251932,
     "ast_hash": "b3158b1bf47b5ce7f81bcc06c56992da",
+    "semantic_hash": ""
+  },
+  "lib/core/widgets/chat_context_header.dart": {
+    "mtime": 1788139431.7570786,
+    "ast_hash": "adbe471c076ef79fd1d10bae9b63dea8",
+    "semantic_hash": ""
+  },
+  "test/chat_context_header_test.dart": {
+    "mtime": 1788137498.4165223,
+    "ast_hash": "c5c193358d8ba09aa1578ab821d572db",
+    "semantic_hash": ""
+  },
+  "test/gateway_activity_card_test.dart": {
+    "mtime": 1788139432.011082,
+    "ast_hash": "cad1f3c537d1dc4cca3d25883c798aeb",
+    "semantic_hash": ""
+  },
+  "docs/plans/2026-08-30-chat-ui-context-composer.md": {
+    "mtime": 1788137460.2130308,
+    "ast_hash": "b55a445c3bd3f43cba47824ad2b6f81e",
     "semantic_hash": ""
   }
 }

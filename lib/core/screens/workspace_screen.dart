@@ -93,11 +93,13 @@ typedef NewChatSessionIdFactory = String Function();
 Widget buildWorkspaceChatScreen({
   required SavedConnection connection,
   required Session session,
+  String? projectName,
   GatewayTurnApplicationController? turnApplicationController,
 }) {
   return ChatScreen(
     connection: connection,
     session: session,
+    projectName: projectName,
     turnApplicationController: turnApplicationController,
   );
 }
@@ -207,6 +209,10 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
   /// no new gateway contract; a turn whose chat is absent simply stays
   /// untitled rather than being dropped or given a fabricated name.
   Map<String, String> _sessionTitles = const {};
+
+  /// Best-effort Project labels learned from the latest projects.tree read,
+  /// used to carry context into chats opened from the global Chats browser.
+  Map<String, String> _chatProjectLabels = const {};
 
   /// Draft session ids of Project chats this workspace started, mapped to the
   /// Project they were committed to. When `session.open` first binds such a
@@ -483,7 +489,9 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
           view: WorkspaceSessionView.all,
           embedded: true,
           load: _loadWorkspaceSessionsData,
-          onOpenSession: (session) => unawaited(_openSession(session)),
+          onOpenSession: (session) => unawaited(
+            _openSession(session, projectName: _chatProjectLabels[session.id]),
+          ),
         );
       case HermesDestination.projects:
         final repository = _repository;
@@ -571,7 +579,7 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
   /// this screen must not also push a route underneath it. Otherwise it opens
   /// the chat itself and re-reads Home on return, because the reason a chat
   /// was blocked usually stops being true while the user is inside it.
-  Future<void> _openSession(Session session) async {
+  Future<void> _openSession(Session session, {String? projectName}) async {
     final report = widget.onOpenSession;
     if (report != null) {
       report(session);
@@ -586,6 +594,7 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
             buildWorkspaceChatScreen(
               connection: widget.connection,
               session: session,
+              projectName: projectName,
               turnApplicationController: widget.turnApplicationController,
             ),
       ),
@@ -626,7 +635,8 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
           projectName: project.name,
           loadSessions: ({required bool refresh}) =>
               repository.projectSessions(projectId, refresh: refresh),
-          onOpenSession: _openSession,
+          onOpenSession: (session) =>
+              _openSession(session, projectName: project.name),
           onNewChat: () => unawaited(_startProjectChat(project)),
           projects: repository.current.projects,
           onMoveSession: (session, targetProjectId) =>
@@ -802,7 +812,7 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
       report(draft);
       return;
     }
-    await _openSession(draft.session);
+    await _openSession(draft.session, projectName: draft.projectName);
   }
 
   /// Re-writes a Project chat's assignment under its durable stored id.
@@ -879,11 +889,12 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
       // Quick-chat metadata is additive; session access must survive its loss.
     }
 
+    _chatProjectLabels = Map.unmodifiable(projectLabels);
     return WorkspaceSessionsData(
       sessions: sessions,
       claimedSessionIds: Set.unmodifiable(claimed),
       archivedQuickChatIds: Set.unmodifiable(archived),
-      projectLabels: Map.unmodifiable(projectLabels),
+      projectLabels: _chatProjectLabels,
     );
   }
 

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../models/gateway_activity.dart';
+import '../theme/hermes_theme.dart';
+import 'hermes_components.dart';
 
 class GatewayActivityCard extends StatefulWidget {
   final List<GatewayToolActivity> activities;
@@ -38,33 +40,54 @@ class _GatewayActivityCardState extends State<GatewayActivityCard> {
         ? '$failures failed • ${activities.length} total'
         : '${activities.length} completed';
 
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      clipBehavior: Clip.antiAlias,
-      child: ExpansionTile(
-        key: PageStorageKey<String>(
-          'gateway-activity-${activities.map((item) => item.toolId ?? item.name).join('-')}',
-        ),
-        initiallyExpanded: active || widget.verbose,
-        onExpansionChanged: (expanded) => setState(() => _expanded = expanded),
-        leading: active
-            ? const SizedBox.square(
-                dimension: 22,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              )
-            : Icon(
-                failures > 0 ? Icons.error_outline : Icons.check_circle_outline,
-                color: failures > 0
-                    ? Theme.of(context).colorScheme.error
-                    : Theme.of(context).colorScheme.primary,
+    final cardStatus = active
+        ? HermesStatus.running
+        : failures > 0
+        ? HermesStatus.failed
+        : HermesStatus.completed;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+        horizontal: HermesSpacing.lg,
+        vertical: HermesSpacing.xs,
+      ),
+      child: HermesCard(
+        status: cardStatus,
+        padding: EdgeInsets.zero,
+        child: ClipRRect(
+          borderRadius: HermesRadius.card,
+          child: Material(
+            color: Colors.transparent,
+            child: ExpansionTile(
+              key: PageStorageKey<String>(
+                'gateway-activity-${activities.map((item) => item.toolId ?? item.name).join('-')}',
               ),
-        title: const Text('Hermes activity'),
-        subtitle: Text(subtitle),
-        children: [
-          const Divider(height: 1),
-          for (final activity in activities)
-            _GatewayActivityRow(activity: activity, expanded: _expanded),
-        ],
+              initiallyExpanded: active || widget.verbose,
+              onExpansionChanged: (expanded) =>
+                  setState(() => _expanded = expanded),
+              leading: active
+                  ? const SizedBox.square(
+                      dimension: 22,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : Icon(
+                      failures > 0
+                          ? Icons.error_outline
+                          : Icons.check_circle_outline,
+                      color: failures > 0
+                          ? Theme.of(context).colorScheme.error
+                          : Theme.of(context).colorScheme.primary,
+                    ),
+              title: const Text('Tool activity'),
+              subtitle: Text(subtitle),
+              children: [
+                const Divider(height: 1),
+                for (final activity in activities)
+                  _GatewayActivityRow(activity: activity, expanded: _expanded),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

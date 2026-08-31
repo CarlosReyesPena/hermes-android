@@ -178,6 +178,7 @@ void main() {
 
       expect(draft.isQuick, isTrue);
       expect(draft.projectId, isNull);
+      expect(draft.projectName, isNull);
       expect(draft.session.id, 'mob-1');
     });
 
@@ -226,6 +227,7 @@ void main() {
 
       expect(draft.isQuick, isFalse);
       expect(draft.projectId, 'p1');
+      expect(draft.projectName, 'Hermes Android');
       expect(draft.session.title, contains('Hermes Android'));
       expect(draft.expiresAt, isNull);
     });

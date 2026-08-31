@@ -154,6 +154,15 @@ void main() {
           ]) {
             expect(tester.getSize(find.byTooltip(tooltip)), const Size(48, 48));
           }
+          final messageField = tester.widget<TextField>(
+            find.descendant(
+              of: find.bySemanticsLabel('Message'),
+              matching: find.byType(TextField),
+            ),
+          );
+          expect(messageField.minLines, 1);
+          expect(messageField.maxLines, 5);
+          expect(messageField.decoration?.hintText, 'Message Hermes…');
           expect(tester.takeException(), isNull);
         }
       },

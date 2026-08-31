@@ -137,6 +137,9 @@ class NewChatDraft {
   /// The owning Project, or null for a Quick chat.
   final String? projectId;
 
+  /// Project label carried into the sticky Chat context header.
+  final String? projectName;
+
   /// When a Quick chat becomes eligible for auto-archive. Null when durable.
   final DateTime? expiresAt;
 
@@ -144,6 +147,7 @@ class NewChatDraft {
     required this.session,
     required this.mode,
     this.projectId,
+    this.projectName,
     this.expiresAt,
   });
 
@@ -190,6 +194,7 @@ NewChatDraft buildNewChatDraft({
     mode: mode,
     // A Quick chat never inherits the active project, even when one is passed.
     projectId: isQuick ? null : project!.id,
+    projectName: isQuick || projectName.isEmpty ? null : projectName,
     expiresAt: isQuick ? now.add(kQuickChatRetention) : null,
   );
 }
