@@ -268,6 +268,8 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   String? _activeClientTurnId;
   bool _recoveringTurn = false;
   bool _legacyTransportFallback = false;
+  bool _legacyHistoryResyncPending = false;
+  bool _legacyHistoryResyncing = false;
   int _responseGeneration = 0;
   bool _approvalDialogOpen = false;
   final List<_PendingSensitivePrompt> _sensitivePromptQueue = [];
@@ -499,11 +501,16 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.paused) {
       _appInBackground = true;
+      if (_legacyTransportFallback && (_sending || _streaming)) {
+        _legacyHistoryResyncPending = true;
+      }
     } else if (state == AppLifecycleState.resumed) {
       _appInBackground = false;
       unawaited(_turnNotifications.cancelAll());
       if (_desktopGateway != null) unawaited(_ensureDesktopSession());
-      if (_turnApplicationSession != null && !_legacyTransportFallback) {
+      if (_legacyTransportFallback) {
+        unawaited(_resyncLegacyHistoryAfterResume());
+      } else if (_turnApplicationSession != null) {
         unawaited(_recoverPendingTurn());
       }
     }
@@ -930,6 +937,36 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
         _error = errStr;
         _loading = false;
       });
+    }
+  }
+
+  Future<void> _resyncLegacyHistoryAfterResume() async {
+    if (!mounted ||
+        !_legacyTransportFallback ||
+        !_legacyHistoryResyncPending ||
+        _appInBackground ||
+        _legacyHistoryResyncing ||
+        _loading ||
+        _sending ||
+        _streaming) {
+      return;
+    }
+
+    _legacyHistoryResyncing = true;
+    try {
+      final messages = await _client.getMessages(widget.session.id);
+      if (!mounted || _appInBackground) return;
+      _extractToolMessages(messages);
+      setState(() {
+        _messages = messages;
+        _legacyHistoryResyncPending = false;
+      });
+      _scheduleInitialEndAlignment();
+    } catch (_) {
+      // Keep the pending watermark so the next resume can retry. The composer
+      // remains usable and the normal screen reload path still fetches history.
+    } finally {
+      _legacyHistoryResyncing = false;
     }
   }
 
@@ -2004,6 +2041,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
         _gatewayTurnStatus = null;
         _activeResponseTransport = _ResponseTransport.none;
       });
+      unawaited(_resyncLegacyHistoryAfterResume());
       _scheduleScrollTarget(_scrollCoordinator.endStreaming());
       if (_awaitingVoiceReply) {
         _awaitingVoiceReply = false;
@@ -2034,6 +2072,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
         });
       }
       _handleSendError(error);
+      unawaited(_resyncLegacyHistoryAfterResume());
     }
   }
 
