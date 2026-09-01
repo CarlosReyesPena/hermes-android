@@ -171,6 +171,7 @@ Future<void> _pump(
   GatewayTurnApplicationController? turnApplicationController,
   String? initialSharedText,
   AndroidSharePayload? initialSharedPayload,
+  bool initialQuickChat = false,
   SharedAttachmentPreparer? sharedAttachmentPreparer,
   Size size = const Size(400, 800),
 }) async {
@@ -203,6 +204,7 @@ Future<void> _pump(
         turnApplicationController: turnApplicationController,
         initialSharedText: initialSharedText,
         initialSharedPayload: initialSharedPayload,
+        initialQuickChat: initialQuickChat,
         sharedAttachmentPreparer: sharedAttachmentPreparer,
         onOpenDashboard: openedDashboards == null
             ? null
@@ -1189,6 +1191,25 @@ void main() {
       expect(opened.single.isQuick, isTrue);
       expect(opened.single.projectId, isNull);
       expect(opened.single.session.id, isNotEmpty);
+    });
+
+    testWidgets('a launcher shortcut opens a Quick Chat without a picker', (
+      tester,
+    ) async {
+      final opened = <NewChatDraft>[];
+      await _pump(
+        tester,
+        connection: _connection(),
+        sessions: const [],
+        initialQuickChat: true,
+        onNewChat: opened.add,
+      );
+      await tester.pumpAndSettle();
+
+      expect(opened, hasLength(1));
+      expect(opened.single.isQuick, isTrue);
+      expect(opened.single.projectId, isNull);
+      expect(find.text(NewChatMode.quickChat.label), findsNothing);
     });
 
     testWidgets('a project chat asks which project and carries it', (

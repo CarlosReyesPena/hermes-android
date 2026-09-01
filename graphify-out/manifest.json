@@ -10,8 +10,8 @@
     "semantic_hash": ""
   },
   "android/app/src/main/kotlin/com/hermesagent/hermes_android/MainActivity.kt": {
-    "mtime": 1788167541.0308077,
-    "ast_hash": "f207f9a574ec8e720ea979b999d306aa",
+    "mtime": 1788242875.931366,
+    "ast_hash": "104a2e9162619f5cd787ccdffd982d4c",
     "semantic_hash": ""
   },
   "android/build.gradle.kts": {
@@ -325,8 +325,8 @@
     "semantic_hash": ""
   },
   "lib/main.dart": {
-    "mtime": 1788168474.9878004,
-    "ast_hash": "5145d0892ae3aebdadadad409b26bad1",
+    "mtime": 1788243460.898829,
+    "ast_hash": "991f4e5d31c563a59d0f0d66d7eee1ba",
     "semantic_hash": ""
   },
   "test/ai_search_query_rewriter_test.dart": {
@@ -860,13 +860,13 @@
     "semantic_hash": ""
   },
   "lib/core/screens/workspace_screen.dart": {
-    "mtime": 1788169720.7500205,
-    "ast_hash": "fe7746fca3a1d46e21e796a1917f08ee",
+    "mtime": 1788243044.9988065,
+    "ast_hash": "7c835c4926afc4696ba63be632abe180",
     "semantic_hash": ""
   },
   "test/workspace_screen_test.dart": {
-    "mtime": 1788169621.878706,
-    "ast_hash": "064668f582e8c63f41677451f3861a56",
+    "mtime": 1788242653.9481678,
+    "ast_hash": "a2b7f0f083d2584b23cfff2695973f8e",
     "semantic_hash": ""
   },
   "lib/core/widgets/space_migration_preview.dart": {
@@ -1050,8 +1050,8 @@
     "semantic_hash": ""
   },
   "test/home_config_restore_test.dart": {
-    "mtime": 1788168648.4350562,
-    "ast_hash": "a71804a1e924a28cc233ba924420d6fb",
+    "mtime": 1788242733.9713206,
+    "ast_hash": "4649236552e68717283173aa4b71844d",
     "semantic_hash": ""
   },
   "lib/core/models/project_sessions_tree.dart": {
@@ -1257,6 +1257,21 @@
   "test/shared_attachment_preparer_test.dart": {
     "mtime": 1788167312.9198902,
     "ast_hash": "b09f1a6d1f13eca81cc0bb73103fe5fb",
+    "semantic_hash": ""
+  },
+  "lib/core/services/android_launch_intent_service.dart": {
+    "mtime": 1788242788.351104,
+    "ast_hash": "ff0565e74e3e978dbcbfff8d4964cf04",
+    "semantic_hash": ""
+  },
+  "test/android_launch_intent_service_test.dart": {
+    "mtime": 1788242557.5287788,
+    "ast_hash": "2caff5ec7a55a2a800625b2d53ec683e",
+    "semantic_hash": ""
+  },
+  "test/android_launcher_shortcut_contract_test.dart": {
+    "mtime": 1788242584.0451608,
+    "ast_hash": "347876e4b73708ea206a62811220609b",
     "semantic_hash": ""
   }
 }

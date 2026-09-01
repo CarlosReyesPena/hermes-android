@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'core/services/android_launch_intent_service.dart';
 import 'core/services/android_share_intent_service.dart';
 import 'core/services/config_backup.dart';
 import 'core/services/config_backup_io.dart';
@@ -19,14 +20,27 @@ void main() async {
   final prefs = await SharedPreferences.getInstance();
   final connManager = await ConnectionManager.create(prefs);
   final shareIntents = AndroidShareIntentService();
-  await shareIntents.initialize();
-  runApp(HermesApp(connManager: connManager, shareIntents: shareIntents));
+  final launchIntents = AndroidLaunchIntentService();
+  await Future.wait([shareIntents.initialize(), launchIntents.initialize()]);
+  runApp(
+    HermesApp(
+      connManager: connManager,
+      shareIntents: shareIntents,
+      launchIntents: launchIntents,
+    ),
+  );
 }
 
 class HermesApp extends StatefulWidget {
   final ConnectionManager connManager;
   final AndroidShareIntentService? shareIntents;
-  const HermesApp({required this.connManager, this.shareIntents, super.key});
+  final AndroidLaunchIntentService? launchIntents;
+  const HermesApp({
+    required this.connManager,
+    this.shareIntents,
+    this.launchIntents,
+    super.key,
+  });
 
   @override
   State<HermesApp> createState() => HermesAppState();
@@ -97,6 +111,7 @@ class HermesAppState extends State<HermesApp> {
         connManager: widget.connManager,
         turnApplicationController: _turnApplicationController,
         shareIntents: widget.shareIntents,
+        launchIntents: widget.launchIntents,
       ),
     );
   }
@@ -159,6 +174,7 @@ class HomeScreen extends StatefulWidget {
   final ConnectionManager connManager;
   final GatewayTurnApplicationController turnApplicationController;
   final AndroidShareIntentService? shareIntents;
+  final AndroidLaunchIntentService? launchIntents;
   final Future<String?> Function()? pickBackupFile;
   final Future<ConfigImportResult> Function(
     String contents,
@@ -171,6 +187,7 @@ class HomeScreen extends StatefulWidget {
     required this.connManager,
     required this.turnApplicationController,
     this.shareIntents,
+    this.launchIntents,
     this.pickBackupFile,
     this.importBackup,
     super.key,
@@ -256,17 +273,34 @@ class HomeScreenState extends State<HomeScreen> {
     super.initState();
     _refresh();
     widget.shareIntents?.pendingShare.addListener(_onSharedText);
-    WidgetsBinding.instance.addPostFrameCallback((_) => _onSharedText());
+    widget.launchIntents?.pendingQuickChat.addListener(_onQuickChat);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _onSharedText();
+      _onQuickChat();
+    });
   }
 
-  void _onSharedText() {
-    if (!mounted || widget.shareIntents?.pendingShare.value == null) return;
+  SavedConnection? _connectionForExternalAction() {
     final lastId = widget.connManager.prefs.getString(_lastConnectionKey);
     final preferred = _connections
         .where((connection) => connection.id == lastId)
         .firstOrNull;
-    final connection =
-        preferred ?? (_connections.length == 1 ? _connections.single : null);
+    return preferred ?? (_connections.length == 1 ? _connections.single : null);
+  }
+
+  void _onSharedText() {
+    if (!mounted || widget.shareIntents?.pendingShare.value == null) return;
+    final connection = _connectionForExternalAction();
+    if (connection == null) return;
+    _autoNavigated = true;
+    _navigateToWorkspace(connection);
+  }
+
+  void _onQuickChat() {
+    if (!mounted || widget.launchIntents?.pendingQuickChat.value != true) {
+      return;
+    }
+    final connection = _connectionForExternalAction();
     if (connection == null) return;
     _autoNavigated = true;
     _navigateToWorkspace(connection);
@@ -275,6 +309,7 @@ class HomeScreenState extends State<HomeScreen> {
   @override
   void dispose() {
     widget.shareIntents?.pendingShare.removeListener(_onSharedText);
+    widget.launchIntents?.pendingQuickChat.removeListener(_onQuickChat);
     super.dispose();
   }
 
@@ -290,7 +325,10 @@ class HomeScreenState extends State<HomeScreen> {
   void _maybeAutoNavigate() {
     // The share listener owns this route so the regular last-connection
     // auto-navigation cannot stack a second Workspace above the shared draft.
-    if (widget.shareIntents?.pendingShare.value != null) return;
+    if (widget.shareIntents?.pendingShare.value != null ||
+        widget.launchIntents?.pendingQuickChat.value == true) {
+      return;
+    }
     final lastId = widget.connManager.prefs.getString(_lastConnectionKey);
     if (lastId == null) return;
     final conn = _connections.where((c) => c.id == lastId).firstOrNull;
@@ -303,6 +341,9 @@ class HomeScreenState extends State<HomeScreen> {
   void _navigateToWorkspace(SavedConnection conn) {
     widget.connManager.prefs.setString(_lastConnectionKey, conn.id);
     final sharedPayload = widget.shareIntents?.takePendingShare();
+    final initialQuickChat =
+        widget.launchIntents?.takePendingQuickChat() == true &&
+        sharedPayload == null;
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -310,6 +351,7 @@ class HomeScreenState extends State<HomeScreen> {
           connection: conn,
           turnApplicationController: widget.turnApplicationController,
           initialSharedPayload: sharedPayload,
+          initialQuickChat: initialQuickChat,
         ),
       ),
     );

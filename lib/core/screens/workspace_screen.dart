@@ -163,6 +163,10 @@ class WorkspaceScreen extends StatefulWidget {
   /// Text and files received through Android's ACTION_SEND contract.
   final AndroidSharePayload? initialSharedPayload;
 
+  /// Opens a fresh Quick Chat immediately, as requested by an Android launcher
+  /// shortcut. The value is consumed by the caller before this screen opens.
+  final bool initialQuickChat;
+
   /// Converts native-cached shared files into validated composer drafts.
   final SharedAttachmentPreparer? sharedAttachmentPreparer;
 
@@ -184,6 +188,7 @@ class WorkspaceScreen extends StatefulWidget {
     this.newChatSessionIdFactory,
     this.initialSharedText,
     this.initialSharedPayload,
+    this.initialQuickChat = false,
     this.sharedAttachmentPreparer,
     this.onOpenDashboard,
     super.key,
@@ -448,7 +453,35 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) unawaited(_startSharedChat(sharedPayload));
       });
+    } else if (widget.initialQuickChat) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) unawaited(_startQuickChat());
+      });
     }
+  }
+
+  Future<void> _startQuickChat() async {
+    await _initialization;
+    if (!mounted) return;
+    final draft = buildNewChatDraft(
+      mode: NewChatMode.quickChat,
+      sessionId:
+          (widget.newChatSessionIdFactory ??
+                  GatewayChatClient.generateSessionId)
+              .call(),
+      now: DateTime.now(),
+    );
+    final expiresAt = draft.expiresAt;
+    if (expiresAt != null) {
+      try {
+        await (await _quickChatStore()).record(
+          draft.session.id,
+          expiresAt: expiresAt,
+        );
+      } catch (_) {}
+    }
+    if (!mounted) return;
+    await _finishNewChat(draft);
   }
 
   Future<void> _startSharedChat(AndroidSharePayload payload) async {

@@ -12,20 +12,25 @@ import java.io.FileOutputStream
 import java.util.UUID
 
 class MainActivity : FlutterActivity() {
-    private val channelName = "com.hermesagent.hermes_android/share"
+    private val shareChannelName = "com.hermesagent.hermes_android/share"
+    private val launchChannelName = "com.hermesagent.hermes_android/launch"
+    private val quickChatAction = "com.hermesagent.hermes_android.action.QUICK_CHAT"
     private val maxSharedItems = 10
     private val maxSharedBytes = 64L * 1024L * 1024L
-    private var channel: MethodChannel? = null
+    private var shareChannel: MethodChannel? = null
+    private var launchChannel: MethodChannel? = null
     private var initialShareIntent: Intent? = null
+    private var initialLaunchAction: String? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         initialShareIntent = intent.takeIf(::isShareIntent)
+        initialLaunchAction = launchActionFor(intent)
         super.onCreate(savedInstanceState)
     }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
-        channel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, channelName).apply {
+        shareChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, shareChannelName).apply {
             setMethodCallHandler { call, result ->
                 when (call.method) {
                     "getInitialShare" -> {
@@ -37,16 +42,35 @@ class MainActivity : FlutterActivity() {
                 }
             }
         }
+        launchChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, launchChannelName).apply {
+            setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "getInitialLaunchAction" -> {
+                        val pending = initialLaunchAction
+                        initialLaunchAction = null
+                        result.success(pending)
+                    }
+                    else -> result.notImplemented()
+                }
+            }
+        }
     }
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
+        launchActionFor(intent)?.let { action ->
+            launchChannel?.invokeMethod("launchAction", action)
+            return
+        }
         if (!isShareIntent(intent)) return
         processShareIntent(intent) { payload ->
-            if (payload != null) channel?.invokeMethod("sharePayload", payload)
+            if (payload != null) shareChannel?.invokeMethod("sharePayload", payload)
         }
     }
+
+    private fun launchActionFor(intent: Intent?): String? =
+        if (intent?.action == quickChatAction) "quickChat" else null
 
     private fun isShareIntent(intent: Intent?): Boolean =
         intent?.action == Intent.ACTION_SEND || intent?.action == Intent.ACTION_SEND_MULTIPLE

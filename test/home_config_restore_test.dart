@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:hermes_android/core/screens/chat_screen.dart';
 import 'package:hermes_android/core/screens/session_list_screen.dart';
 import 'package:hermes_android/core/screens/workspace_screen.dart';
+import 'package:hermes_android/core/services/android_launch_intent_service.dart';
 import 'package:hermes_android/core/services/android_share_intent_service.dart';
 import 'package:hermes_android/core/services/config_backup_service.dart';
 import 'package:hermes_android/core/services/connection_manager.dart';
@@ -60,6 +61,7 @@ Future<void> pumpHome(
   Future<ConfigImportResult> Function(String, String, ConfigImportMode)?
   importBackup,
   AndroidShareIntentService? shareIntents,
+  AndroidLaunchIntentService? launchIntents,
 }) async {
   await tester.pumpWidget(
     MaterialApp(
@@ -69,6 +71,7 @@ Future<void> pumpHome(
           sessionFactory: (_) => InertTurnApplicationSession(),
         ),
         shareIntents: shareIntents,
+        launchIntents: launchIntents,
         pickBackupFile: pickBackupFile,
         importBackup: importBackup,
       ),
@@ -108,6 +111,31 @@ void main() {
     for (final destination in HermesDestination.values) {
       expect(find.text(destination.label), findsWidgets);
     }
+  });
+
+  testWidgets('a cold-start launcher shortcut opens a Quick Chat directly', (
+    tester,
+  ) async {
+    const channel = MethodChannel(AndroidLaunchIntentService.channelName);
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(channel, (_) async => 'quickChat');
+    addTearDown(
+      () => TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, null),
+    );
+
+    final launchIntents = AndroidLaunchIntentService();
+    await launchIntents.initialize();
+    addTearDown(launchIntents.dispose);
+    final manager = await buildManager();
+    await manager.saveConnection('Miniserver', 'host', 8642, 'key');
+
+    await pumpHome(tester, manager, launchIntents: launchIntents);
+    await tester.pump(const Duration(milliseconds: 500));
+
+    expect(find.byType(ChatScreen), findsOneWidget);
+    expect(find.text('New chat'), findsNothing);
+    expect(launchIntents.pendingQuickChat.value, isFalse);
   });
 
   testWidgets('a cold-start share uses the saved connection exactly once', (
