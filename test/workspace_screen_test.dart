@@ -568,6 +568,32 @@ void main() {
     expect(find.textContaining('Home — Coming next'), findsNothing);
   });
 
+  testWidgets('Home search opens the focused global Chats search', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      connection: _connection(desktopGatewayUrl: 'https://host:8642'),
+      repository: await _repository([]),
+      sessions: [_session(id: 's1', title: 'Searchable chat')],
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Search all chats'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(WorkspaceSessionsScreen), findsOneWidget);
+    expect(
+      find.descendant(of: find.byType(AppBar), matching: find.text('Search')),
+      findsOneWidget,
+    );
+    expect(find.byKey(kWorkspaceSessionSearchKey), findsOneWidget);
+    expect(
+      tester.widget<EditableText>(find.byType(EditableText)).focusNode.hasFocus,
+      isTrue,
+    );
+  });
+
   testWidgets('opening a Home row reports the session to the host', (
     tester,
   ) async {

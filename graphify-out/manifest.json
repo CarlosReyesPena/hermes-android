@@ -860,13 +860,13 @@
     "semantic_hash": ""
   },
   "lib/core/screens/workspace_screen.dart": {
-    "mtime": 1788243044.9988065,
-    "ast_hash": "7c835c4926afc4696ba63be632abe180",
+    "mtime": 1788339493.863388,
+    "ast_hash": "d29479fce41d31773c6c522b1012bd5a",
     "semantic_hash": ""
   },
   "test/workspace_screen_test.dart": {
-    "mtime": 1788242653.9481678,
-    "ast_hash": "a2b7f0f083d2584b23cfff2695973f8e",
+    "mtime": 1788339534.2918837,
+    "ast_hash": "a533596f99a0762bcfd58933f2f8d879",
     "semantic_hash": ""
   },
   "lib/core/widgets/space_migration_preview.dart": {
@@ -1150,8 +1150,8 @@
     "semantic_hash": ""
   },
   "lib/core/screens/workspace_sessions_screen.dart": {
-    "mtime": 1788086750.4516678,
-    "ast_hash": "69bf40b9cb424a96c55318e0f2e22a4e",
+    "mtime": 1788339493.863388,
+    "ast_hash": "2b9a301cad41feec6e3429e7e77dcff4",
     "semantic_hash": ""
   },
   "test/workspace_sessions_screen_test.dart": {

@@ -1175,7 +1175,19 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
 
     return Scaffold(
       backgroundColor: tokens.surface,
-      appBar: AppBar(title: Text(widget.connection.label), centerTitle: false),
+      appBar: AppBar(
+        title: Text(widget.connection.label),
+        centerTitle: false,
+        actions: [
+          if (_destination == HermesDestination.home)
+            IconButton(
+              tooltip: 'Search all chats',
+              onPressed: () =>
+                  _openWorkspaceSessionView(WorkspaceSessionView.search),
+              icon: const Icon(Icons.search),
+            ),
+        ],
+      ),
       body: HermesShell(
         initialDestination: HermesDestination.home,
         // The badge is the only attention signal visible from another

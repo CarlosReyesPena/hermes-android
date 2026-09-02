@@ -327,6 +327,7 @@ class _WorkspaceSessionsScreenState extends State<WorkspaceSessionsScreen> {
         children: [
           TextField(
             key: kWorkspaceSessionSearchKey,
+            autofocus: widget.view == WorkspaceSessionView.search,
             decoration: InputDecoration(
               hintText: 'Search conversations',
               prefixIcon: const Icon(Icons.search),
