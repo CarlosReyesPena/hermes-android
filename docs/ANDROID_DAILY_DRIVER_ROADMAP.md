@@ -1258,6 +1258,23 @@ Projects.
     Workspace is hidden behind the drawer), followed by rename/archive/restore
     and a browsable Inbox/Unassigned surface.
 
+29. **Project lifecycle actions** — `test/projects_pane_test.dart` and
+    `test/project_detail_screen_test.dart`. Rename and Archive are available
+    from the same overflow menu on live Projects, archived Projects live in a
+    separate **Archived** section, and Restore moves them back to the active
+    list through the existing optimistic repository contracts.
+
+30. **Action Inbox — first native vertical slice** —
+    `test/activity_pane_test.dart`, `test/more_pane_test.dart`, and
+    `test/workspace_screen_test.dart`. Home now exposes a counted Inbox action.
+    The Inbox reuses the durable Activity feed but shows only work that needs a
+    decision or recovery (**Needs you** and **Failed**), and every known row
+    opens its chat. Running and completed work stay in Activity. The previous
+    “Inbox / Unassigned” label was corrected to **Unassigned chats**, because
+    project filing state and actionable work are different concepts. Cron
+    failures, due tasks, and approvals outside an open chat still require an
+    authoritative aggregation contract and are not claimed by this slice.
+
 Phase 0 is **complete**. Step 7 (real Gateway smoke test on a device) passed on
 2026-08-29 against the live Miniserver gateway from a physical SM-S948B over
 wireless debugging, and the migration *write* path it gated is implemented and
@@ -1266,9 +1283,9 @@ covered (`ProjectsRepository.migrateSpaces`,
 (Home, Projects, Activity, More) is implemented, covered, and now validated on
 hardware, so *screen* slices may begin.
 
-Next slice: surface the existing rename/archive/restore contracts in the same
-Project actions menu, add an Archived section, then build the browsable
-Inbox/Unassigned recovery surface identified by the interface audit.
+Next slice: extend the action Inbox with authoritative Cron failures, due tasks,
+and approvals that outlive an open chat. Keep each source capability-gated and
+never fabricate actionable rows when its server contract is unavailable.
 
 ---
 

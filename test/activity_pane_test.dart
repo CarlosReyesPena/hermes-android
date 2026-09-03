@@ -55,6 +55,7 @@ Future<void> _pump(
   WidgetTester tester, {
   required ActivityFeedLoader loadFeed,
   ValueChanged<ActivityItem>? onOpenItem,
+  bool actionableOnly = false,
   Size size = const Size(400, 900),
 }) async {
   tester.view.physicalSize = size;
@@ -68,6 +69,7 @@ Future<void> _pump(
         body: ActivityPane(
           loadFeed: loadFeed,
           onOpenItem: onOpenItem,
+          actionableOnly: actionableOnly,
           clock: () => _now,
         ),
       ),
@@ -200,6 +202,61 @@ void main() {
 
     expect(find.byType(EmptyState), findsOneWidget);
     expect(find.text('Nothing is running'), findsOneWidget);
+  });
+
+  testWidgets('Inbox mode only shows work that needs action', (tester) async {
+    await _pump(
+      tester,
+      actionableOnly: true,
+      loadFeed: () async => _feed([
+        _group(ActivityGroupKind.needsYou, [
+          _item(
+            sessionId: 'blocked',
+            title: 'Approve deployment',
+            status: HermesStatus.blocked,
+          ),
+        ]),
+        _group(ActivityGroupKind.running, [
+          _item(sessionId: 'live', title: 'Still running'),
+        ]),
+        _group(ActivityGroupKind.failed, [
+          _item(
+            sessionId: 'failed',
+            title: 'Repair failed turn',
+            status: HermesStatus.failed,
+          ),
+        ]),
+        _group(ActivityGroupKind.completed, [
+          _item(
+            sessionId: 'done',
+            title: 'Already completed',
+            status: HermesStatus.completed,
+          ),
+        ]),
+      ]),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Approve deployment'), findsOneWidget);
+    expect(find.text('Repair failed turn'), findsOneWidget);
+    expect(find.text('Still running'), findsNothing);
+    expect(find.text('Already completed'), findsNothing);
+  });
+
+  testWidgets('an empty Inbox states that no action is required', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      actionableOnly: true,
+      loadFeed: () async => _feed([
+        _group(ActivityGroupKind.running, [_item(title: 'Still running')]),
+      ]),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byType(EmptyState), findsOneWidget);
+    expect(find.text('Inbox is clear'), findsOneWidget);
   });
 
   testWidgets('a first read that fails becomes a retryable error state', (

@@ -38,6 +38,10 @@ typedef ActivityClock = DateTime Function();
 class ActivityPane extends StatefulWidget {
   final ActivityFeedLoader loadFeed;
 
+  /// When true, this pane becomes the action Inbox: only blocked and failed
+  /// work is shown. Running and completed work remain available in Activity.
+  final bool actionableOnly;
+
   /// Called when the user taps a row. When null, rows are drawn inert rather
   /// than looking tappable and doing nothing.
   final ValueChanged<ActivityItem>? onOpenItem;
@@ -46,6 +50,7 @@ class ActivityPane extends StatefulWidget {
 
   const ActivityPane({
     required this.loadFeed,
+    this.actionableOnly = false,
     this.onOpenItem,
     this.clock,
     super.key,
@@ -121,6 +126,16 @@ class ActivityPaneState extends State<ActivityPane> {
       );
     }
 
+    final groups = widget.actionableOnly
+        ? feed.groups
+              .where(
+                (group) =>
+                    group.kind == ActivityGroupKind.needsYou ||
+                    group.kind == ActivityGroupKind.failed,
+              )
+              .toList(growable: false)
+        : feed.groups;
+
     return RefreshIndicator(
       onRefresh: _load,
       child: ListView(
@@ -128,21 +143,26 @@ class ActivityPaneState extends State<ActivityPane> {
         physics: const AlwaysScrollableScrollPhysics(),
         children: [
           if (_error != null) const _OfflineBanner(),
-          if (feed.isEmpty)
+          if (groups.isEmpty)
             Padding(
               padding: EdgeInsets.only(
                 top: MediaQuery.sizeOf(context).height * 0.12,
               ),
-              child: const EmptyState(
-                icon: Icons.bolt_outlined,
-                title: 'Nothing is running',
-                message:
-                    'No turn is blocked, in flight, or recently finished. '
-                    'Work you start will show up here.',
+              child: EmptyState(
+                icon: widget.actionableOnly
+                    ? Icons.inbox_outlined
+                    : Icons.bolt_outlined,
+                title: widget.actionableOnly
+                    ? 'Inbox is clear'
+                    : 'Nothing is running',
+                message: widget.actionableOnly
+                    ? 'No turn needs your input or has failed.'
+                    : 'No turn is blocked, in flight, or recently finished. '
+                          'Work you start will show up here.',
               ),
             )
           else
-            for (final group in feed.groups) ..._group(group),
+            for (final group in groups) ..._group(group),
         ],
       ),
     );

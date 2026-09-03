@@ -790,8 +790,8 @@
     "semantic_hash": ""
   },
   "docs/ANDROID_DAILY_DRIVER_ROADMAP.md": {
-    "mtime": 1788040929.3682597,
-    "ast_hash": "ba28ea5296a6603cbd43bab20b2163eb",
+    "mtime": 1788413631.956257,
+    "ast_hash": "dbc70e3293b29149bdb6783c03b1be7b",
     "semantic_hash": ""
   },
   "lib/core/models/hermes_project.dart": {
@@ -860,13 +860,13 @@
     "semantic_hash": ""
   },
   "lib/core/screens/workspace_screen.dart": {
-    "mtime": 1788339493.863388,
-    "ast_hash": "d29479fce41d31773c6c522b1012bd5a",
+    "mtime": 1788413500.007561,
+    "ast_hash": "5f23241ce3da78d8fce79a7eaa17c9a8",
     "semantic_hash": ""
   },
   "test/workspace_screen_test.dart": {
-    "mtime": 1788339534.2918837,
-    "ast_hash": "a533596f99a0762bcfd58933f2f8d879",
+    "mtime": 1788413500.1685631,
+    "ast_hash": "c7d42471ab55ea88f19784689be124f1",
     "semantic_hash": ""
   },
   "lib/core/widgets/space_migration_preview.dart": {
@@ -890,13 +890,13 @@
     "semantic_hash": ""
   },
   "lib/core/widgets/more_pane.dart": {
-    "mtime": 1788079516.3669002,
-    "ast_hash": "025c964dec1be42beed0385a01c748d7",
+    "mtime": 1788413470.4361773,
+    "ast_hash": "f0a71b645f2a15fcab8694a4d68fed27",
     "semantic_hash": ""
   },
   "test/more_pane_test.dart": {
-    "mtime": 1788079784.1120198,
-    "ast_hash": "bac1fecbee8787e43e6dcc3fc7ba64bc",
+    "mtime": 1788413544.1231332,
+    "ast_hash": "4d6cb4ad0be54d6ae41441662370a439",
     "semantic_hash": ""
   },
   "test/support/recording_turn_notification_sink.dart": {
@@ -1000,8 +1000,8 @@
     "semantic_hash": ""
   },
   "lib/core/widgets/activity_pane.dart": {
-    "mtime": 1788079783.688015,
-    "ast_hash": "ccbf1edba1bdffe16812ec309197a317",
+    "mtime": 1788413318.8522105,
+    "ast_hash": "1d46b9b39026a0b2abfbe19a0a5012c0",
     "semantic_hash": ""
   },
   "test/activity_feed_test.dart": {
@@ -1010,8 +1010,8 @@
     "semantic_hash": ""
   },
   "test/activity_pane_test.dart": {
-    "mtime": 1788079783.8270166,
-    "ast_hash": "f3019fedcf1f1468275f98373753a085",
+    "mtime": 1788413500.0425613,
+    "ast_hash": "3bcfe5cbf6543bd1d0f26bfff23a5f43",
     "semantic_hash": ""
   },
   "lib/core/services/config_backup.dart": {

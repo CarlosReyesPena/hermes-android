@@ -219,6 +219,9 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
   /// Reaches the live Activity pane for the same reason.
   final _activityKey = GlobalKey<ActivityPaneState>();
 
+  /// Reaches the action-only Activity view opened from Home.
+  final _inboxKey = GlobalKey<ActivityPaneState>();
+
   /// The destination currently on screen. The New button is a Home
   /// affordance: over Projects or More it would be ambiguous what it creates.
   HermesDestination _destination = HermesDestination.home;
@@ -231,6 +234,9 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
   /// separately from the feed so the badge survives a destination switch that
   /// disposes the pane.
   int _activityBlockedCount = 0;
+
+  /// Blocked plus failed turns shown by the Home Inbox action.
+  int _inboxActionCount = 0;
 
   /// Session id to title, from the last successful session read.
   ///
@@ -367,8 +373,13 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
     try {
       await _loadActivity();
     } catch (_) {
-      if (!mounted || _activityBlockedCount == 0) return;
-      setState(() => _activityBlockedCount = 0);
+      if (!mounted || (_activityBlockedCount == 0 && _inboxActionCount == 0)) {
+        return;
+      }
+      setState(() {
+        _activityBlockedCount = 0;
+        _inboxActionCount = 0;
+      });
     }
   }
 
@@ -416,12 +427,24 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
       } catch (_) {}
     }
     final feed = await loader(widget.connection, _sessionTitles);
-    if (mounted && feed.blockedCount != _activityBlockedCount) {
+    final inboxCount = feed.groups
+        .where(
+          (group) =>
+              group.kind == ActivityGroupKind.needsYou ||
+              group.kind == ActivityGroupKind.failed,
+        )
+        .fold<int>(0, (count, group) => count + group.totalCount);
+    if (mounted &&
+        (feed.blockedCount != _activityBlockedCount ||
+            inboxCount != _inboxActionCount)) {
       // Deferred: the pane calls this from its own build-triggered load, and
       // setState during that frame would rebuild the shell mid-layout.
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
-        setState(() => _activityBlockedCount = feed.blockedCount);
+        setState(() {
+          _activityBlockedCount = feed.blockedCount;
+          _inboxActionCount = inboxCount;
+        });
       });
     }
     return feed;
@@ -809,6 +832,23 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
     );
   }
 
+  /// Opens the Home action Inbox. It deliberately reuses the Activity feed but
+  /// filters out informational Running/Completed rows, so this route contains
+  /// only work that can change what the user does next.
+  void _openInbox() {
+    _push(
+      Scaffold(
+        appBar: AppBar(title: const Text('Inbox')),
+        body: ActivityPane(
+          key: _inboxKey,
+          loadFeed: _loadActivity,
+          onOpenItem: _openActivityItem,
+          actionableOnly: true,
+        ),
+      ),
+    );
+  }
+
   /// Opens the chat an Activity row belongs to.
   ///
   /// The journal outlives a deleted session, so a row can name a chat the
@@ -821,6 +861,7 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
     await _openSession(session);
     if (!mounted) return;
     unawaited(_activityKey.currentState?.refresh() ?? Future<void>.value());
+    unawaited(_inboxKey.currentState?.refresh() ?? Future<void>.value());
   }
 
   /// The live session an Activity row points at, or `null` when the chat is
@@ -1076,7 +1117,7 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
   void _openWorkspaceSessionView(WorkspaceSessionView view) {
     final title = switch (view) {
       WorkspaceSessionView.all => 'All chats',
-      WorkspaceSessionView.unassigned => 'Inbox / Unassigned',
+      WorkspaceSessionView.unassigned => 'Unassigned chats',
       WorkspaceSessionView.archivedQuick => 'Archived quick chats',
       WorkspaceSessionView.search => 'Search',
     };
@@ -1179,13 +1220,25 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
         title: Text(widget.connection.label),
         centerTitle: false,
         actions: [
-          if (_destination == HermesDestination.home)
+          if (_destination == HermesDestination.home) ...[
+            IconButton(
+              tooltip: _inboxActionCount == 0
+                  ? 'Open inbox'
+                  : 'Open inbox ($_inboxActionCount)',
+              onPressed: _openInbox,
+              icon: Badge(
+                isLabelVisible: _inboxActionCount > 0,
+                label: Text('$_inboxActionCount'),
+                child: const Icon(Icons.inbox_outlined),
+              ),
+            ),
             IconButton(
               tooltip: 'Search all chats',
               onPressed: () =>
                   _openWorkspaceSessionView(WorkspaceSessionView.search),
               icon: const Icon(Icons.search),
             ),
+          ],
         ],
       ),
       body: HermesShell(

@@ -101,7 +101,7 @@ List<MoreSection> buildMoreSections({required bool dashboardReachable}) {
       entries: [
         const MoreEntry(
           id: 'unassigned',
-          title: 'Inbox / Unassigned',
+          title: 'Unassigned chats',
           subtitle: 'Chats that are not assigned to a Project',
           icon: Icons.inbox_outlined,
         ),

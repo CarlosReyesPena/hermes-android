@@ -61,6 +61,15 @@ void main() {
       );
     });
 
+    test('Unassigned chats is not mislabeled as the action Inbox', () {
+      final entry = buildMoreSections(dashboardReachable: true)
+          .expand((section) => section.entries)
+          .firstWhere((candidate) => candidate.id == 'unassigned');
+
+      expect(entry.title, 'Unassigned chats');
+      expect(entry.subtitle, contains('not assigned to a Project'));
+    });
+
     test('every section has a title and at least one entry', () {
       for (final section in buildMoreSections(dashboardReachable: true)) {
         expect(section.title, isNotEmpty);
@@ -263,7 +272,7 @@ void main() {
       );
 
       expect(tester.takeException(), isNull);
-      expect(find.text('Inbox / Unassigned'), findsOneWidget);
+      expect(find.text('Unassigned chats'), findsOneWidget);
     });
 
     testWidgets('scrolls to the last entry on a real phone height', (

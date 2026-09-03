@@ -594,6 +594,84 @@ void main() {
     );
   });
 
+  testWidgets('Home opens an actionable Inbox with a count', (tester) async {
+    final now = DateTime.now();
+    final opened = <String>[];
+    await _pump(
+      tester,
+      connection: _connection(desktopGatewayUrl: 'https://host:8642'),
+      repository: await _repository([]),
+      sessions: [
+        _session(id: 'blocked', title: 'Approve deployment'),
+        _session(id: 'failed', title: 'Repair failed turn'),
+        _session(id: 'live', title: 'Still running'),
+      ],
+      openedSessions: opened,
+      activityFeedLoader: (_, _) async => ActivityFeed(
+        groups: [
+          ActivityGroup(
+            kind: ActivityGroupKind.needsYou,
+            items: [
+              ActivityItem(
+                sessionId: 'blocked',
+                title: 'Approve deployment',
+                clientTurnId: 'turn-blocked',
+                label: 'Waiting for your input',
+                status: HermesStatus.blocked,
+                updatedAt: now,
+              ),
+            ],
+            totalCount: 1,
+          ),
+          ActivityGroup(
+            kind: ActivityGroupKind.running,
+            items: [
+              ActivityItem(
+                sessionId: 'live',
+                title: 'Still running',
+                clientTurnId: 'turn-live',
+                label: 'Running',
+                status: HermesStatus.running,
+                updatedAt: now,
+              ),
+            ],
+            totalCount: 1,
+          ),
+          ActivityGroup(
+            kind: ActivityGroupKind.failed,
+            items: [
+              ActivityItem(
+                sessionId: 'failed',
+                title: 'Repair failed turn',
+                clientTurnId: 'turn-failed',
+                label: 'The turn failed',
+                status: HermesStatus.failed,
+                updatedAt: now,
+              ),
+            ],
+            totalCount: 1,
+          ),
+        ],
+        blockedCount: 1,
+        runningCount: 1,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byTooltip('Open inbox (2)'), findsOneWidget);
+    await tester.tap(find.byTooltip('Open inbox (2)'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Inbox'), findsOneWidget);
+    expect(find.text('Approve deployment'), findsOneWidget);
+    expect(find.text('Repair failed turn'), findsOneWidget);
+    expect(find.text('Still running'), findsNothing);
+
+    await tester.tap(find.text('Approve deployment'));
+    await tester.pumpAndSettle();
+    expect(opened, ['blocked']);
+  });
+
   testWidgets('opening a Home row reports the session to the host', (
     tester,
   ) async {
@@ -812,7 +890,9 @@ void main() {
     expect(find.text('Settings'), findsOneWidget);
   });
 
-  testWidgets('More opens Inbox as a native Smart View', (tester) async {
+  testWidgets('More opens Unassigned chats as a native Smart View', (
+    tester,
+  ) async {
     await _pump(
       tester,
       connection: _connection(desktopGatewayUrl: 'https://host:8642'),
@@ -824,7 +904,7 @@ void main() {
 
     await tester.tap(find.text(HermesDestination.more.label).last);
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Inbox / Unassigned'));
+    await tester.tap(find.text('Unassigned chats'));
     await tester.pumpAndSettle();
     expect(find.byType(WorkspaceSessionsScreen), findsOneWidget);
     expect(find.text('Find me'), findsOneWidget);
