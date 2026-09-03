@@ -4,6 +4,45 @@ All notable changes to this project are documented here. This project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html). Release notes for
 versions prior to 1.0.7 are in the **What's new** sections of the [README](README.md).
 
+## [2.1.0] - 2026-09-03
+
+Community daily-driver workspace edition from
+[@CarlosReyesPena](https://github.com/CarlosReyesPena) (PR #88).
+
+### Added
+
+- Workspace shell: Home attention digest, global New chat button, Activity
+  operational timeline, More pane routing Cron/Skills/Memory/Settings/dashboard.
+- Projects pane over the gateway `projects.*` RPC family: tree overview,
+  per-project chats, Spaces→Projects migration preview and write path, chat
+  moves between projects, per-project search, safe deletion, and legacy-gateway
+  compatibility mode.
+- Chats browser with All/Recent/Unassigned/Archived filters, date grouping,
+  status and project labels.
+- Session search with three per-connection modes: on-device, dashboard FTS5
+  full-text with matching excerpts, and AI-assisted query rewriting.
+- Encrypted configuration export/import (PBKDF2 + AES-256-GCM), with restore
+  available from the empty-connection state.
+- Quick chat lifecycle: app shortcut, share-target intents, share review
+  sheets, 72-hour archive policy.
+- Gateway capability discovery (CapabilityRegistry) so older gateways degrade
+  gracefully instead of erroring.
+- Runtime Android 13+ notification permission request.
+- Chat UI: sticky context header, You/Hermes role labels, long-press action
+  sheet, fenced code blocks with copy and wrap/scroll toggle, full tool output
+  on expanded activity cards.
+
+### Fixed
+
+- Fresh TCP per request with a 20 s timeout fixes stale keep-alive hangs.
+- FAB no longer swallows taps on the More destination.
+
+### Validation
+
+- `flutter analyze` clean; 941 Flutter tests pass (including release-identity
+  gates), CI green on PR #88.
+- Secret scan of the merged diff: no real credentials (test fixtures only).
+
 ## [1.0.14-hermesapk.14] - 2026-07-30
 
 ### Added

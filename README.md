@@ -1,4 +1,4 @@
-# Hermes Android — v2.0.0
+# Hermes Android — v2.1.0
 
 Android client for [Hermes Agent](https://hermes-agent.nousresearch.com/) — chat with your Hermes sessions from a phone or tablet over local Wi-Fi or a private Tailscale network.
 
@@ -14,7 +14,7 @@ Android client for [Hermes Agent](https://hermes-agent.nousresearch.com/) — ch
 
 ## Current release
 
-- Version: **2.0.1** (build 2131)
+- Version: **2.1.0** (build 2140)
 - Package: `com.hermesagent.hermes_android`
 - Recommended APK for modern phones: ARM64 release build from the
   [Releases](https://github.com/rusty4444/hermes-android/releases) page.
@@ -57,6 +57,46 @@ gateway explicitly advertises the compatible recovery contract.
 See [CHANGELOG.md](CHANGELOG.md) for the complete `.13` change list and
 [docs/HERMESAPK_DEVELOPMENT_LOG.md](docs/HERMESAPK_DEVELOPMENT_LOG.md) for the
 sanitized implementation and validation record.
+
+## What's new in v2.1.0
+
+v2.1.0 merges the community daily-driver workspace edition from
+[@CarlosReyesPena](https://github.com/CarlosReyesPena) (PR #88): a new
+Workspace home with Projects, Chats and Activity panes, server-backed session
+search, config backup and restore, and quick-chat intents — plus a large
+accompanying test suite (900+ tests).
+
+- **Workspace shell** — a new Home with attention-ranked "needs you" digest,
+  global New (project or quick) chat button, Activity operational timeline of
+  gateway turns, and a More pane that routes Cron, Skills, Memory, Settings
+  and the Hermes dashboard.
+- **Projects pane** — server-owned Hermes projects via the gateway
+  `projects.*` RPC family: project tree overview, per-project chats,
+  migration preview and write path for local Spaces, chat moves between
+  projects, per-project search, and safe deletion. Legacy gateways degrade
+  gracefully to a labelled local-only compatibility mode.
+- **Chats browser** — All / Recent / Unassigned / Archived filters, date
+  grouping, running/done status, pinned and archived session flags, and a
+  session→project label fallback for older APIs.
+- **Session search** — three selectable modes: on-device (default), full-text
+  via the dashboard FTS5 endpoint with matching-excerpt results, and
+  AI-assisted query rewriting through Hermes (requires the corresponding
+  server support). Mode is remembered per connection; provider API keys never
+  leave the server.
+- **Configuration backup & restore** — export all connections and app
+  preferences to a single encrypted file (PBKDF2 + AES-256-GCM), import in
+  merge or replace mode, with restore reachable from the empty-connection
+  state before any server is configured.
+- **Quick chat lifecycle** — share-target and app-shortcut entry points,
+  share/review sheets for text and files, and a 72-hour quick-chat archive
+  policy that never archives blocked or running work.
+- **Resilience** — gateway capability discovery (never assume the newest
+  server), fresh TCP per request with a 20 s timeout to fix stale keep-alive
+  hangs, and runtime Android 13+ notification permission request.
+- **Chat UI** — sticky context header (project, model, reasoning effort,
+  connection state), You/Hermes role labels, long-press action sheet, real
+  fenced code blocks with copy and wrap/scroll toggle, and full tool output
+  on expanded activity cards.
 
 ## What's new in v2.0.1
 
@@ -451,7 +491,7 @@ cp build/app/outputs/flutter-apk/app-*-release.apk release-apks/
 block in `android/app/build.gradle.kts` derives per-ABI codes as
 `base * 10 + ABI code` (armeabi-v7a = 1, arm64-v8a = 2, x86_64 = 3), so the
 codes stay ordered armeabi-v7a < arm64-v8a < x86_64 as fdroiddata requires.
-For v2.0.1, base `2131` therefore produces codes `21311`/`21312`/`21313`.
+For v2.1.0, base `2140` therefore produces codes `21401`/`21402`/`21403`.
 CI reads the completed arm64 APK with `aapt` and fails if that relationship
 drifts. Release-floor checks continue to apply to the base value and must not
 be weakened to rely on the ABI code.
@@ -562,6 +602,7 @@ lib/
 
 ## Credits
 
+- **CarlosReyesPena** — community daily-driver workspace edition (PR #88): Workspace shell with Home/Projects/Chats/Activity/More, gateway projects integration, three-mode session search (on-device / FTS5 full-text / AI-assisted), encrypted config backup & restore, quick-chat lifecycle and share intents, capability discovery, and 900+ tests. Merged in v2.1.0.
 - **CristianGCiocoi** — community Remote Gateway edition: unified JSON-RPC transport, per-chat model selection, multi-attachment uploads, durable turn recovery, voice dictation, gateway contract test suite, and the comprehensive CHANGELOG. Merged in v2.0.0.
 - **AI-Guru** — detailed review, independent testing, and scroll-offset bug identification for the community edition.
 - **grunjol** — technical review and transport-architecture feedback for the community edition; also contributed PR #68: reverse-proxy path prefix and proxied dashboard support.
