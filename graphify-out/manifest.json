@@ -325,8 +325,8 @@
     "semantic_hash": ""
   },
   "lib/main.dart": {
-    "mtime": 1788243460.898829,
-    "ast_hash": "991f4e5d31c563a59d0f0d66d7eee1ba",
+    "mtime": 1788651143.2117908,
+    "ast_hash": "6393db035ae9e38a0041c6feb5394611",
     "semantic_hash": ""
   },
   "test/ai_search_query_rewriter_test.dart": {
@@ -1050,8 +1050,8 @@
     "semantic_hash": ""
   },
   "test/home_config_restore_test.dart": {
-    "mtime": 1788242733.9713206,
-    "ast_hash": "4649236552e68717283173aa4b71844d",
+    "mtime": 1788651189.2513928,
+    "ast_hash": "5619181e90d68a236fa40c871e554d5a",
     "semantic_hash": ""
   },
   "lib/core/models/project_sessions_tree.dart": {
@@ -1282,6 +1282,16 @@
   "test/session_search_controller_test.dart": {
     "mtime": 1788649013.6114826,
     "ast_hash": "4164268018b1be1c2941db47b2dcc0e6",
+    "semantic_hash": ""
+  },
+  "lib/core/services/connection_config_string.dart": {
+    "mtime": 1788650960.4714096,
+    "ast_hash": "39a1f340bdc562f1390ebdf4ef014952",
+    "semantic_hash": ""
+  },
+  "test/connection_config_string_test.dart": {
+    "mtime": 1788650936.473102,
+    "ast_hash": "569bc38c900e0e2b975c722df6590d4d",
     "semantic_hash": ""
   }
 }

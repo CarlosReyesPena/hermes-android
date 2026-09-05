@@ -324,4 +324,54 @@ void main() {
     final textField = tester.widget<TextField>(field);
     expect(textField.controller?.text, isEmpty);
   });
+
+  testWidgets('pasting a config string pre-fills the Add dialog fields', (
+    tester,
+  ) async {
+    const channel = SystemChannels.platform;
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(
+          channel,
+          (call) async {
+            if (call.method == 'Clipboard.getData') {
+              return <String, dynamic>{
+                'text': 'hermes://hermes-miniserver.example.ts.net:8642/connect?label=Miniserver&key=abc123&dashboard_port=9120&dashboard_username=carlos',
+              };
+            }
+            return null;
+          },
+        );
+    addTearDown(
+      () => TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, null),
+    );
+
+    final manager = await buildManager();
+    await pumpHome(tester, manager);
+
+    await tester.tap(find.byTooltip('Add Connection'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('paste_connection_config')));
+    await tester.pumpAndSettle();
+
+    // Label, host, port, API key, and dashboard fields are all pre-filled.
+    expect(
+      find.widgetWithText(TextField, 'Miniserver'),
+      findsOneWidget,
+    );
+    final host = tester.widget<TextField>(
+      find.widgetWithText(TextField, 'Host'),
+    );
+    expect(host.controller?.text, 'hermes-miniserver.example.ts.net');
+    final key = tester.widget<TextField>(
+      find.widgetWithText(TextField, 'API Key'),
+    );
+    expect(key.controller?.text, 'abc123');
+    // The pasted dashboard port/username reveal the advanced section.
+    final dashPort = tester.widget<TextField>(
+      find.widgetWithText(TextField, 'Dashboard Port'),
+    );
+    expect(dashPort.controller?.text, '9120');
+  });
 }

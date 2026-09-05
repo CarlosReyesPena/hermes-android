@@ -1,12 +1,14 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'core/services/android_launch_intent_service.dart';
 import 'core/services/android_share_intent_service.dart';
 import 'core/services/config_backup.dart';
 import 'core/services/config_backup_io.dart';
 import 'core/services/config_backup_service.dart';
+import 'core/services/connection_config_string.dart';
 import 'core/services/connection_manager.dart';
 import 'core/services/gateway_turn_application_controller.dart';
 import 'core/services/text_size_preference.dart';
@@ -418,6 +420,22 @@ class HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  /// Copies one connection to the clipboard as a single portable `hermes://`
+  /// config string, so a fresh install on another device can be set up by
+  /// pasting that one string instead of retyping every field.
+  Future<void> _copyConnectionConfig(SavedConnection conn) async {
+    final config = ConnectionConfigString.encode(conn);
+    await Clipboard.setData(ClipboardData(text: config));
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'Connection config copied. Paste it into the Add dialog on the other device.',
+        ),
+      ),
+    );
+  }
+
   void _showApiKeyDialog(SavedConnection conn) {
     final ctrl = TextEditingController(text: conn.apiKey);
     bool validating = false;
@@ -820,6 +838,8 @@ class HomeScreenState extends State<HomeScreen> {
               _showApiKeyDialog(conn);
             } else if (v == 'dashboard') {
               _showDashboardAuthDialog(conn);
+            } else if (v == 'copyconfig') {
+              await _copyConnectionConfig(conn);
             }
           },
           itemBuilder: (_) => [
@@ -828,6 +848,10 @@ class HomeScreenState extends State<HomeScreen> {
             const PopupMenuItem(
               value: 'dashboard',
               child: Text('Dashboard / Proxy Settings'),
+            ),
+            const PopupMenuItem(
+              value: 'copyconfig',
+              child: Text('Copy connection config'),
             ),
             const PopupMenuItem(
               value: 'delete',
@@ -1004,6 +1028,74 @@ class _AddDialogState extends State<_AddDialog> {
         conn?.desktopGatewayUrl?.isNotEmpty == true;
   }
 
+  /// Reads a `hermes://` config string from the clipboard and pre-fills the
+  /// dialog fields, so pasting one string replaces typing eight fields.
+  Future<void> _pasteConfig() async {
+    final data = await Clipboard.getData(Clipboard.kTextPlain);
+    final text = data?.text?.trim() ?? '';
+    if (text.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('The clipboard is empty.')),
+        );
+      }
+      return;
+    }
+
+    final SavedConnection? decoded;
+    try {
+      decoded = ConnectionConfigString.decode(text);
+    } on FormatException catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(error.message)),
+        );
+      }
+      return;
+    }
+    if (decoded == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('That is not a Hermes connection config.'),
+          ),
+        );
+      }
+      return;
+    }
+    final connection = decoded;
+
+    setState(() {
+      _label.text = connection.label;
+      _host.text = connection.useHttps
+          ? 'https://${connection.host}'
+          : connection.host;
+      _port.text = connection.port.toString();
+      _apiKey.text = connection.apiKey;
+      _gatewayPrefix.text = connection.gatewayPrefix ?? '';
+      _dashboardPrefix.text = connection.dashboardPrefix ?? '';
+      _dashPort.text = connection.dashboardPortOverride?.toString() ?? '';
+      _dashUser.text = connection.dashboardUsername ?? '';
+      _dashPass.text = connection.dashboardPassword ?? '';
+      _desktopGatewayUrl.text = connection.desktopGatewayUrl ?? '';
+      _dashboardProxied = connection.dashboardProxied;
+      _showDashboard =
+          connection.gatewayPrefix?.isNotEmpty == true ||
+          connection.dashboardPrefix?.isNotEmpty == true ||
+          connection.dashboardPortOverride != null ||
+          connection.dashboardUsername?.isNotEmpty == true ||
+          connection.dashboardPassword?.isNotEmpty == true ||
+          connection.dashboardProxied ||
+          connection.desktopGatewayUrl?.isNotEmpty == true;
+      _error = null;
+    });
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Config pasted — review and tap Connect.')),
+      );
+    }
+  }
+
   Future<void> _validateAndSave() async {
     final label = _label.text.trim();
     final host = _host.text.trim();
@@ -1165,6 +1257,15 @@ class _AddDialogState extends State<_AddDialog> {
                 ),
               ),
             ],
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                key: const Key('paste_connection_config'),
+                onPressed: _validating ? null : _pasteConfig,
+                icon: const Icon(Icons.content_paste, size: 18),
+                label: const Text('Paste connection config'),
+              ),
+            ),
             TextField(
               controller: _label,
               decoration: const InputDecoration(labelText: 'Label'),
