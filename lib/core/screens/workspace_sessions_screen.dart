@@ -3,6 +3,11 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../models/session.dart';
+import '../models/session_search_hit.dart';
+import '../services/ai_search_query_rewriter.dart';
+import '../services/session_search_client.dart';
+import '../services/session_search_controller.dart';
+import '../services/session_search_preferences.dart';
 import '../theme/hermes_theme.dart';
 import '../utils/relative_time.dart';
 import '../widgets/hermes_components.dart';
@@ -170,6 +175,13 @@ class WorkspaceSessionsScreen extends StatefulWidget {
   final WorkspaceSessionPromoter? onPromote;
   final bool embedded;
 
+  /// When non-null, the search bar gains the three search modes (on-device,
+  /// full-text, AI + full-text) and the network modes use this controller.
+  ///
+  /// Kept optional so the embedded Chats browser and the non-search views keep
+  /// their existing local-only filtering without a dependency on the gateway.
+  final SessionSearchController? searchController;
+
   /// Clock injection for deterministic filter/date tests. When null the
   /// screen uses `DateTime.now()`.
   final DateTime? now;
@@ -181,6 +193,7 @@ class WorkspaceSessionsScreen extends StatefulWidget {
     required this.onOpenSession,
     this.onPromote,
     this.embedded = false,
+    this.searchController,
     this.now,
     super.key,
   });
@@ -191,6 +204,10 @@ class WorkspaceSessionsScreen extends StatefulWidget {
 }
 
 class _WorkspaceSessionsScreenState extends State<WorkspaceSessionsScreen> {
+  /// Debounce window before a typed query hits the network. Local search
+  /// filters on every keystroke; the server modes must not.
+  static const _searchDebounce = Duration(milliseconds: 350);
+
   WorkspaceSessionsData? _data;
   Object? _error;
   String _query = '';
@@ -199,12 +216,33 @@ class _WorkspaceSessionsScreenState extends State<WorkspaceSessionsScreen> {
   /// The active chip filter in the embedded Chats browser.
   WorkspaceChatsFilter _filter = WorkspaceChatsFilter.all;
 
+  // ── Search mode state (only used when a controller is supplied) ─────────
+  SessionSearchMode _searchMode = SessionSearchMode.local;
+  AiSearchModel? _aiSearchModel;
+  List<SessionSearchHit>? _serverResults;
+  bool _searching = false;
+  bool _loadingAiModels = false;
+  String? _searchError;
+  String? _aiRewrittenQuery;
+  String _serverQuery = '';
+  Timer? _searchDebounceTimer;
+  int _searchRequestGeneration = 0;
+
+  /// Whether the network search modes are available for this screen.
+  bool get _hasSearchController => widget.searchController != null;
+
   /// Injectable clock for deterministic tests.
   DateTime get _now => widget.now ?? DateTime.now();
 
   @override
   void initState() {
     super.initState();
+    final controller = widget.searchController;
+    if (controller != null) {
+      controller.restore();
+      _searchMode = controller.mode;
+      _aiSearchModel = controller.aiModel;
+    }
     unawaited(_load());
   }
 
@@ -264,6 +302,191 @@ class _WorkspaceSessionsScreenState extends State<WorkspaceSessionsScreen> {
     }
   }
 
+  Future<void> _setSearchMode(SessionSearchMode mode) async {
+    final controller = widget.searchController;
+    if (controller == null || mode == _searchMode) return;
+    if (mode == SessionSearchMode.ai && _aiSearchModel == null) {
+      final selected = await _showAiModelSelector();
+      if (selected == null) return;
+    }
+    setState(() {
+      _searchRequestGeneration++;
+      _searchMode = mode;
+      _serverResults = null;
+      _searchError = null;
+      _serverQuery = '';
+      _aiRewrittenQuery = null;
+    });
+    await controller.setMode(mode);
+    if (mode != SessionSearchMode.local) {
+      _onSearchChanged(_query);
+    }
+  }
+
+  void _onSearchChanged(String raw) {
+    setState(() => _query = raw);
+    if (!_hasSearchController || _searchMode == SessionSearchMode.local) {
+      return;
+    }
+
+    _searchDebounceTimer?.cancel();
+    final query = raw.trim();
+    if (query.isEmpty) {
+      setState(() {
+        _searchRequestGeneration++;
+        _serverResults = null;
+        _searchError = null;
+        _searching = false;
+        _serverQuery = '';
+        _aiRewrittenQuery = null;
+      });
+      return;
+    }
+    _searchDebounceTimer = Timer(
+      _searchDebounce,
+      () => _runServerSearch(query),
+    );
+  }
+
+  Future<void> _runServerSearch(String query) async {
+    final controller = widget.searchController;
+    if (!mounted || controller == null || query.isEmpty) return;
+    final requestGeneration = ++_searchRequestGeneration;
+    setState(() {
+      _searching = true;
+      _searchError = null;
+    });
+
+    bool requestIsCurrent() =>
+        mounted &&
+        requestGeneration == _searchRequestGeneration &&
+        _query.trim() == query;
+
+    try {
+      final result = await controller.resolve(query);
+      if (!requestIsCurrent()) return;
+      setState(() {
+        _serverResults = result.hits;
+        _serverQuery = query;
+        _aiRewrittenQuery = result.rewrittenQuery;
+        _searching = false;
+      });
+    } on AiSearchRewriteException catch (error) {
+      if (!requestIsCurrent()) return;
+      setState(() {
+        _searchError = error.message;
+        _serverResults = null;
+        _searching = false;
+      });
+    } on SessionSearchException catch (error) {
+      if (!requestIsCurrent()) return;
+      setState(() {
+        _searchError = error.message;
+        _serverResults = null;
+        _searching = false;
+      });
+    } catch (error) {
+      if (!requestIsCurrent()) return;
+      setState(() {
+        _searchError = 'Session search failed: $error';
+        _serverResults = null;
+        _searching = false;
+      });
+    }
+  }
+
+  Future<AiSearchModel?> _showAiModelSelector() async {
+    final controller = widget.searchController;
+    if (controller == null || _loadingAiModels) return null;
+    setState(() => _loadingAiModels = true);
+    try {
+      final choices = await controller.availableModels();
+      if (choices.isEmpty) {
+        throw StateError('Hermes returned no configured selectable models.');
+      }
+
+      if (!mounted) return null;
+      final selection = await showModalBottomSheet<AiSearchModel>(
+        context: context,
+        showDragHandle: true,
+        isScrollControlled: true,
+        builder: (sheetContext) => SafeArea(
+          child: SizedBox(
+            height: MediaQuery.sizeOf(sheetContext).height * 0.75,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'AI search model',
+                        style: Theme.of(sheetContext).textTheme.titleLarge,
+                      ),
+                      const SizedBox(height: 4),
+                      const Text(
+                        'The model only rewrites your question into a short '
+                        'full-text query. Hermes uses the provider credentials '
+                        'already configured on the host.',
+                      ),
+                    ],
+                  ),
+                ),
+                const Divider(height: 1),
+                Expanded(
+                  child: ListView.builder(
+                    itemCount: choices.length,
+                    itemBuilder: (_, index) {
+                      final choice = choices[index];
+                      final isSelected =
+                          _aiSearchModel?.provider == choice.provider &&
+                          _aiSearchModel?.model == choice.model;
+                      return ListTile(
+                        leading: Icon(
+                          choice.isRecommended
+                              ? Icons.savings_outlined
+                              : Icons.smart_toy_outlined,
+                        ),
+                        title: Text(choice.model),
+                        subtitle: Text(
+                          choice.isRecommended
+                              ? '${choice.provider} • Recommended: small and inexpensive'
+                              : choice.provider,
+                        ),
+                        trailing: isSelected
+                            ? const Icon(Icons.check_circle)
+                            : null,
+                        onTap: () => Navigator.pop(sheetContext, choice),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+      if (selection == null || !mounted) return null;
+      setState(() => _aiSearchModel = selection);
+      await controller.setAiModel(selection);
+      if (_searchMode == SessionSearchMode.ai && _query.trim().isNotEmpty) {
+        unawaited(_runServerSearch(_query.trim()));
+      }
+      return selection;
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not load AI search models: $error')),
+        );
+      }
+      return null;
+    } finally {
+      if (mounted) setState(() => _loadingAiModels = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final data = _data;
@@ -289,7 +512,16 @@ class _WorkspaceSessionsScreenState extends State<WorkspaceSessionsScreen> {
   }
 
   Widget _buildLoaded(WorkspaceSessionsData data) {
-    final sessions = widget.embedded
+    final tokens = HermesTokens.of(context);
+    final serverMode = _hasSearchController && _searchMode != SessionSearchMode.local;
+    final aiMode = _hasSearchController && _searchMode == SessionSearchMode.ai;
+    final serverHitsCurrent =
+        serverMode && _serverQuery == _query.trim() ? _serverResults : null;
+
+    final sessions = serverMode
+        ? (serverHitsCurrent?.map((hit) => hit.session).toList() ??
+              const <Session>[])
+        : widget.embedded
         ? filterChats(
             sessions: data.sessions,
             filter: _filter,
@@ -306,6 +538,11 @@ class _WorkspaceSessionsScreenState extends State<WorkspaceSessionsScreen> {
             query: _query,
           );
 
+    final snippetsBySession = <String, String>{
+      for (final hit in serverHitsCurrent ?? const <SessionSearchHit>[])
+        hit.session.id: hit.snippet,
+    };
+
     final groups = widget.embedded
         ? groupChatsByDate(_now, sessions)
         : [
@@ -315,8 +552,12 @@ class _WorkspaceSessionsScreenState extends State<WorkspaceSessionsScreen> {
             ),
           ];
 
+    final showSearchModes = _hasSearchController && widget.embedded == false;
+
     return RefreshIndicator(
-      onRefresh: _load,
+      onRefresh: serverMode && _query.trim().isNotEmpty
+          ? () => _runServerSearch(_query.trim())
+          : _load,
       child: ListView(
         padding: const EdgeInsets.fromLTRB(
           HermesSpacing.lg,
@@ -329,24 +570,155 @@ class _WorkspaceSessionsScreenState extends State<WorkspaceSessionsScreen> {
             key: kWorkspaceSessionSearchKey,
             autofocus: widget.view == WorkspaceSessionView.search,
             decoration: InputDecoration(
-              hintText: 'Search conversations',
-              prefixIcon: const Icon(Icons.search),
-              suffixIcon: _query.isEmpty
+              hintText: aiMode
+                  ? 'Ask AI to find a conversation'
+                  : serverMode
+                  ? 'Search all message content'
+                  : 'Search conversations',
+              prefixIcon: _searching
+                  ? const Padding(
+                      padding: EdgeInsets.all(12),
+                      child: SizedBox.square(
+                        dimension: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                    )
+                  : const Icon(Icons.search),
+              suffixIcon: _query.isEmpty && !showSearchModes
                   ? null
-                  : IconButton(
-                      tooltip: 'Clear search',
-                      onPressed: () => setState(() => _query = ''),
-                      icon: const Icon(Icons.clear),
+                  : Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (_query.isNotEmpty)
+                          IconButton(
+                            tooltip: 'Clear search',
+                            onPressed: () {
+                              _searchDebounceTimer?.cancel();
+                              setState(() {
+                                _query = '';
+                                _searchRequestGeneration++;
+                                _serverResults = null;
+                                _searchError = null;
+                                _serverQuery = '';
+                                _aiRewrittenQuery = null;
+                                _searching = false;
+                              });
+                            },
+                            icon: const Icon(Icons.clear),
+                          ),
+                        if (aiMode)
+                          IconButton(
+                            tooltip: 'Change AI search model',
+                            onPressed: _loadingAiModels
+                                ? null
+                                : _showAiModelSelector,
+                            icon: _loadingAiModels
+                                ? const SizedBox.square(
+                                    dimension: 18,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : const Icon(Icons.tune),
+                          ),
+                        if (showSearchModes)
+                          PopupMenuButton<SessionSearchMode>(
+                            tooltip: 'Search mode',
+                            icon: Icon(
+                              aiMode
+                                  ? Icons.auto_awesome
+                                  : serverMode
+                                  ? Icons.manage_search
+                                  : Icons.phone_android,
+                            ),
+                            onSelected: _setSearchMode,
+                            itemBuilder: (_) => [
+                              CheckedPopupMenuItem(
+                                value: SessionSearchMode.local,
+                                checked: !serverMode,
+                                child: const ListTile(
+                                  contentPadding: EdgeInsets.zero,
+                                  leading: Icon(Icons.phone_android),
+                                  title: Text('On-device'),
+                                  subtitle: Text('Titles, previews, and models'),
+                                ),
+                              ),
+                              CheckedPopupMenuItem(
+                                value: SessionSearchMode.server,
+                                checked: _searchMode ==
+                                    SessionSearchMode.server,
+                                child: const ListTile(
+                                  contentPadding: EdgeInsets.zero,
+                                  leading: Icon(Icons.manage_search),
+                                  title: Text('Full-text'),
+                                  subtitle: Text('All stored message content'),
+                                ),
+                              ),
+                              CheckedPopupMenuItem(
+                                value: SessionSearchMode.ai,
+                                checked: aiMode,
+                                child: ListTile(
+                                  contentPadding: EdgeInsets.zero,
+                                  leading: const Icon(Icons.auto_awesome),
+                                  title: const Text('AI + full-text'),
+                                  subtitle: Text(
+                                    _aiSearchModel == null
+                                        ? 'Choose a small model to rewrite queries'
+                                        : '${_aiSearchModel!.provider} • ${_aiSearchModel!.model}',
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                      ],
                     ),
             ),
-            onChanged: (value) => setState(() => _query = value),
+            onChanged: _onSearchChanged,
+            onSubmitted: (value) {
+              _searchDebounceTimer?.cancel();
+              if (serverMode && value.trim().isNotEmpty) {
+                _runServerSearch(value.trim());
+              }
+            },
           ),
           if (widget.embedded) ...[
             const SizedBox(height: HermesSpacing.md),
             _buildChips(),
           ],
+          if (aiMode && _aiRewrittenQuery != null) ...[
+            const SizedBox(height: HermesSpacing.sm),
+            Row(
+              children: [
+                Icon(Icons.auto_awesome, size: 16, color: tokens.muted),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    'AI searched for: $_aiRewrittenQuery',
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: tokens.typography.label.copyWith(color: tokens.muted),
+                  ),
+                ),
+              ],
+            ),
+          ],
+          if (_searchError != null) ...[
+            const SizedBox(height: HermesSpacing.sm),
+            _buildSearchError(tokens),
+          ],
           const SizedBox(height: HermesSpacing.lg),
-          if (sessions.isEmpty)
+          if (serverMode &&
+              _query.trim().isNotEmpty &&
+              !_searching &&
+              _searchError == null &&
+              serverHitsCurrent != null &&
+              serverHitsCurrent.isEmpty)
+            EmptyState(
+              icon: Icons.search_off,
+              title: 'No message-content matches',
+              message: 'Try a different phrase, or switch to on-device search.',
+            )
+          else if (sessions.isEmpty)
             EmptyState(
               icon: _emptyIcon,
               title: _query.isEmpty ? 'Nothing here' : 'No matches',
@@ -367,10 +739,41 @@ class _WorkspaceSessionsScreenState extends State<WorkspaceSessionsScreen> {
               for (final session in group.value)
                 Padding(
                   padding: const EdgeInsets.only(bottom: HermesSpacing.sm),
-                  child: _buildSessionRow(session, data),
+                  child: _buildSessionRow(
+                    session,
+                    data,
+                    snippet: snippetsBySession[session.id],
+                  ),
                 ),
             ],
         ],
+      ),
+    );
+  }
+
+  Widget _buildSearchError(HermesTokens tokens) {
+    return Material(
+      color: tokens.raised,
+      borderRadius: BorderRadius.circular(HermesRadius.md),
+      child: Padding(
+        padding: const EdgeInsets.all(HermesSpacing.md),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(Icons.error_outline, color: tokens.danger),
+            const SizedBox(width: HermesSpacing.sm),
+            Expanded(
+              child: Text(
+                _searchError!,
+                style: tokens.typography.body.copyWith(color: tokens.danger),
+              ),
+            ),
+            TextButton(
+              onPressed: () => _setSearchMode(SessionSearchMode.local),
+              child: const Text('Use on-device'),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -394,7 +797,11 @@ class _WorkspaceSessionsScreenState extends State<WorkspaceSessionsScreen> {
     );
   }
 
-  Widget _buildSessionRow(Session session, WorkspaceSessionsData data) {
+  Widget _buildSessionRow(
+    Session session,
+    WorkspaceSessionsData data, {
+    String? snippet,
+  }) {
     final tokens = HermesTokens.of(context);
     final projectLabel = data.projectLabels[session.id];
     final showPromote =
@@ -422,7 +829,14 @@ class _WorkspaceSessionsScreenState extends State<WorkspaceSessionsScreen> {
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
-                if (session.preview.isNotEmpty)
+                if (snippet != null && snippet.isNotEmpty)
+                  Text(
+                    snippet,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(color: tokens.muted),
+                  )
+                else if (session.preview.isNotEmpty)
                   Text(
                     session.preview,
                     maxLines: 1,

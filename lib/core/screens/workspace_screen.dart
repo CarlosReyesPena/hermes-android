@@ -26,6 +26,7 @@ import '../services/gateway_turn_journal.dart';
 import '../services/projects_repository.dart';
 import '../services/quick_chat_store.dart';
 import '../services/remote_files_client.dart';
+import '../services/session_search_controller.dart';
 import '../services/shared_attachment_preparer.dart';
 import '../theme/hermes_theme.dart';
 import '../utils/activity_feed.dart';
@@ -249,6 +250,11 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
   /// Best-effort Project labels learned from the latest projects.tree read,
   /// used to carry context into chats opened from the global Chats browser.
   Map<String, String> _chatProjectLabels = const {};
+
+  /// Lazily-built AI search controller for the global Search view. Held here so
+  /// opening and re-opening Search does not rebuild the dashboard/gateway
+  /// clients or reload model options every time.
+  SessionSearchController? _searchController;
 
   /// Draft session ids of Project chats this workspace started, mapped to the
   /// Project they were committed to. When `session.open` first binds such a
@@ -1114,13 +1120,21 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
     );
   }
 
-  void _openWorkspaceSessionView(WorkspaceSessionView view) {
+  Future<void> _openWorkspaceSessionView(WorkspaceSessionView view) async {
     final title = switch (view) {
       WorkspaceSessionView.all => 'All chats',
       WorkspaceSessionView.unassigned => 'Unassigned chats',
       WorkspaceSessionView.archivedQuick => 'Archived quick chats',
       WorkspaceSessionView.search => 'Search',
     };
+    SessionSearchController? searchController;
+    if (view == WorkspaceSessionView.search) {
+      searchController =
+          _searchController ??= await SessionSearchController.fromConnection(
+            widget.connection,
+          );
+    }
+    if (!mounted) return;
     _push(
       WorkspaceSessionsScreen(
         title: title,
@@ -1130,6 +1144,7 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
         onPromote: view == WorkspaceSessionView.archivedQuick
             ? _promoteQuickChat
             : null,
+        searchController: searchController,
       ),
     );
   }
@@ -1192,9 +1207,9 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
     final connection = widget.connection;
     switch (entry.id) {
       case 'unassigned':
-        _openWorkspaceSessionView(WorkspaceSessionView.unassigned);
+        unawaited(_openWorkspaceSessionView(WorkspaceSessionView.unassigned));
       case 'archived-quick':
-        _openWorkspaceSessionView(WorkspaceSessionView.archivedQuick);
+        unawaited(_openWorkspaceSessionView(WorkspaceSessionView.archivedQuick));
       case 'files':
         unawaited(_openFiles());
       case 'cron':
@@ -1234,8 +1249,9 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
             ),
             IconButton(
               tooltip: 'Search all chats',
-              onPressed: () =>
-                  _openWorkspaceSessionView(WorkspaceSessionView.search),
+              onPressed: () => unawaited(
+                _openWorkspaceSessionView(WorkspaceSessionView.search),
+              ),
               icon: const Icon(Icons.search),
             ),
           ],

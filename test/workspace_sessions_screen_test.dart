@@ -1,8 +1,23 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hermes_android/core/models/session.dart';
 import 'package:hermes_android/core/screens/workspace_sessions_screen.dart';
+import 'package:hermes_android/core/services/ai_search_query_rewriter.dart';
+import 'package:hermes_android/core/services/session_search_client.dart';
+import 'package:hermes_android/core/services/session_search_controller.dart';
+import 'package:hermes_android/core/services/session_search_preferences.dart';
 import 'package:hermes_android/core/theme/hermes_theme.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+http.Response _jsonOk(Object body) => http.Response(
+  jsonEncode(body),
+  200,
+  headers: const {'content-type': 'application/json'},
+);
 
 Session _session(
   String id,
@@ -366,5 +381,118 @@ void main() {
     await tester.pumpAndSettle();
     expect(promoted, ['s1']);
     expect(find.text('Old research'), findsNothing);
+  });
+
+  group('search modes with a controller', () {
+    setUp(() {
+      SharedPreferences.setMockInitialValues({});
+    });
+
+    Future<SessionSearchController> buildController() async {
+      final preferences = await SharedPreferences.getInstance();
+      return SessionSearchController(
+        client: SessionSearchClient(
+          baseUrl: 'http://dashboard.example:9119',
+          headers: () async => const {'Cookie': 'session=abc'},
+          httpClient: MockClient(
+            (_) async => _jsonOk({
+              'results': [
+                {
+                  'id': 's-tuk',
+                  'title': 'Electric tuk-tuk build',
+                  'snippet': 'the [tuk-tuk] prototype',
+                },
+              ],
+            }),
+          ),
+        ),
+        rewriter: AiSearchQueryRewriter(
+          baseUrl: 'http://gateway.example:8642',
+          apiKey: 'key',
+          httpClient: MockClient(
+            (_) async => _jsonOk({'query': 'electric vehicle'}),
+          ),
+        ),
+        preferences: SessionSearchPreferences(preferences),
+        connectionIdentity: 'conn',
+        loadModelOptions: () async => {'providers': <dynamic>[]},
+      );
+    }
+
+    Future<void> pumpSearch(
+      WidgetTester tester,
+      SessionSearchController controller,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: hermesTheme(Brightness.dark),
+          home: WorkspaceSessionsScreen(
+            title: 'Search',
+            view: WorkspaceSessionView.search,
+            load: () async =>
+                WorkspaceSessionsData(sessions: [_session('s1', 'Local chat')]),
+            onOpenSession: (_) {},
+            searchController: controller,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('offers the search-mode selector in the search view', (
+      tester,
+    ) async {
+      await pumpSearch(tester, await buildController());
+
+      expect(find.byTooltip('Search mode'), findsOneWidget);
+      expect(find.byIcon(Icons.phone_android), findsOneWidget);
+    });
+
+    testWidgets('full-text mode replaces local filtering with server hits', (
+      tester,
+    ) async {
+      SharedPreferences.setMockInitialValues({
+        'session_search.conn.mode': 'server',
+      });
+      final controller = await buildController();
+
+      await pumpSearch(tester, controller);
+
+      await tester.enterText(
+        find.byKey(kWorkspaceSessionSearchKey),
+        'tuk',
+      );
+      // Let the debounce fire, then settle the network result.
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Electric tuk-tuk build'), findsOneWidget);
+      expect(find.text('the [tuk-tuk] prototype'), findsOneWidget);
+      expect(find.text('Local chat'), findsNothing);
+    });
+
+    testWidgets('AI mode reveals the rewritten query', (tester) async {
+      // Pre-seed AI mode + model so the screen restores straight into AI mode.
+      SharedPreferences.setMockInitialValues({
+        'session_search.conn.mode': 'ai',
+        'session_search.conn.ai_provider': 'openrouter',
+        'session_search.conn.ai_model': 'gpt-oss-20b',
+      });
+      final controller = await buildController();
+
+      await pumpSearch(tester, controller);
+
+      expect(find.byIcon(Icons.auto_awesome), findsOneWidget);
+
+      await tester.enterText(
+        find.byKey(kWorkspaceSessionSearchKey),
+        'tuk tuk project',
+      );
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.pumpAndSettle();
+
+      expect(find.text('AI searched for: electric vehicle'), findsOneWidget);
+      expect(find.text('Electric tuk-tuk build'), findsOneWidget);
+    });
   });
 }
