@@ -666,6 +666,7 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
   Widget _pane(BuildContext context, HermesDestination destination) {
     switch (destination) {
       case HermesDestination.chats:
+        final repository = _repository;
         return WorkspaceSessionsScreen(
           title: 'Chats',
           view: WorkspaceSessionView.all,
@@ -674,6 +675,11 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
           onOpenSession: (session) => unawaited(
             _openSession(session, projectName: _chatProjectLabels[session.id]),
           ),
+          onMoveSession: repository == null
+              ? null
+              : (session, targetProjectId) =>
+                  repository.assignSession(session.id, targetProjectId),
+          projects: repository?.current.projects ?? const [],
         );
       case HermesDestination.projects:
         final repository = _repository;
@@ -1136,6 +1142,7 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
           );
     }
     if (!mounted) return;
+    final repository = _repository;
     _push(
       WorkspaceSessionsScreen(
         title: title,
@@ -1145,6 +1152,11 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
         onPromote: view == WorkspaceSessionView.archivedQuick
             ? _promoteQuickChat
             : null,
+        onMoveSession: repository == null
+            ? null
+            : (session, targetProjectId) =>
+                repository.assignSession(session.id, targetProjectId),
+        projects: repository?.current.projects ?? const [],
         searchController: searchController,
       ),
     );

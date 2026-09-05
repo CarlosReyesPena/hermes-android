@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../models/hermes_project.dart';
 import '../models/session.dart';
 import '../models/session_search_hit.dart';
 import '../services/ai_search_query_rewriter.dart';
@@ -135,6 +136,12 @@ class WorkspaceSessionsData {
 typedef WorkspaceSessionsLoader = Future<WorkspaceSessionsData> Function();
 typedef WorkspaceSessionPromoter = Future<void> Function(Session session);
 
+/// Moves one conversation into a Project (or back to Unassigned when
+/// [projectId] is null). Mirrors `ProjectSessionMover` so the Chats browser
+/// can file a chat from where the user sees it, not only from inside a Project.
+typedef WorkspaceSessionMover =
+    Future<void> Function(Session session, String? projectId);
+
 class QuickChatPromotionCancelled implements Exception {
   const QuickChatPromotionCancelled();
 }
@@ -175,6 +182,12 @@ class WorkspaceSessionsScreen extends StatefulWidget {
   final WorkspaceSessionPromoter? onPromote;
   final bool embedded;
 
+  /// When non-null, each row gains a "Move conversation" action backed by this
+  /// callback. [projects] supplies the move destinations (Unassigned plus each
+  /// non-archived Project).
+  final WorkspaceSessionMover? onMoveSession;
+  final List<HermesProject> projects;
+
   /// When non-null, the search bar gains the three search modes (on-device,
   /// full-text, AI + full-text) and the network modes use this controller.
   ///
@@ -193,6 +206,8 @@ class WorkspaceSessionsScreen extends StatefulWidget {
     required this.onOpenSession,
     this.onPromote,
     this.embedded = false,
+    this.onMoveSession,
+    this.projects = const [],
     this.searchController,
     this.now,
     super.key,
@@ -212,6 +227,7 @@ class _WorkspaceSessionsScreenState extends State<WorkspaceSessionsScreen> {
   Object? _error;
   String _query = '';
   final Set<String> _promoting = {};
+  final Set<String> _moving = {};
 
   /// The active chip filter in the embedded Chats browser.
   WorkspaceChatsFilter _filter = WorkspaceChatsFilter.all;
@@ -300,6 +316,77 @@ class _WorkspaceSessionsScreenState extends State<WorkspaceSessionsScreen> {
         ),
       );
     }
+  }
+
+  Future<void> _moveSession(Session session, _MoveTarget target) async {
+    final move = widget.onMoveSession;
+    if (move == null || _moving.contains(session.id)) return;
+    setState(() => _moving.add(session.id));
+    try {
+      await move(session, target.projectId);
+      if (!mounted) return;
+      setState(() => _moving.remove(session.id));
+      await _load();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Moved to ${target.label}')),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _moving.remove(session.id));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Couldn’t move conversation'),
+          action: SnackBarAction(
+            label: 'Retry',
+            onPressed: () => unawaited(_moveSession(session, target)),
+          ),
+        ),
+      );
+    }
+  }
+
+  Future<void> _chooseMoveDestination(Session session) async {
+    final target = await showModalBottomSheet<_MoveTarget>(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Padding(
+              padding: EdgeInsets.fromLTRB(
+                HermesSpacing.lg,
+                HermesSpacing.lg,
+                HermesSpacing.lg,
+                HermesSpacing.sm,
+              ),
+              child: Text('Move conversation'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.inbox_outlined),
+              title: const Text('Unassigned'),
+              onTap: () => Navigator.pop(
+                context,
+                const _MoveTarget(projectId: null, label: 'Unassigned'),
+              ),
+            ),
+            for (final project in widget.projects)
+              if (!project.archived)
+                ListTile(
+                  leading: const Icon(Icons.folder_outlined),
+                  title: Text(project.name),
+                  onTap: () => Navigator.pop(
+                    context,
+                    _MoveTarget(projectId: project.id, label: project.name),
+                  ),
+                ),
+          ],
+        ),
+      ),
+    );
+    if (target == null || !mounted) return;
+    await _moveSession(session, target);
   }
 
   Future<void> _setSearchMode(SessionSearchMode mode) async {
@@ -807,6 +894,7 @@ class _WorkspaceSessionsScreenState extends State<WorkspaceSessionsScreen> {
     final showPromote =
         widget.view == WorkspaceSessionView.archivedQuick &&
         widget.onPromote != null;
+    final showMove = widget.onMoveSession != null;
     return HermesCard(
       onTap: () => widget.onOpenSession(session),
       child: Row(
@@ -876,6 +964,19 @@ class _WorkspaceSessionsScreenState extends State<WorkspaceSessionsScreen> {
               ],
             ),
           ),
+          if (showMove)
+            _moving.contains(session.id)
+                ? const SizedBox.square(
+                    dimension: 24,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : IconButton(
+                    key: Key('move-session-${session.id}'),
+                    tooltip: 'Move conversation',
+                    onPressed: () =>
+                        unawaited(_chooseMoveDestination(session)),
+                    icon: const Icon(Icons.drive_file_move_outline),
+                  ),
           if (showPromote)
             _promoting.contains(session.id)
                 ? const SizedBox.square(
@@ -967,4 +1068,11 @@ class _MetaChip extends StatelessWidget {
       ),
     );
   }
+}
+
+class _MoveTarget {
+  final String? projectId;
+  final String label;
+
+  const _MoveTarget({required this.projectId, required this.label});
 }

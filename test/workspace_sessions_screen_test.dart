@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hermes_android/core/models/hermes_project.dart';
 import 'package:hermes_android/core/models/session.dart';
 import 'package:hermes_android/core/screens/workspace_sessions_screen.dart';
 import 'package:hermes_android/core/services/ai_search_query_rewriter.dart';
@@ -346,6 +347,116 @@ void main() {
       );
 
       expect(find.byIcon(Icons.push_pin_outlined), findsOneWidget);
+    });
+
+    testWidgets('moves a conversation into a Project from the Chats browser', (
+      tester,
+    ) async {
+      final moves = <(String, String?)>[];
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: hermesTheme(Brightness.dark),
+          home: Scaffold(
+            body: WorkspaceSessionsScreen(
+              title: 'Chats',
+              view: WorkspaceSessionView.all,
+              embedded: true,
+              now: now,
+              load: () async => WorkspaceSessionsData(
+                sessions: [_session('s1', 'Unfiled research')],
+              ),
+              onOpenSession: (_) {},
+              onMoveSession: (session, projectId) async {
+                moves.add((session.id, projectId));
+              },
+              projects: const [
+                HermesProject(id: 'p-tuk', slug: 'tuk', name: 'Tuk-tuk'),
+              ],
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byTooltip('Move conversation'));
+      await tester.pumpAndSettle();
+
+      expect(find.widgetWithText(ListTile, 'Unassigned'), findsOneWidget);
+      expect(find.widgetWithText(ListTile, 'Tuk-tuk'), findsOneWidget);
+
+      await tester.tap(find.widgetWithText(ListTile, 'Tuk-tuk'));
+      await tester.pumpAndSettle();
+
+      expect(moves, [('s1', 'p-tuk')]);
+    });
+
+    testWidgets('moves a conversation back to Unassigned', (tester) async {
+      final moves = <(String, String?)>[];
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: hermesTheme(Brightness.dark),
+          home: Scaffold(
+            body: WorkspaceSessionsScreen(
+              title: 'Chats',
+              view: WorkspaceSessionView.all,
+              embedded: true,
+              now: now,
+              load: () async => WorkspaceSessionsData(
+                sessions: [_session('s1', 'Filed chat')],
+              ),
+              onOpenSession: (_) {},
+              onMoveSession: (session, projectId) async {
+                moves.add((session.id, projectId));
+              },
+              projects: const [
+                HermesProject(id: 'p-tuk', slug: 'tuk', name: 'Tuk-tuk'),
+              ],
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byTooltip('Move conversation'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(ListTile, 'Unassigned'));
+      await tester.pumpAndSettle();
+
+      expect(moves, [('s1', null)]);
+    });
+
+    testWidgets('archived Projects are not offered as move destinations', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: hermesTheme(Brightness.dark),
+          home: Scaffold(
+            body: WorkspaceSessionsScreen(
+              title: 'Chats',
+              view: WorkspaceSessionView.all,
+              embedded: true,
+              now: now,
+              load: () async => WorkspaceSessionsData(
+                sessions: [_session('s1', 'Unfiled research')],
+              ),
+              onOpenSession: (_) {},
+              onMoveSession: (_, _) async {},
+              projects: const [
+                HermesProject(id: 'p-arch', slug: 'arch', name: 'Old', archived: true),
+                HermesProject(id: 'p-tuk', slug: 'tuk', name: 'Tuk-tuk'),
+              ],
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byTooltip('Move conversation'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Old'), findsNothing);
+      expect(find.text('Tuk-tuk'), findsOneWidget);
     });
   });
 

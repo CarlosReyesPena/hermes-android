@@ -860,8 +860,8 @@
     "semantic_hash": ""
   },
   "lib/core/screens/workspace_screen.dart": {
-    "mtime": 1788650089.5272472,
-    "ast_hash": "b4091510450e5c080607f07649a4c1c3",
+    "mtime": 1788652070.0959945,
+    "ast_hash": "16366d4e3ec80e07243bf20d941c8925",
     "semantic_hash": ""
   },
   "test/workspace_screen_test.dart": {
@@ -1150,13 +1150,13 @@
     "semantic_hash": ""
   },
   "lib/core/screens/workspace_sessions_screen.dart": {
-    "mtime": 1788649522.6979938,
-    "ast_hash": "c177e75d4aaaea11371f3b3d4c6166f1",
+    "mtime": 1788652030.4493911,
+    "ast_hash": "baf6facab09ee811f9b2b30abd0da05e",
     "semantic_hash": ""
   },
   "test/workspace_sessions_screen_test.dart": {
-    "mtime": 1788649733.103685,
-    "ast_hash": "ac7da1b87c718590ddd53fecf4007392",
+    "mtime": 1788652353.5483775,
+    "ast_hash": "6d3781fd573a8087e0787865ca885be5",
     "semantic_hash": ""
   },
   "docs/ANDROID_PHASE1_COHERENCE_GOAL.md": {
