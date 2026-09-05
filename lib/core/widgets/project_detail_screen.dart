@@ -71,6 +71,10 @@ class ProjectDetailScreen extends StatefulWidget {
   /// become Unassigned because the Gateway deletes only their assignments.
   final ProjectDeleter? onDeleteProject;
 
+  /// Opens the file browser at one of the Project's server-reported folders.
+  /// When null, the folder cards are drawn inert rather than fake-tappable.
+  final ValueChanged<String>? onOpenFolder;
+
   const ProjectDetailScreen({
     required this.projectId,
     required this.projectName,
@@ -82,6 +86,7 @@ class ProjectDetailScreen extends StatefulWidget {
     this.onRenameProject,
     this.onArchiveProject,
     this.onDeleteProject,
+    this.onOpenFolder,
     super.key,
   });
 
@@ -709,6 +714,19 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen>
             )
           else ...[
             const SectionHeader(title: 'Folders'),
+            if (widget.onOpenFolder != null)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  HermesSpacing.lg,
+                  HermesSpacing.xs,
+                  HermesSpacing.lg,
+                  HermesSpacing.sm,
+                ),
+                child: Text(
+                  'Tap a folder to browse its files on the server.',
+                  style: tokens.typography.label.copyWith(color: tokens.muted),
+                ),
+              ),
             for (final path in paths)
               Padding(
                 padding: const EdgeInsets.fromLTRB(
@@ -718,6 +736,9 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen>
                   HermesSpacing.sm,
                 ),
                 child: HermesCard(
+                  onTap: widget.onOpenFolder == null
+                      ? null
+                      : () => widget.onOpenFolder!(path),
                   child: Row(
                     children: [
                       Icon(
@@ -734,6 +755,12 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen>
                           ),
                         ),
                       ),
+                      if (widget.onOpenFolder != null)
+                        Icon(
+                          Icons.chevron_right,
+                          size: 20,
+                          color: tokens.muted,
+                        ),
                     ],
                   ),
                 ),

@@ -90,6 +90,7 @@ Future<void> _pump(
   Future<void> Function(String name)? onRenameProject,
   Future<void> Function()? onArchiveProject,
   Future<void> Function()? onDeleteProject,
+  ValueChanged<String>? onOpenFolder,
 }) async {
   await tester.pumpWidget(
     MaterialApp(
@@ -104,6 +105,7 @@ Future<void> _pump(
         onRenameProject: onRenameProject,
         onArchiveProject: onArchiveProject,
         onDeleteProject: onDeleteProject,
+        onOpenFolder: onOpenFolder,
       ),
     ),
   );
@@ -293,6 +295,31 @@ void main() {
 
     expect(find.text('/home/carlos/dev/hermes-android'), findsWidgets);
     expect(find.textContaining('hermes-android'), findsWidgets);
+  });
+
+  testWidgets('tapping a folder opens the file browser at that path', (
+    tester,
+  ) async {
+    final opened = <String>[];
+    await _pump(
+      tester,
+      load: ({required refresh}) async => ProjectSessionsView(
+        projectId: 'p1',
+        tree: _tree(sessions: [_session()]),
+        sessions: [_session()],
+        support: ProjectsSupport.native,
+      ),
+      onOpenFolder: opened.add,
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Files'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('/home/carlos/dev/hermes-android').first);
+    await tester.pumpAndSettle();
+
+    expect(opened, ['/home/carlos/dev/hermes-android']);
   });
 
   testWidgets('Assets tab explains the missing server index', (tester) async {

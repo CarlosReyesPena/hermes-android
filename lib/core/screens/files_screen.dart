@@ -12,10 +12,16 @@ class FilesScreen extends StatefulWidget {
   final ValueChanged<String>? onAddToChat;
   final Future<void> Function(RemoteFileDownload download)? onSaveDownload;
 
+  /// When set, the browser opens directly at this directory instead of the
+  /// server's default working directory. Used to jump into a Project's folder
+  /// from the Project detail Files tab.
+  final String? initialPath;
+
   const FilesScreen({
     required this.files,
     this.onAddToChat,
     this.onSaveDownload,
+    this.initialPath,
     super.key,
   });
 
@@ -45,6 +51,12 @@ class _FilesScreenState extends State<FilesScreen> {
       _error = null;
     });
     try {
+      final initialPath = widget.initialPath?.trim();
+      if (initialPath != null && initialPath.isNotEmpty) {
+        _root = RemoteDirectory(path: initialPath);
+        await _openDirectory(initialPath);
+        return;
+      }
       final root = await widget.files.defaultDirectory();
       if (!mounted) return;
       _root = root;

@@ -833,6 +833,7 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
           onRenameProject: (name) => repository.rename(projectId, name),
           onArchiveProject: () => repository.archive(projectId),
           onDeleteProject: () => repository.delete(projectId),
+          onOpenFolder: (path) => unawaited(_openProjectFolder(path)),
         ),
       ),
     );
@@ -1197,6 +1198,20 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
     try {
       await Navigator.of(context).push(
         MaterialPageRoute<void>(builder: (_) => FilesScreen(files: files)),
+      );
+    } finally {
+      files.close();
+    }
+  }
+
+  /// Opens the server file browser at one of a Project's folders.
+  Future<void> _openProjectFolder(String path) async {
+    final files = RemoteFilesClient.fromConnection(widget.connection);
+    try {
+      await Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) => FilesScreen(files: files, initialPath: path),
+        ),
       );
     } finally {
       files.close();

@@ -128,6 +128,24 @@ void main() {
     expect(downloads.single.bytes, [1, 2, 3]);
   });
 
+  testWidgets('opens directly at an initial path, skipping the default cwd', (
+    tester,
+  ) async {
+    final source = _FakeFilesDataSource();
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: hermesTheme(Brightness.dark),
+        home: FilesScreen(files: source, initialPath: '/srv/project/lib'),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // It must not ask for the default cwd, and must list the initial folder.
+    expect(source.openedDirectories, isNot(contains('/srv/project')));
+    expect(source.openedDirectories, contains('/srv/project/lib'));
+    expect(find.text('main.dart'), findsOneWidget);
+  });
+
   testWidgets('shows a retryable error when the directory cannot load', (
     tester,
   ) async {
