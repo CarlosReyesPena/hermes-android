@@ -775,8 +775,8 @@
     "semantic_hash": ""
   },
   "docs/ANDROID_DAILY_DRIVER_ROADMAP.md": {
-    "mtime": 1788413631.956257,
-    "ast_hash": "dbc70e3293b29149bdb6783c03b1be7b",
+    "mtime": 1788734140.2140403,
+    "ast_hash": "6f3486fbc225deb086d9a166a49e9553",
     "semantic_hash": ""
   },
   "lib/core/models/hermes_project.dart": {
@@ -845,12 +845,12 @@
     "semantic_hash": ""
   },
   "lib/core/screens/workspace_screen.dart": {
-    "mtime": 1788733155.666435,
-    "ast_hash": "1af9eb87b4ed4e97ca1e886912cb59d7",
+    "mtime": 1788734687.924308,
+    "ast_hash": "df34086c19f22929b7054a0341a8837a",
     "semantic_hash": ""
   },
   "test/workspace_screen_test.dart": {
-    "mtime": 1788724990.7293596,
+    "mtime": 1788733994.9101124,
     "ast_hash": "dac5ecf36fd711814a56ab53ebf7b177",
     "semantic_hash": ""
   },
@@ -1135,13 +1135,13 @@
     "semantic_hash": ""
   },
   "lib/core/screens/workspace_sessions_screen.dart": {
-    "mtime": 1788733155.584434,
-    "ast_hash": "1d73c9be26a562f9f6d8a8228b4b743d",
+    "mtime": 1788734040.930723,
+    "ast_hash": "2c25722e1ee9b67c15b094e127790208",
     "semantic_hash": ""
   },
   "test/workspace_sessions_screen_test.dart": {
-    "mtime": 1788733155.7784364,
-    "ast_hash": "56b07782b4a07e9ec3e5335d1c7c8bad",
+    "mtime": 1788734700.1104698,
+    "ast_hash": "e000edbbcfe1289dfeed42d586b266fc",
     "semantic_hash": ""
   },
   "docs/ANDROID_PHASE1_COHERENCE_GOAL.md": {
@@ -1362,6 +1362,26 @@
   "test/settings_local_sections_test.dart": {
     "mtime": 1788726299.0535266,
     "ast_hash": "83585d210495fdef455be93bf84a7d57",
+    "semantic_hash": ""
+  },
+  "lib/core/utils/pending_approval_probe.dart": {
+    "mtime": 1788733791.696518,
+    "ast_hash": "1bce9ead2aa9da047d580f16cf54eb19",
+    "semantic_hash": ""
+  },
+  "lib/core/widgets/pending_approvals_banner.dart": {
+    "mtime": 1788733849.847257,
+    "ast_hash": "3fb798353240df17a07cc4d125ce9ebb",
+    "semantic_hash": ""
+  },
+  "test/pending_approval_probe_test.dart": {
+    "mtime": 1788733758.118091,
+    "ast_hash": "2130a597f382b9b238303520ed8dfc49",
+    "semantic_hash": ""
+  },
+  "test/pending_approvals_banner_test.dart": {
+    "mtime": 1788733820.9128892,
+    "ast_hash": "680f554e5cc1638333176d3b12d4e228",
     "semantic_hash": ""
   }
 }

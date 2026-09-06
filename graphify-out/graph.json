@@ -878,7 +878,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "bool_get",
-      "community": 183,
+      "community": 200,
       "norm_label": "bool get"
     },
     {
@@ -898,7 +898,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "string_get",
-      "community": 35,
+      "community": 138,
       "norm_label": "string get"
     },
     {
@@ -1148,7 +1148,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "models_attachment_draft_attachmentdraft",
-      "community": 43,
+      "community": 51,
       "norm_label": "attachmentdraft"
     },
     {
@@ -1288,7 +1288,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "models_connection",
-      "community": 148,
+      "community": 14,
       "norm_label": "connection.dart"
     },
     {
@@ -1298,7 +1298,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "models_connection_normalizedconnectionhost",
-      "community": 148,
+      "community": 14,
       "norm_label": "normalizedconnectionhost"
     },
     {
@@ -1318,7 +1318,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "models_connection_host",
-      "community": 148,
+      "community": 14,
       "norm_label": "host"
     },
     {
@@ -1328,7 +1328,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "models_connection_port",
-      "community": 148,
+      "community": 14,
       "norm_label": "port"
     },
     {
@@ -1338,7 +1338,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "models_connection_usehttps",
-      "community": 148,
+      "community": 14,
       "norm_label": "usehttps"
     },
     {
@@ -1348,7 +1348,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "models_connection_id",
-      "community": 148,
+      "community": 14,
       "norm_label": "id"
     },
     {
@@ -1358,7 +1358,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "models_connection_label",
-      "community": 148,
+      "community": 14,
       "norm_label": "label"
     },
     {
@@ -1368,7 +1368,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "models_connection_apikey",
-      "community": 148,
+      "community": 14,
       "norm_label": "apikey"
     },
     {
@@ -1378,7 +1378,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "models_connection_gatewayprefix",
-      "community": 148,
+      "community": 14,
       "norm_label": "gatewayprefix"
     },
     {
@@ -1388,7 +1388,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "models_connection_dashboardprefix",
-      "community": 148,
+      "community": 14,
       "norm_label": "dashboardprefix"
     },
     {
@@ -1398,7 +1398,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "models_connection_dashboardproxied",
-      "community": 148,
+      "community": 14,
       "norm_label": "dashboardproxied"
     },
     {
@@ -1408,7 +1408,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "models_connection_desktopgatewayurl",
-      "community": 148,
+      "community": 14,
       "norm_label": "desktopgatewayurl"
     },
     {
@@ -1418,7 +1418,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "models_connection_dashboardportoverride",
-      "community": 148,
+      "community": 14,
       "norm_label": "dashboardportoverride"
     },
     {
@@ -1428,7 +1428,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "models_connection_dashboardusername",
-      "community": 148,
+      "community": 14,
       "norm_label": "dashboardusername"
     },
     {
@@ -1438,7 +1438,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "models_connection_dashboardpassword",
-      "community": 148,
+      "community": 14,
       "norm_label": "dashboardpassword"
     },
     {
@@ -1448,7 +1448,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "models_connection_dashboardport",
-      "community": 148,
+      "community": 14,
       "norm_label": "dashboardport"
     },
     {
@@ -1458,7 +1458,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "int_get",
-      "community": 18,
+      "community": 14,
       "norm_label": "int get"
     },
     {
@@ -1468,7 +1468,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "models_connection_joinbaseurl",
-      "community": 148,
+      "community": 14,
       "norm_label": "joinbaseurl"
     },
     {
@@ -1478,7 +1478,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "models_connection_normalizehostandport",
-      "community": 148,
+      "community": 14,
       "norm_label": "normalizehostandport"
     },
     {
@@ -1488,7 +1488,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "models_connection_tomap",
-      "community": 148,
+      "community": 14,
       "norm_label": "tomap"
     },
     {
@@ -1498,7 +1498,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "models_connection_frommap",
-      "community": 148,
+      "community": 14,
       "norm_label": "frommap"
     },
     {
@@ -1508,7 +1508,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "models_connection_copywith",
-      "community": 148,
+      "community": 14,
       "norm_label": "copywith"
     },
     {
@@ -1568,7 +1568,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "static_const",
-      "community": 190,
+      "community": 137,
       "norm_label": "static const"
     },
     {
@@ -1758,7 +1758,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "models_gateway_activity_duration",
-      "community": 155,
+      "community": 153,
       "norm_label": "_duration"
     },
     {
@@ -1798,7 +1798,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "models_gateway_approval",
-      "community": 185,
+      "community": 48,
       "norm_label": "gateway_approval.dart"
     },
     {
@@ -1808,7 +1808,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "models_gateway_approval_gatewayapprovalchoice",
-      "community": 185,
+      "community": 48,
       "norm_label": "gatewayapprovalchoice"
     },
     {
@@ -1818,7 +1818,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "models_gateway_approval_gatewayapprovalrequest",
-      "community": 185,
+      "community": 48,
       "norm_label": "gatewayapprovalrequest"
     },
     {
@@ -1828,7 +1828,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "models_gateway_approval_wirevalue",
-      "community": 185,
+      "community": 48,
       "norm_label": "wirevalue"
     },
     {
@@ -1838,7 +1838,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "models_gateway_approval_command",
-      "community": 185,
+      "community": 48,
       "norm_label": "command"
     },
     {
@@ -1848,7 +1848,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "models_gateway_approval_description",
-      "community": 185,
+      "community": 48,
       "norm_label": "description"
     },
     {
@@ -1858,7 +1858,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "models_gateway_approval_allowpermanent",
-      "community": 185,
+      "community": 48,
       "norm_label": "allowpermanent"
     },
     {
@@ -1868,7 +1868,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "models_gateway_approval_smartdenied",
-      "community": 185,
+      "community": 48,
       "norm_label": "smartdenied"
     },
     {
@@ -1878,7 +1878,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "models_gateway_approval_choices",
-      "community": 185,
+      "community": 48,
       "norm_label": "choices"
     },
     {
@@ -1898,7 +1898,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "models_gateway_approval_fromwirevalue",
-      "community": 185,
+      "community": 48,
       "norm_label": "fromwirevalue"
     },
     {
@@ -1908,7 +1908,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "models_gateway_approval_fromeventdata",
-      "community": 185,
+      "community": 48,
       "norm_label": "fromeventdata"
     },
     {
@@ -1928,7 +1928,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "models_gateway_clarify_gatewayclarifyrequest",
-      "community": 122,
+      "community": 117,
       "norm_label": "gatewayclarifyrequest"
     },
     {
@@ -4838,7 +4838,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "typedef",
-      "community": 53,
+      "community": 44,
       "norm_label": "typedef"
     },
     {
@@ -6498,7 +6498,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_flutter_material_dart",
-      "community": 192,
+      "community": 82,
       "norm_label": "package:flutter/material.dart"
     },
     {
@@ -6558,7 +6558,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_shared_preferences_shared_preferences_dart",
-      "community": 172,
+      "community": 128,
       "norm_label": "package:shared_preferences/shared_preferences.dart"
     },
     {
@@ -6708,7 +6708,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "models_gateway_activity_dart",
-      "community": 62,
+      "community": 140,
       "norm_label": "../models/gateway_activity.dart"
     },
     {
@@ -6728,7 +6728,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "models_gateway_clarify_dart",
-      "community": 122,
+      "community": 117,
       "norm_label": "../models/gateway_clarify.dart"
     },
     {
@@ -6978,7 +6978,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "screens_cron_screen_attentionbanner",
-      "community": 119,
+      "community": 29,
       "norm_label": "_attentionbanner"
     },
     {
@@ -7318,7 +7318,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "valuechanged",
-      "community": 186,
+      "community": 36,
       "norm_label": "valuechanged"
     },
     {
@@ -7818,7 +7818,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "screens_settings_screen_sessionsourcesfilter",
-      "community": 15,
+      "community": 34,
       "norm_label": "_sessionsourcesfilter"
     },
     {
@@ -7828,7 +7828,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "screens_settings_screen_sessionsourcesfilterstate",
-      "community": 15,
+      "community": 34,
       "norm_label": "_sessionsourcesfilterstate"
     },
     {
@@ -8248,7 +8248,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "screens_settings_screen_set",
-      "community": 122,
+      "community": 117,
       "norm_label": "_set"
     },
     {
@@ -9542,6 +9542,16 @@
       "norm_label": "_renamesession"
     },
     {
+      "label": "_deleteSession",
+      "file_type": "code",
+      "source_file": "lib/core/screens/workspace_screen.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "screens_workspace_screen_deletesession",
+      "community": 124,
+      "norm_label": "_deletesession"
+    },
+    {
       "label": "_promoteQuickChat",
       "file_type": "code",
       "source_file": "lib/core/screens/workspace_screen.dart",
@@ -10202,6 +10212,16 @@
       "norm_label": "workspacesessionrenamer"
     },
     {
+      "label": "WorkspaceSessionDeleter",
+      "file_type": "code",
+      "source_file": "lib/core/screens/workspace_sessions_screen.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "screens_workspace_sessions_screen_workspacesessiondeleter",
+      "community": 125,
+      "norm_label": "workspacesessiondeleter"
+    },
+    {
       "label": "required WorkspaceSessionView view,\n  Set",
       "file_type": "code",
       "source_file": null,
@@ -10310,6 +10330,16 @@
       "id": "screens_workspace_sessions_screen_onrenamesession",
       "community": 125,
       "norm_label": "onrenamesession"
+    },
+    {
+      "label": "onDeleteSession",
+      "file_type": "code",
+      "source_file": "lib/core/screens/workspace_sessions_screen.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "screens_workspace_sessions_screen_ondeletesession",
+      "community": 125,
+      "norm_label": "ondeletesession"
     },
     {
       "label": "searchController",
@@ -10588,7 +10618,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "datetime_get",
-      "community": 65,
+      "community": 144,
       "norm_label": "datetime get"
     },
     {
@@ -10732,6 +10762,16 @@
       "norm_label": "_showsessionmenu"
     },
     {
+      "label": "_deleteSession",
+      "file_type": "code",
+      "source_file": "lib/core/screens/workspace_sessions_screen.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "screens_workspace_sessions_screen_deletesession",
+      "community": 125,
+      "norm_label": "_deletesession"
+    },
+    {
       "label": "_renameSession",
       "file_type": "code",
       "source_file": "lib/core/screens/workspace_sessions_screen.dart",
@@ -10848,7 +10888,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "models_session_search_hit_dart",
-      "community": 139,
+      "community": 126,
       "norm_label": "../models/session_search_hit.dart"
     },
     {
@@ -11038,7 +11078,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "dart_convert",
-      "community": 128,
+      "community": 207,
       "norm_label": "dart:convert"
     },
     {
@@ -11048,7 +11088,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_http_http_dart",
-      "community": 159,
+      "community": 6,
       "norm_label": "package:http/http.dart"
     },
     {
@@ -11998,7 +12038,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "services_biometric_authenticator_localauthbiometricauthenticator",
-      "community": 201,
+      "community": 185,
       "norm_label": "localauthbiometricauthenticator"
     },
     {
@@ -12008,7 +12048,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "biometricauthenticator",
-      "community": 201,
+      "community": 185,
       "norm_label": "biometricauthenticator"
     },
     {
@@ -12108,7 +12148,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "services_biometric_lock_store_biometriclockstore",
-      "community": 200,
+      "community": 196,
       "norm_label": "biometriclockstore"
     },
     {
@@ -12148,7 +12188,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "sharedpreferences",
-      "community": 200,
+      "community": 128,
       "norm_label": "sharedpreferences"
     },
     {
@@ -12938,7 +12978,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "static_const_int",
-      "community": 139,
+      "community": 126,
       "norm_label": "static const int"
     },
     {
@@ -15248,7 +15288,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "services_gateway_turn_application_controller_gatewayturnapplicationsession",
-      "community": 153,
+      "community": 38,
       "norm_label": "gatewayturnapplicationsession"
     },
     {
@@ -15268,7 +15308,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "services_gateway_turn_application_controller_coordinatorgatewayturnapplicationsession",
-      "community": 153,
+      "community": 38,
       "norm_label": "_coordinatorgatewayturnapplicationsession"
     },
     {
@@ -18398,7 +18438,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "services_projects_gateway_client_projectsunsupportedexception",
-      "community": 207,
+      "community": 109,
       "norm_label": "projectsunsupportedexception"
     },
     {
@@ -18528,7 +18568,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "services_projects_gateway_client_list",
-      "community": 185,
+      "community": 183,
       "norm_label": "list"
     },
     {
@@ -19868,7 +19908,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "services_session_search_client",
-      "community": 139,
+      "community": 126,
       "norm_label": "session_search_client.dart"
     },
     {
@@ -19878,7 +19918,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "services_session_search_client_sessionsearchexception",
-      "community": 128,
+      "community": 207,
       "norm_label": "sessionsearchexception"
     },
     {
@@ -19888,7 +19928,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "services_session_search_client_sessionsearchclient",
-      "community": 139,
+      "community": 126,
       "norm_label": "sessionsearchclient"
     },
     {
@@ -19898,7 +19938,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "services_session_search_client_message",
-      "community": 139,
+      "community": 126,
       "norm_label": "message"
     },
     {
@@ -19908,7 +19948,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "services_session_search_client_maxlimit",
-      "community": 139,
+      "community": 126,
       "norm_label": "maxlimit"
     },
     {
@@ -19918,7 +19958,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "services_session_search_client_http",
-      "community": 139,
+      "community": 126,
       "norm_label": "_http"
     },
     {
@@ -19928,7 +19968,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "services_session_search_client_baseurl",
-      "community": 139,
+      "community": 126,
       "norm_label": "_baseurl"
     },
     {
@@ -19938,7 +19978,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "services_session_search_client_tostring",
-      "community": 139,
+      "community": 126,
       "norm_label": "tostring"
     },
     {
@@ -19948,7 +19988,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "services_session_search_client_search",
-      "community": 139,
+      "community": 126,
       "norm_label": "search"
     },
     {
@@ -19958,7 +19998,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "services_session_search_client_decodehits",
-      "community": 139,
+      "community": 126,
       "norm_label": "_decodehits"
     },
     {
@@ -19968,7 +20008,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "services_session_search_client_close",
-      "community": 139,
+      "community": 126,
       "norm_label": "close"
     },
     {
@@ -20498,7 +20538,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "services_text_size_preference_textsizepreference",
-      "community": 117,
+      "community": 18,
       "norm_label": "textsizepreference"
     },
     {
@@ -20508,7 +20548,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "services_text_size_preference_textsizepreferencestore",
-      "community": 117,
+      "community": 18,
       "norm_label": "textsizepreferencestore"
     },
     {
@@ -20658,7 +20698,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "double_get",
-      "community": 206,
+      "community": 18,
       "norm_label": "double get"
     },
     {
@@ -21028,7 +21068,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "services_voice_composer_adapter",
-      "community": 31,
+      "community": 139,
       "norm_label": "voice_composer_adapter.dart"
     },
     {
@@ -21038,7 +21078,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "services_voice_composer_adapter_voicecomposeradapter",
-      "community": 31,
+      "community": 139,
       "norm_label": "voicecomposeradapter"
     },
     {
@@ -21048,7 +21088,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "services_voice_composer_adapter_speechtotextvoicecomposeradapter",
-      "community": 31,
+      "community": 139,
       "norm_label": "speechtotextvoicecomposeradapter"
     },
     {
@@ -21058,7 +21098,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "services_voice_composer_adapter_voicestatuscallback",
-      "community": 31,
+      "community": 139,
       "norm_label": "voicestatuscallback"
     },
     {
@@ -21068,7 +21108,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "services_voice_composer_adapter_voiceerrorcallback",
-      "community": 31,
+      "community": 139,
       "norm_label": "voiceerrorcallback"
     },
     {
@@ -21078,7 +21118,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "services_voice_composer_adapter_voiceresultcallback",
-      "community": 31,
+      "community": 139,
       "norm_label": "voiceresultcallback"
     },
     {
@@ -21088,7 +21128,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "services_voice_composer_adapter_haspermission",
-      "community": 31,
+      "community": 139,
       "norm_label": "haspermission"
     },
     {
@@ -21098,7 +21138,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "services_voice_composer_adapter_speechtotext",
-      "community": 31,
+      "community": 139,
       "norm_label": "_speechtotext"
     },
     {
@@ -21108,7 +21148,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "services_voice_composer_adapter_initialize",
-      "community": 31,
+      "community": 139,
       "norm_label": "initialize"
     },
     {
@@ -21118,7 +21158,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "services_voice_composer_adapter_listen",
-      "community": 31,
+      "community": 139,
       "norm_label": "listen"
     },
     {
@@ -21128,7 +21168,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "services_voice_composer_adapter_stop",
-      "community": 31,
+      "community": 139,
       "norm_label": "stop"
     },
     {
@@ -21138,7 +21178,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "services_voice_composer_adapter_cancel",
-      "community": 31,
+      "community": 139,
       "norm_label": "cancel"
     },
     {
@@ -21148,7 +21188,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "services_voice_composer_adapter_dispose",
-      "community": 31,
+      "community": 139,
       "norm_label": "dispose"
     },
     {
@@ -21158,7 +21198,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_speech_to_text_speech_recognition_error_dart",
-      "community": 31,
+      "community": 139,
       "norm_label": "package:speech_to_text/speech_recognition_error.dart"
     },
     {
@@ -21168,7 +21208,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_speech_to_text_speech_recognition_result_dart",
-      "community": 31,
+      "community": 139,
       "norm_label": "package:speech_to_text/speech_recognition_result.dart"
     },
     {
@@ -21178,7 +21218,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_speech_to_text_speech_to_text_dart",
-      "community": 31,
+      "community": 139,
       "norm_label": "package:speech_to_text/speech_to_text.dart"
     },
     {
@@ -22218,7 +22258,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "theme_hermes_theme_hermesstatus",
-      "community": 145,
+      "community": 153,
       "norm_label": "hermesstatus"
     },
     {
@@ -22508,7 +22548,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "brightness",
-      "community": 194,
+      "community": 101,
       "norm_label": "brightness"
     },
     {
@@ -23258,7 +23298,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "utils_chat_display_items_chatreasoningitem",
-      "community": 62,
+      "community": 157,
       "norm_label": "chatreasoningitem"
     },
     {
@@ -24722,6 +24762,186 @@
       "norm_label": "buildnewchatdraft"
     },
     {
+      "label": "pending_approval_probe.dart",
+      "file_type": "code",
+      "source_file": "lib/core/utils/pending_approval_probe.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "utils_pending_approval_probe",
+      "community": 138,
+      "norm_label": "pending_approval_probe.dart"
+    },
+    {
+      "label": "ApprovalProbeTarget",
+      "file_type": "code",
+      "source_file": "lib/core/utils/pending_approval_probe.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "utils_pending_approval_probe_approvalprobetarget",
+      "community": 138,
+      "norm_label": "approvalprobetarget"
+    },
+    {
+      "label": "PendingApprovalSummary",
+      "file_type": "code",
+      "source_file": "lib/core/utils/pending_approval_probe.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "utils_pending_approval_probe_pendingapprovalsummary",
+      "community": 148,
+      "norm_label": "pendingapprovalsummary"
+    },
+    {
+      "label": "kPendingApprovalProbeLimit",
+      "file_type": "code",
+      "source_file": "lib/core/utils/pending_approval_probe.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "utils_pending_approval_probe_kpendingapprovalprobelimit",
+      "community": 138,
+      "norm_label": "kpendingapprovalprobelimit"
+    },
+    {
+      "label": "sessionId",
+      "file_type": "code",
+      "source_file": "lib/core/utils/pending_approval_probe.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "utils_pending_approval_probe_sessionid",
+      "community": 138,
+      "norm_label": "sessionid"
+    },
+    {
+      "label": "title",
+      "file_type": "code",
+      "source_file": "lib/core/utils/pending_approval_probe.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "utils_pending_approval_probe_title",
+      "community": 138,
+      "norm_label": "title"
+    },
+    {
+      "label": "limit",
+      "file_type": "code",
+      "source_file": "lib/core/utils/pending_approval_probe.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "utils_pending_approval_probe_limit",
+      "community": 138,
+      "norm_label": "limit"
+    },
+    {
+      "label": "required ActivityFeed feed,\n  int",
+      "file_type": "code",
+      "source_file": null,
+      "source_location": null,
+      "_origin": "ast",
+      "id": "required_activityfeed_feed_int",
+      "community": 138,
+      "norm_label": "required activityfeed feed,\n  int"
+    },
+    {
+      "label": "probeOrder",
+      "file_type": "code",
+      "source_file": "lib/core/utils/pending_approval_probe.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "utils_pending_approval_probe_probeorder",
+      "community": 138,
+      "norm_label": "probeorder"
+    },
+    {
+      "label": "targets",
+      "file_type": "code",
+      "source_file": "lib/core/utils/pending_approval_probe.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "utils_pending_approval_probe_targets",
+      "community": 138,
+      "norm_label": "targets"
+    },
+    {
+      "label": "seen",
+      "file_type": "code",
+      "source_file": "lib/core/utils/pending_approval_probe.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "utils_pending_approval_probe_seen",
+      "community": 138,
+      "norm_label": "seen"
+    },
+    {
+      "label": "command",
+      "file_type": "code",
+      "source_file": "lib/core/utils/pending_approval_probe.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "utils_pending_approval_probe_command",
+      "community": 138,
+      "norm_label": "command"
+    },
+    {
+      "label": "description",
+      "file_type": "code",
+      "source_file": "lib/core/utils/pending_approval_probe.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "utils_pending_approval_probe_description",
+      "community": 138,
+      "norm_label": "description"
+    },
+    {
+      "label": "chatLabel",
+      "file_type": "code",
+      "source_file": "lib/core/utils/pending_approval_probe.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "utils_pending_approval_probe_chatlabel",
+      "community": 138,
+      "norm_label": "chatlabel"
+    },
+    {
+      "label": "selectApprovalProbeTargets",
+      "file_type": "code",
+      "source_file": "lib/core/utils/pending_approval_probe.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "utils_pending_approval_probe_selectapprovalprobetargets",
+      "community": 138,
+      "norm_label": "selectapprovalprobetargets"
+    },
+    {
+      "label": "unmodifiable",
+      "file_type": "code",
+      "source_file": "lib/core/utils/pending_approval_probe.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "utils_pending_approval_probe_unmodifiable",
+      "community": 138,
+      "norm_label": "unmodifiable"
+    },
+    {
+      "label": "fromWire",
+      "file_type": "code",
+      "source_file": "lib/core/utils/pending_approval_probe.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "utils_pending_approval_probe_fromwire",
+      "community": 138,
+      "norm_label": "fromwire"
+    },
+    {
+      "label": "activity_feed.dart",
+      "file_type": "code",
+      "source_file": null,
+      "source_location": null,
+      "_origin": "ast",
+      "id": "activity_feed_dart",
+      "community": 138,
+      "norm_label": "activity_feed.dart"
+    },
+    {
       "label": "project_session_filter.dart",
       "file_type": "code",
       "source_file": "lib/core/utils/project_session_filter.dart",
@@ -25198,7 +25418,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "hermes_components_dart",
-      "community": 140,
+      "community": 53,
       "norm_label": "hermes_components.dart"
     },
     {
@@ -25878,7 +26098,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "widgets_chat_end_affordance",
-      "community": 190,
+      "community": 53,
       "norm_label": "chat_end_affordance.dart"
     },
     {
@@ -25888,7 +26108,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "widgets_chat_end_affordance_chatendaffordance",
-      "community": 190,
+      "community": 53,
       "norm_label": "chatendaffordance"
     },
     {
@@ -25898,7 +26118,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "widgets_chat_end_affordance_buttonkey",
-      "community": 190,
+      "community": 53,
       "norm_label": "buttonkey"
     },
     {
@@ -25908,7 +26128,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "widgets_chat_end_affordance_countkey",
-      "community": 190,
+      "community": 53,
       "norm_label": "countkey"
     },
     {
@@ -25918,7 +26138,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "widgets_chat_end_affordance_newmessagecount",
-      "community": 190,
+      "community": 53,
       "norm_label": "newmessagecount"
     },
     {
@@ -25928,7 +26148,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "widgets_chat_end_affordance_onpressed",
-      "community": 190,
+      "community": 53,
       "norm_label": "onpressed"
     },
     {
@@ -25938,7 +26158,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "widgets_chat_end_affordance_build",
-      "community": 190,
+      "community": 53,
       "norm_label": "build"
     },
     {
@@ -26568,7 +26788,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "widgets_gateway_clarify_dialog",
-      "community": 122,
+      "community": 117,
       "norm_label": "gateway_clarify_dialog.dart"
     },
     {
@@ -26578,7 +26798,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "widgets_gateway_clarify_dialog_gatewayclarifydialog",
-      "community": 122,
+      "community": 117,
       "norm_label": "gatewayclarifydialog"
     },
     {
@@ -26588,7 +26808,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "widgets_gateway_clarify_dialog_gatewayclarifydialogstate",
-      "community": 122,
+      "community": 117,
       "norm_label": "_gatewayclarifydialogstate"
     },
     {
@@ -26598,7 +26818,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "widgets_gateway_clarify_dialog_clarifyresponder",
-      "community": 122,
+      "community": 117,
       "norm_label": "clarifyresponder"
     },
     {
@@ -26608,7 +26828,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "widgets_gateway_clarify_dialog_request",
-      "community": 122,
+      "community": 117,
       "norm_label": "request"
     },
     {
@@ -26618,7 +26838,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "widgets_gateway_clarify_dialog_onrespond",
-      "community": 122,
+      "community": 117,
       "norm_label": "onrespond"
     },
     {
@@ -26628,7 +26848,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "widgets_gateway_clarify_dialog_othercontroller",
-      "community": 122,
+      "community": 117,
       "norm_label": "_othercontroller"
     },
     {
@@ -26638,7 +26858,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "widgets_gateway_clarify_dialog_selectedindices",
-      "community": 122,
+      "community": 117,
       "norm_label": "_selectedindices"
     },
     {
@@ -26648,7 +26868,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "widgets_gateway_clarify_dialog_selectedindex",
-      "community": 122,
+      "community": 117,
       "norm_label": "_selectedindex"
     },
     {
@@ -26658,7 +26878,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "widgets_gateway_clarify_dialog_submitting",
-      "community": 122,
+      "community": 117,
       "norm_label": "_submitting"
     },
     {
@@ -26668,7 +26888,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "widgets_gateway_clarify_dialog_error",
-      "community": 122,
+      "community": 117,
       "norm_label": "_error"
     },
     {
@@ -26678,7 +26898,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "widgets_gateway_clarify_dialog_createstate",
-      "community": 122,
+      "community": 117,
       "norm_label": "createstate"
     },
     {
@@ -26688,7 +26908,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "widgets_gateway_clarify_dialog_dispose",
-      "community": 122,
+      "community": 117,
       "norm_label": "dispose"
     },
     {
@@ -26698,7 +26918,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "widgets_gateway_clarify_dialog_selectchoice",
-      "community": 122,
+      "community": 117,
       "norm_label": "_selectchoice"
     },
     {
@@ -26708,7 +26928,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "widgets_gateway_clarify_dialog_respond",
-      "community": 122,
+      "community": 117,
       "norm_label": "_respond"
     },
     {
@@ -26718,7 +26938,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "widgets_gateway_clarify_dialog_build",
-      "community": 122,
+      "community": 117,
       "norm_label": "build"
     },
     {
@@ -26828,7 +27048,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "widgets_gateway_sensitive_prompt_dialog_gatewaysensitivepromptdialogresult",
-      "community": 151,
+      "community": 174,
       "norm_label": "gatewaysensitivepromptdialogresult"
     },
     {
@@ -26968,7 +27188,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "widgets_hermes_components_statuschip",
-      "community": 39,
+      "community": 119,
       "norm_label": "statuschip"
     },
     {
@@ -26998,7 +27218,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "widgets_hermes_components_emptystate",
-      "community": 39,
+      "community": 119,
       "norm_label": "emptystate"
     },
     {
@@ -27518,7 +27738,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "widgets_home_pane_overflownote",
-      "community": 119,
+      "community": 65,
       "norm_label": "_overflownote"
     },
     {
@@ -28210,6 +28430,156 @@
       "id": "widgets_new_chat_sheet_build",
       "community": 187,
       "norm_label": "build"
+    },
+    {
+      "label": "pending_approvals_banner.dart",
+      "file_type": "code",
+      "source_file": "lib/core/widgets/pending_approvals_banner.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "widgets_pending_approvals_banner",
+      "community": 148,
+      "norm_label": "pending_approvals_banner.dart"
+    },
+    {
+      "label": "PendingApprovalsBanner",
+      "file_type": "code",
+      "source_file": "lib/core/widgets/pending_approvals_banner.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "widgets_pending_approvals_banner_pendingapprovalsbanner",
+      "community": 148,
+      "norm_label": "pendingapprovalsbanner"
+    },
+    {
+      "label": "PendingApprovalsBannerState",
+      "file_type": "code",
+      "source_file": "lib/core/widgets/pending_approvals_banner.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "widgets_pending_approvals_banner_pendingapprovalsbannerstate",
+      "community": 148,
+      "norm_label": "pendingapprovalsbannerstate"
+    },
+    {
+      "label": "_PendingApprovalRow",
+      "file_type": "code",
+      "source_file": "lib/core/widgets/pending_approvals_banner.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "widgets_pending_approvals_banner_pendingapprovalrow",
+      "community": 148,
+      "norm_label": "_pendingapprovalrow"
+    },
+    {
+      "label": "PendingApprovalsLoader",
+      "file_type": "code",
+      "source_file": "lib/core/widgets/pending_approvals_banner.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "widgets_pending_approvals_banner_pendingapprovalsloader",
+      "community": 148,
+      "norm_label": "pendingapprovalsloader"
+    },
+    {
+      "label": "loadApprovals",
+      "file_type": "code",
+      "source_file": "lib/core/widgets/pending_approvals_banner.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "widgets_pending_approvals_banner_loadapprovals",
+      "community": 148,
+      "norm_label": "loadapprovals"
+    },
+    {
+      "label": "onOpenApproval",
+      "file_type": "code",
+      "source_file": "lib/core/widgets/pending_approvals_banner.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "widgets_pending_approvals_banner_onopenapproval",
+      "community": 148,
+      "norm_label": "onopenapproval"
+    },
+    {
+      "label": "_approvals",
+      "file_type": "code",
+      "source_file": "lib/core/widgets/pending_approvals_banner.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "widgets_pending_approvals_banner_approvals",
+      "community": 148,
+      "norm_label": "_approvals"
+    },
+    {
+      "label": "approval",
+      "file_type": "code",
+      "source_file": "lib/core/widgets/pending_approvals_banner.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "widgets_pending_approvals_banner_approval",
+      "community": 148,
+      "norm_label": "approval"
+    },
+    {
+      "label": "onTap",
+      "file_type": "code",
+      "source_file": "lib/core/widgets/pending_approvals_banner.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "widgets_pending_approvals_banner_ontap",
+      "community": 148,
+      "norm_label": "ontap"
+    },
+    {
+      "label": "createState",
+      "file_type": "code",
+      "source_file": "lib/core/widgets/pending_approvals_banner.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "widgets_pending_approvals_banner_createstate",
+      "community": 148,
+      "norm_label": "createstate"
+    },
+    {
+      "label": "initState",
+      "file_type": "code",
+      "source_file": "lib/core/widgets/pending_approvals_banner.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "widgets_pending_approvals_banner_initstate",
+      "community": 148,
+      "norm_label": "initstate"
+    },
+    {
+      "label": "refresh",
+      "file_type": "code",
+      "source_file": "lib/core/widgets/pending_approvals_banner.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "widgets_pending_approvals_banner_refresh",
+      "community": 148,
+      "norm_label": "refresh"
+    },
+    {
+      "label": "build",
+      "file_type": "code",
+      "source_file": "lib/core/widgets/pending_approvals_banner.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "widgets_pending_approvals_banner_build",
+      "community": 148,
+      "norm_label": "build"
+    },
+    {
+      "label": "../utils/pending_approval_probe.dart",
+      "file_type": "code",
+      "source_file": null,
+      "source_location": null,
+      "_origin": "ast",
+      "id": "utils_pending_approval_probe_dart",
+      "community": 148,
+      "norm_label": "../utils/pending_approval_probe.dart"
     },
     {
       "label": "project_detail_screen.dart",
@@ -29268,7 +29638,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "widgets_session_name_dialog",
-      "community": 192,
+      "community": 82,
       "norm_label": "session_name_dialog.dart"
     },
     {
@@ -29278,7 +29648,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "widgets_session_name_dialog_draft",
-      "community": 192,
+      "community": 82,
       "norm_label": "draft"
     },
     {
@@ -29288,7 +29658,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "widgets_session_name_dialog_result",
-      "community": 192,
+      "community": 82,
       "norm_label": "result"
     },
     {
@@ -29298,7 +29668,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "widgets_session_name_dialog_showsessionnamedialog",
-      "community": 192,
+      "community": 82,
       "norm_label": "showsessionnamedialog"
     },
     {
@@ -29618,7 +29988,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "widgets_text_size_settings_card",
-      "community": 117,
+      "community": 18,
       "norm_label": "text_size_settings_card.dart"
     },
     {
@@ -29628,7 +29998,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "widgets_text_size_settings_card_textsizesettingscard",
-      "community": 117,
+      "community": 18,
       "norm_label": "textsizesettingscard"
     },
     {
@@ -29638,7 +30008,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "widgets_text_size_settings_card_textsizesettingscardstate",
-      "community": 117,
+      "community": 18,
       "norm_label": "_textsizesettingscardstate"
     },
     {
@@ -29648,7 +30018,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "widgets_text_size_settings_card_preferences",
-      "community": 117,
+      "community": 18,
       "norm_label": "preferences"
     },
     {
@@ -29658,7 +30028,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "widgets_text_size_settings_card_onchanged",
-      "community": 117,
+      "community": 18,
       "norm_label": "onchanged"
     },
     {
@@ -29668,7 +30038,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "widgets_text_size_settings_card_store",
-      "community": 117,
+      "community": 18,
       "norm_label": "_store"
     },
     {
@@ -29678,7 +30048,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "widgets_text_size_settings_card_preference",
-      "community": 117,
+      "community": 18,
       "norm_label": "_preference"
     },
     {
@@ -29688,7 +30058,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "widgets_text_size_settings_card_createstate",
-      "community": 117,
+      "community": 18,
       "norm_label": "createstate"
     },
     {
@@ -29698,7 +30068,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "widgets_text_size_settings_card_initstate",
-      "community": 117,
+      "community": 18,
       "norm_label": "initstate"
     },
     {
@@ -29708,7 +30078,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "widgets_text_size_settings_card_select",
-      "community": 117,
+      "community": 18,
       "norm_label": "_select"
     },
     {
@@ -29718,7 +30088,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "widgets_text_size_settings_card_showpicker",
-      "community": 117,
+      "community": 18,
       "norm_label": "_showpicker"
     },
     {
@@ -29728,7 +30098,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "widgets_text_size_settings_card_build",
-      "community": 117,
+      "community": 18,
       "norm_label": "build"
     },
     {
@@ -29738,7 +30108,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "services_text_size_preference_dart",
-      "community": 117,
+      "community": 18,
       "norm_label": "../services/text_size_preference.dart"
     },
     {
@@ -29888,7 +30258,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_main_hermesapp",
-      "community": 209,
+      "community": 34,
       "norm_label": "hermesapp"
     },
     {
@@ -29898,7 +30268,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_main_hermesappstate",
-      "community": 209,
+      "community": 34,
       "norm_label": "hermesappstate"
     },
     {
@@ -30978,7 +31348,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_flutter_test_flutter_test_dart",
-      "community": 141,
+      "community": 208,
       "norm_label": "package:flutter_test/flutter_test.dart"
     },
     {
@@ -31008,7 +31378,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_hermes_android_core_services_gateway_turn_recovery_dart",
-      "community": 202,
+      "community": 33,
       "norm_label": "package:hermes_android/core/services/gateway_turn_recovery.dart"
     },
     {
@@ -31018,7 +31388,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_hermes_android_core_theme_hermes_theme_dart",
-      "community": 138,
+      "community": 163,
       "norm_label": "package:hermes_android/core/theme/hermes_theme.dart"
     },
     {
@@ -31028,7 +31398,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_hermes_android_core_utils_activity_feed_dart",
-      "community": 115,
+      "community": 153,
       "norm_label": "package:hermes_android/core/utils/activity_feed.dart"
     },
     {
@@ -31078,7 +31448,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "string_title_string",
-      "community": 145,
+      "community": 153,
       "norm_label": "string? title,\n  string"
     },
     {
@@ -31248,7 +31618,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_hermes_android_core_widgets_hermes_components_dart",
-      "community": 174,
+      "community": 163,
       "norm_label": "package:hermes_android/core/widgets/hermes_components.dart"
     },
     {
@@ -31398,7 +31768,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_android_share_platform_contract_test",
-      "community": 141,
+      "community": 208,
       "norm_label": "android_share_platform_contract_test.dart"
     },
     {
@@ -31408,7 +31778,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_android_share_platform_contract_test_main",
-      "community": 141,
+      "community": 208,
       "norm_label": "main"
     },
     {
@@ -31488,7 +31858,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_hermes_android_core_services_connection_manager_dart",
-      "community": 159,
+      "community": 6,
       "norm_label": "package:hermes_android/core/services/connection_manager.dart"
     },
     {
@@ -31598,7 +31968,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_hermes_android_core_models_attachment_draft_dart",
-      "community": 167,
+      "community": 50,
       "norm_label": "package:hermes_android/core/models/attachment_draft.dart"
     },
     {
@@ -31618,7 +31988,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_attachment_draft_tile_test",
-      "community": 167,
+      "community": 50,
       "norm_label": "attachment_draft_tile_test.dart"
     },
     {
@@ -31628,7 +31998,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_attachment_draft_tile_test_main",
-      "community": 167,
+      "community": 50,
       "norm_label": "main"
     },
     {
@@ -31638,7 +32008,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_hermes_android_core_widgets_attachment_draft_tile_dart",
-      "community": 167,
+      "community": 50,
       "norm_label": "package:hermes_android/core/widgets/attachment_draft_tile.dart"
     },
     {
@@ -31648,7 +32018,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "iconbutton",
-      "community": 167,
+      "community": 50,
       "norm_label": "iconbutton"
     },
     {
@@ -31678,7 +32048,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_biometric_app_entry_test_lockauthenticator",
-      "community": 201,
+      "community": 185,
       "norm_label": "_lockauthenticator"
     },
     {
@@ -31828,7 +32198,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_hermes_android_main_dart",
-      "community": 206,
+      "community": 18,
       "norm_label": "package:hermes_android/main.dart"
     },
     {
@@ -31848,7 +32218,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_biometric_lock_gate_test_fakeauthenticator",
-      "community": 201,
+      "community": 185,
       "norm_label": "_fakeauthenticator"
     },
     {
@@ -32048,7 +32418,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_biometric_settings_card_test_fakeauthenticator",
-      "community": 201,
+      "community": 185,
       "norm_label": "_fakeauthenticator"
     },
     {
@@ -32258,7 +32628,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_hermes_android_core_services_capability_registry_dart",
-      "community": 132,
+      "community": 195,
       "norm_label": "package:hermes_android/core/services/capability_registry.dart"
     },
     {
@@ -32278,7 +32648,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_chat_approval_replay_test",
-      "community": 159,
+      "community": 6,
       "norm_label": "chat_approval_replay_test.dart"
     },
     {
@@ -32298,7 +32668,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_chat_approval_replay_test_send",
-      "community": 159,
+      "community": 6,
       "norm_label": "send"
     },
     {
@@ -32308,7 +32678,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_chat_approval_replay_test_main",
-      "community": 159,
+      "community": 6,
       "norm_label": "main"
     },
     {
@@ -32318,7 +32688,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_hermes_android_core_screens_chat_screen_dart",
-      "community": 82,
+      "community": 6,
       "norm_label": "package:hermes_android/core/screens/chat_screen.dart"
     },
     {
@@ -32328,7 +32698,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_hermes_android_core_widgets_gateway_approval_dialog_dart",
-      "community": 159,
+      "community": 82,
       "norm_label": "package:hermes_android/core/widgets/gateway_approval_dialog.dart"
     },
     {
@@ -32348,7 +32718,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "support_inert_turn_application_session_dart",
-      "community": 163,
+      "community": 6,
       "norm_label": "support/inert_turn_application_session.dart"
     },
     {
@@ -32488,7 +32858,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_chat_display_items_test",
-      "community": 62,
+      "community": 157,
       "norm_label": "chat_display_items_test.dart"
     },
     {
@@ -32498,7 +32868,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_chat_display_items_test_notice",
-      "community": 62,
+      "community": 157,
       "norm_label": "_notice"
     },
     {
@@ -32508,7 +32878,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_chat_display_items_test_tool",
-      "community": 62,
+      "community": 157,
       "norm_label": "_tool"
     },
     {
@@ -32518,7 +32888,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_chat_display_items_test_subagent",
-      "community": 62,
+      "community": 157,
       "norm_label": "_subagent"
     },
     {
@@ -32528,7 +32898,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_chat_display_items_test_main",
-      "community": 62,
+      "community": 157,
       "norm_label": "main"
     },
     {
@@ -32538,7 +32908,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_hermes_android_core_models_gateway_activity_dart",
-      "community": 138,
+      "community": 174,
       "norm_label": "package:hermes_android/core/models/gateway_activity.dart"
     },
     {
@@ -32548,7 +32918,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_hermes_android_core_models_gateway_insight_dart",
-      "community": 62,
+      "community": 157,
       "norm_label": "package:hermes_android/core/models/gateway_insight.dart"
     },
     {
@@ -32558,7 +32928,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_hermes_android_core_utils_chat_display_items_dart",
-      "community": 62,
+      "community": 157,
       "norm_label": "package:hermes_android/core/utils/chat_display_items.dart"
     },
     {
@@ -32588,7 +32958,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_chat_history_scroll_test_controlledchathttpclient",
-      "community": 6,
+      "community": 17,
       "norm_label": "_controlledchathttpclient"
     },
     {
@@ -32598,7 +32968,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "token",
-      "community": 6,
+      "community": 17,
       "norm_label": "token"
     },
     {
@@ -32968,7 +33338,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "textfield",
-      "community": 151,
+      "community": 174,
       "norm_label": "textfield"
     },
     {
@@ -32988,7 +33358,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "text",
-      "community": 151,
+      "community": 174,
       "norm_label": "text"
     },
     {
@@ -32998,7 +33368,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_chat_model_override_store_test",
-      "community": 172,
+      "community": 128,
       "norm_label": "chat_model_override_store_test.dart"
     },
     {
@@ -33008,7 +33378,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_chat_model_override_store_test_main",
-      "community": 172,
+      "community": 128,
       "norm_label": "main"
     },
     {
@@ -33018,7 +33388,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_hermes_android_core_services_chat_model_override_store_dart",
-      "community": 172,
+      "community": 128,
       "norm_label": "package:hermes_android/core/services/chat_model_override_store.dart"
     },
     {
@@ -33138,7 +33508,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_chat_space_store_test",
-      "community": 194,
+      "community": 208,
       "norm_label": "chat_space_store_test.dart"
     },
     {
@@ -33148,7 +33518,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_chat_space_store_test_session",
-      "community": 194,
+      "community": 208,
       "norm_label": "session"
     },
     {
@@ -33158,7 +33528,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_chat_space_store_test_main",
-      "community": 194,
+      "community": 208,
       "norm_label": "main"
     },
     {
@@ -33168,7 +33538,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_hermes_android_core_models_session_dart",
-      "community": 131,
+      "community": 208,
       "norm_label": "package:hermes_android/core/models/session.dart"
     },
     {
@@ -33178,7 +33548,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_hermes_android_core_services_chat_space_store_dart",
-      "community": 194,
+      "community": 208,
       "norm_label": "package:hermes_android/core/services/chat_space_store.dart"
     },
     {
@@ -33198,7 +33568,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_chat_turn_notification_wiring_test_callbackcapturingturnsession",
-      "community": 153,
+      "community": 38,
       "norm_label": "_callbackcapturingturnsession"
     },
     {
@@ -33458,7 +33828,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_chat_turn_recovery_test_faketurnsession",
-      "community": 153,
+      "community": 38,
       "norm_label": "_faketurnsession"
     },
     {
@@ -33848,7 +34218,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_chat_voice_composer_test",
-      "community": 82,
+      "community": 6,
       "norm_label": "chat_voice_composer_test.dart"
     },
     {
@@ -33868,7 +34238,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_chat_voice_composer_test_textscale",
-      "community": 82,
+      "community": 6,
       "norm_label": "textscale"
     },
     {
@@ -33878,7 +34248,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "testremotepromptsubmit_remotesubmit_double",
-      "community": 82,
+      "community": 6,
       "norm_label": "testremotepromptsubmit? remotesubmit,\n  double"
     },
     {
@@ -33888,7 +34258,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_chat_voice_composer_test_apiclient",
-      "community": 82,
+      "community": 6,
       "norm_label": "apiclient"
     },
     {
@@ -33898,7 +34268,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_chat_voice_composer_test_main",
-      "community": 82,
+      "community": 6,
       "norm_label": "main"
     },
     {
@@ -33908,7 +34278,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_chat_voice_composer_test_pumpchat",
-      "community": 82,
+      "community": 6,
       "norm_label": "_pumpchat"
     },
     {
@@ -33918,7 +34288,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_chat_voice_composer_test_pumpwidget",
-      "community": 82,
+      "community": 6,
       "norm_label": "pumpwidget"
     },
     {
@@ -33928,7 +34298,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_chat_voice_composer_test_pumpandsettle",
-      "community": 82,
+      "community": 6,
       "norm_label": "pumpandsettle"
     },
     {
@@ -33938,7 +34308,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_chat_voice_composer_test_send",
-      "community": 82,
+      "community": 6,
       "norm_label": "send"
     },
     {
@@ -33948,7 +34318,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_hermes_android_core_widgets_voice_composer_controls_dart",
-      "community": 82,
+      "community": 6,
       "norm_label": "package:hermes_android/core/widgets/voice_composer_controls.dart"
     },
     {
@@ -34188,7 +34558,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_config_backup_test",
-      "community": 128,
+      "community": 207,
       "norm_label": "config_backup_test.dart"
     },
     {
@@ -34198,7 +34568,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_config_backup_test_fastiterations",
-      "community": 128,
+      "community": 207,
       "norm_label": "fastiterations"
     },
     {
@@ -34208,7 +34578,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_config_backup_test_main",
-      "community": 128,
+      "community": 207,
       "norm_label": "main"
     },
     {
@@ -34218,7 +34588,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_config_backup_test_samplebackup",
-      "community": 128,
+      "community": 207,
       "norm_label": "samplebackup"
     },
     {
@@ -34558,7 +34928,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_cron_failures_banner_test",
-      "community": 174,
+      "community": 163,
       "norm_label": "cron_failures_banner_test.dart"
     },
     {
@@ -34568,7 +34938,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_cron_failures_banner_test_main",
-      "community": 174,
+      "community": 163,
       "norm_label": "main"
     },
     {
@@ -34578,7 +34948,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_cron_failures_banner_test_pump",
-      "community": 174,
+      "community": 163,
       "norm_label": "pump"
     },
     {
@@ -34588,7 +34958,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_hermes_android_core_widgets_cron_failures_banner_dart",
-      "community": 174,
+      "community": 163,
       "norm_label": "package:hermes_android/core/widgets/cron_failures_banner.dart"
     },
     {
@@ -34908,7 +35278,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_hermes_android_core_services_remote_files_client_dart",
-      "community": 159,
+      "community": 6,
       "norm_label": "package:hermes_android/core/services/remote_files_client.dart"
     },
     {
@@ -34918,7 +35288,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_gateway_activity_card_test",
-      "community": 138,
+      "community": 174,
       "norm_label": "gateway_activity_card_test.dart"
     },
     {
@@ -34928,7 +35298,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_gateway_activity_card_test_verbose",
-      "community": 138,
+      "community": 174,
       "norm_label": "verbose"
     },
     {
@@ -34938,7 +35308,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_gateway_activity_card_test_pump",
-      "community": 138,
+      "community": 174,
       "norm_label": "_pump"
     },
     {
@@ -34948,7 +35318,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_gateway_activity_card_test_pumpwidget",
-      "community": 138,
+      "community": 174,
       "norm_label": "pumpwidget"
     },
     {
@@ -34958,7 +35328,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_gateway_activity_card_test_main",
-      "community": 138,
+      "community": 174,
       "norm_label": "main"
     },
     {
@@ -34968,7 +35338,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_hermes_android_core_widgets_gateway_activity_card_dart",
-      "community": 138,
+      "community": 174,
       "norm_label": "package:hermes_android/core/widgets/gateway_activity_card.dart"
     },
     {
@@ -34978,7 +35348,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_gateway_activity_test",
-      "community": 138,
+      "community": 174,
       "norm_label": "gateway_activity_test.dart"
     },
     {
@@ -34988,7 +35358,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_gateway_activity_test_main",
-      "community": 138,
+      "community": 174,
       "norm_label": "main"
     },
     {
@@ -34998,7 +35368,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_gateway_approval_test",
-      "community": 159,
+      "community": 82,
       "norm_label": "gateway_approval_test.dart"
     },
     {
@@ -35008,7 +35378,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_gateway_approval_test_main",
-      "community": 159,
+      "community": 82,
       "norm_label": "main"
     },
     {
@@ -35018,7 +35388,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_hermes_android_core_models_gateway_approval_dart",
-      "community": 159,
+      "community": 82,
       "norm_label": "package:hermes_android/core/models/gateway_approval.dart"
     },
     {
@@ -35028,7 +35398,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_gateway_clarify_test",
-      "community": 151,
+      "community": 174,
       "norm_label": "gateway_clarify_test.dart"
     },
     {
@@ -35038,7 +35408,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_gateway_clarify_test_main",
-      "community": 151,
+      "community": 174,
       "norm_label": "main"
     },
     {
@@ -35048,7 +35418,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_hermes_android_core_models_gateway_clarify_dart",
-      "community": 151,
+      "community": 174,
       "norm_label": "package:hermes_android/core/models/gateway_clarify.dart"
     },
     {
@@ -35058,7 +35428,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_hermes_android_core_widgets_gateway_clarify_dialog_dart",
-      "community": 151,
+      "community": 174,
       "norm_label": "package:hermes_android/core/widgets/gateway_clarify_dialog.dart"
     },
     {
@@ -35068,7 +35438,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "filledbutton",
-      "community": 151,
+      "community": 174,
       "norm_label": "filledbutton"
     },
     {
@@ -35078,7 +35448,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_gateway_insight_test",
-      "community": 62,
+      "community": 157,
       "norm_label": "gateway_insight_test.dart"
     },
     {
@@ -35088,7 +35458,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_gateway_insight_test_main",
-      "community": 62,
+      "community": 157,
       "norm_label": "main"
     },
     {
@@ -35098,7 +35468,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_hermes_android_core_widgets_gateway_insight_card_dart",
-      "community": 62,
+      "community": 157,
       "norm_label": "package:hermes_android/core/widgets/gateway_insight_card.dart"
     },
     {
@@ -35108,7 +35478,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_gateway_sensitive_prompt_test",
-      "community": 151,
+      "community": 174,
       "norm_label": "gateway_sensitive_prompt_test.dart"
     },
     {
@@ -35118,7 +35488,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_gateway_sensitive_prompt_test_main",
-      "community": 151,
+      "community": 174,
       "norm_label": "main"
     },
     {
@@ -35128,7 +35498,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_hermes_android_core_models_gateway_sensitive_prompt_dart",
-      "community": 151,
+      "community": 174,
       "norm_label": "package:hermes_android/core/models/gateway_sensitive_prompt.dart"
     },
     {
@@ -35138,7 +35508,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_hermes_android_core_widgets_gateway_sensitive_prompt_dialog_dart",
-      "community": 151,
+      "community": 174,
       "norm_label": "package:hermes_android/core/widgets/gateway_sensitive_prompt_dialog.dart"
     },
     {
@@ -35158,7 +35528,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_gateway_turn_application_controller_test_fakeapplicationsession",
-      "community": 153,
+      "community": 38,
       "norm_label": "_fakeapplicationsession"
     },
     {
@@ -36738,7 +37108,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_hermes_theme_test",
-      "community": 138,
+      "community": 163,
       "norm_label": "hermes_theme_test.dart"
     },
     {
@@ -36748,7 +37118,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_hermes_theme_test_seen",
-      "community": 138,
+      "community": 163,
       "norm_label": "seen"
     },
     {
@@ -36758,7 +37128,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_hermes_theme_test_tokensfrom",
-      "community": 138,
+      "community": 163,
       "norm_label": "_tokensfrom"
     },
     {
@@ -36768,7 +37138,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_hermes_theme_test_pumpandreadtokens",
-      "community": 138,
+      "community": 163,
       "norm_label": "_pumpandreadtokens"
     },
     {
@@ -36778,7 +37148,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_hermes_theme_test_pumpwidget",
-      "community": 138,
+      "community": 163,
       "norm_label": "pumpwidget"
     },
     {
@@ -36788,7 +37158,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_hermes_theme_test_main",
-      "community": 138,
+      "community": 163,
       "norm_label": "main"
     },
     {
@@ -36948,7 +37318,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_hermes_android_core_screens_workspace_screen_dart",
-      "community": 163,
+      "community": 141,
       "norm_label": "package:hermes_android/core/screens/workspace_screen.dart"
     },
     {
@@ -37108,7 +37478,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "argumenterror",
-      "community": 132,
+      "community": 131,
       "norm_label": "argumenterror"
     },
     {
@@ -37518,7 +37888,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_message_content_test",
-      "community": 141,
+      "community": 208,
       "norm_label": "message_content_test.dart"
     },
     {
@@ -37528,7 +37898,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_message_content_test_main",
-      "community": 141,
+      "community": 208,
       "norm_label": "main"
     },
     {
@@ -37538,7 +37908,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_hermes_android_core_utils_message_content_dart",
-      "community": 141,
+      "community": 208,
       "norm_label": "package:hermes_android/core/utils/message_content.dart"
     },
     {
@@ -37548,7 +37918,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_more_pane_test",
-      "community": 186,
+      "community": 36,
       "norm_label": "more_pane_test.dart"
     },
     {
@@ -37558,7 +37928,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_more_pane_test_size",
-      "community": 186,
+      "community": 36,
       "norm_label": "size"
     },
     {
@@ -37568,7 +37938,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_more_pane_test_textscale",
-      "community": 186,
+      "community": 36,
       "norm_label": "textscale"
     },
     {
@@ -37578,7 +37948,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_more_pane_test_brightness",
-      "community": 186,
+      "community": 36,
       "norm_label": "brightness"
     },
     {
@@ -37588,7 +37958,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_more_pane_test_pumppane",
-      "community": 186,
+      "community": 36,
       "norm_label": "_pumppane"
     },
     {
@@ -37598,7 +37968,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_more_pane_test_pumpwidget",
-      "community": 186,
+      "community": 36,
       "norm_label": "pumpwidget"
     },
     {
@@ -37608,7 +37978,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_more_pane_test_pumpandsettle",
-      "community": 186,
+      "community": 36,
       "norm_label": "pumpandsettle"
     },
     {
@@ -37618,7 +37988,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_more_pane_test_main",
-      "community": 186,
+      "community": 36,
       "norm_label": "main"
     },
     {
@@ -37628,7 +37998,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_hermes_android_core_widgets_more_pane_dart",
-      "community": 186,
+      "community": 36,
       "norm_label": "package:hermes_android/core/widgets/more_pane.dart"
     },
     {
@@ -37638,7 +38008,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_new_chat_options_test",
-      "community": 157,
+      "community": 101,
       "norm_label": "new_chat_options_test.dart"
     },
     {
@@ -37648,7 +38018,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_new_chat_options_test_now",
-      "community": 157,
+      "community": 101,
       "norm_label": "_now"
     },
     {
@@ -37658,7 +38028,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_new_chat_options_test_id",
-      "community": 157,
+      "community": 101,
       "norm_label": "id"
     },
     {
@@ -37668,7 +38038,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_new_chat_options_test_name",
-      "community": 157,
+      "community": 101,
       "norm_label": "name"
     },
     {
@@ -37678,7 +38048,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_new_chat_options_test_archived",
-      "community": 157,
+      "community": 101,
       "norm_label": "archived"
     },
     {
@@ -37688,7 +38058,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_new_chat_options_test_project",
-      "community": 157,
+      "community": 101,
       "norm_label": "_project"
     },
     {
@@ -37698,7 +38068,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_new_chat_options_test_option",
-      "community": 157,
+      "community": 101,
       "norm_label": "_option"
     },
     {
@@ -37708,7 +38078,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_new_chat_options_test_firstwhere",
-      "community": 157,
+      "community": 101,
       "norm_label": "firstwhere"
     },
     {
@@ -37718,7 +38088,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_new_chat_options_test_main",
-      "community": 157,
+      "community": 101,
       "norm_label": "main"
     },
     {
@@ -37728,7 +38098,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_hermes_android_core_models_hermes_project_dart",
-      "community": 128,
+      "community": 101,
       "norm_label": "package:hermes_android/core/models/hermes_project.dart"
     },
     {
@@ -37738,7 +38108,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_hermes_android_core_services_projects_repository_dart",
-      "community": 157,
+      "community": 101,
       "norm_label": "package:hermes_android/core/services/projects_repository.dart"
     },
     {
@@ -37750,6 +38120,206 @@
       "id": "package_hermes_android_core_utils_new_chat_options_dart",
       "community": 155,
       "norm_label": "package:hermes_android/core/utils/new_chat_options.dart"
+    },
+    {
+      "label": "pending_approval_probe_test.dart",
+      "file_type": "code",
+      "source_file": "test/pending_approval_probe_test.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "test_pending_approval_probe_test",
+      "community": 153,
+      "norm_label": "pending_approval_probe_test.dart"
+    },
+    {
+      "label": "built",
+      "file_type": "code",
+      "source_file": "test/pending_approval_probe_test.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "test_pending_approval_probe_test_built",
+      "community": 153,
+      "norm_label": "built"
+    },
+    {
+      "label": "_now",
+      "file_type": "code",
+      "source_file": "test/pending_approval_probe_test.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "test_pending_approval_probe_test_now",
+      "community": 153,
+      "norm_label": "_now"
+    },
+    {
+      "label": "clientTurnId",
+      "file_type": "code",
+      "source_file": "test/pending_approval_probe_test.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "test_pending_approval_probe_test_clientturnid",
+      "community": 153,
+      "norm_label": "clientturnid"
+    },
+    {
+      "label": "label",
+      "file_type": "code",
+      "source_file": "test/pending_approval_probe_test.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "test_pending_approval_probe_test_label",
+      "community": 153,
+      "norm_label": "label"
+    },
+    {
+      "label": "status",
+      "file_type": "code",
+      "source_file": "test/pending_approval_probe_test.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "test_pending_approval_probe_test_status",
+      "community": 153,
+      "norm_label": "status"
+    },
+    {
+      "label": "ago",
+      "file_type": "code",
+      "source_file": "test/pending_approval_probe_test.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "test_pending_approval_probe_test_ago",
+      "community": 153,
+      "norm_label": "ago"
+    },
+    {
+      "label": "_feed",
+      "file_type": "code",
+      "source_file": "test/pending_approval_probe_test.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "test_pending_approval_probe_test_feed",
+      "community": 153,
+      "norm_label": "_feed"
+    },
+    {
+      "label": "_item",
+      "file_type": "code",
+      "source_file": "test/pending_approval_probe_test.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "test_pending_approval_probe_test_item",
+      "community": 153,
+      "norm_label": "_item"
+    },
+    {
+      "label": "main",
+      "file_type": "code",
+      "source_file": "test/pending_approval_probe_test.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "test_pending_approval_probe_test_main",
+      "community": 153,
+      "norm_label": "main"
+    },
+    {
+      "label": "package:hermes_android/core/utils/pending_approval_probe.dart",
+      "file_type": "code",
+      "source_file": null,
+      "source_location": null,
+      "_origin": "ast",
+      "id": "package_hermes_android_core_utils_pending_approval_probe_dart",
+      "community": 163,
+      "norm_label": "package:hermes_android/core/utils/pending_approval_probe.dart"
+    },
+    {
+      "label": "pending_approvals_banner_test.dart",
+      "file_type": "code",
+      "source_file": "test/pending_approvals_banner_test.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "test_pending_approvals_banner_test",
+      "community": 163,
+      "norm_label": "pending_approvals_banner_test.dart"
+    },
+    {
+      "label": "sessionId",
+      "file_type": "code",
+      "source_file": "test/pending_approvals_banner_test.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "test_pending_approvals_banner_test_sessionid",
+      "community": 163,
+      "norm_label": "sessionid"
+    },
+    {
+      "label": "title",
+      "file_type": "code",
+      "source_file": "test/pending_approvals_banner_test.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "test_pending_approvals_banner_test_title",
+      "community": 163,
+      "norm_label": "title"
+    },
+    {
+      "label": "command",
+      "file_type": "code",
+      "source_file": "test/pending_approvals_banner_test.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "test_pending_approvals_banner_test_command",
+      "community": 163,
+      "norm_label": "command"
+    },
+    {
+      "label": "description",
+      "file_type": "code",
+      "source_file": "test/pending_approvals_banner_test.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "test_pending_approvals_banner_test_description",
+      "community": 163,
+      "norm_label": "description"
+    },
+    {
+      "label": "_summary",
+      "file_type": "code",
+      "source_file": "test/pending_approvals_banner_test.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "test_pending_approvals_banner_test_summary",
+      "community": 163,
+      "norm_label": "_summary"
+    },
+    {
+      "label": "main",
+      "file_type": "code",
+      "source_file": "test/pending_approvals_banner_test.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "test_pending_approvals_banner_test_main",
+      "community": 163,
+      "norm_label": "main"
+    },
+    {
+      "label": "pump",
+      "file_type": "code",
+      "source_file": "test/pending_approvals_banner_test.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "test_pending_approvals_banner_test_pump",
+      "community": 163,
+      "norm_label": "pump"
+    },
+    {
+      "label": "package:hermes_android/core/widgets/pending_approvals_banner.dart",
+      "file_type": "code",
+      "source_file": null,
+      "source_location": null,
+      "_origin": "ast",
+      "id": "package_hermes_android_core_widgets_pending_approvals_banner_dart",
+      "community": 163,
+      "norm_label": "package:hermes_android/core/widgets/pending_approvals_banner.dart"
     },
     {
       "label": "project_detail_screen_test.dart",
@@ -37868,7 +38438,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_project_session_filter_test",
-      "community": 131,
+      "community": 208,
       "norm_label": "project_session_filter_test.dart"
     },
     {
@@ -37878,7 +38448,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_project_session_filter_test_session",
-      "community": 131,
+      "community": 208,
       "norm_label": "_session"
     },
     {
@@ -37888,7 +38458,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_project_session_filter_test_main",
-      "community": 131,
+      "community": 208,
       "norm_label": "main"
     },
     {
@@ -37898,7 +38468,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_hermes_android_core_utils_project_session_filter_dart",
-      "community": 131,
+      "community": 208,
       "norm_label": "package:hermes_android/core/utils/project_session_filter.dart"
     },
     {
@@ -38078,7 +38648,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_hermes_android_core_services_projects_gateway_client_dart",
-      "community": 109,
+      "community": 132,
       "norm_label": "package:hermes_android/core/services/projects_gateway_client.dart"
     },
     {
@@ -38588,7 +39158,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_hermes_android_core_widgets_space_migration_preview_dart",
-      "community": 194,
+      "community": 101,
       "norm_label": "package:hermes_android/core/widgets/space_migration_preview.dart"
     },
     {
@@ -39078,7 +39648,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_relative_time_test",
-      "community": 141,
+      "community": 208,
       "norm_label": "relative_time_test.dart"
     },
     {
@@ -39088,7 +39658,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_relative_time_test_now",
-      "community": 141,
+      "community": 208,
       "norm_label": "now"
     },
     {
@@ -39098,7 +39668,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_relative_time_test_main",
-      "community": 141,
+      "community": 208,
       "norm_label": "main"
     },
     {
@@ -39108,7 +39678,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_hermes_android_core_utils_relative_time_dart",
-      "community": 141,
+      "community": 208,
       "norm_label": "package:hermes_android/core/utils/relative_time.dart"
     },
     {
@@ -39138,7 +39708,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_remote_files_client_test",
-      "community": 159,
+      "community": 6,
       "norm_label": "remote_files_client_test.dart"
     },
     {
@@ -39148,7 +39718,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_remote_files_client_test_main",
-      "community": 159,
+      "community": 6,
       "norm_label": "main"
     },
     {
@@ -39158,7 +39728,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_remote_files_client_test_dashboardwith",
-      "community": 159,
+      "community": 6,
       "norm_label": "dashboardwith"
     },
     {
@@ -39458,7 +40028,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_session_model_test",
-      "community": 131,
+      "community": 208,
       "norm_label": "session_model_test.dart"
     },
     {
@@ -39468,7 +40038,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_session_model_test_main",
-      "community": 131,
+      "community": 208,
       "norm_label": "main"
     },
     {
@@ -39478,7 +40048,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_session_name_dialog_test",
-      "community": 192,
+      "community": 82,
       "norm_label": "session_name_dialog_test.dart"
     },
     {
@@ -39488,7 +40058,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_session_name_dialog_test_main",
-      "community": 192,
+      "community": 82,
       "norm_label": "main"
     },
     {
@@ -39498,7 +40068,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_hermes_android_core_widgets_session_name_dialog_dart",
-      "community": 192,
+      "community": 82,
       "norm_label": "package:hermes_android/core/widgets/session_name_dialog.dart"
     },
     {
@@ -39508,7 +40078,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_session_search_client_test",
-      "community": 128,
+      "community": 207,
       "norm_label": "session_search_client_test.dart"
     },
     {
@@ -39518,7 +40088,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_session_search_client_test_socketexceptionstub",
-      "community": 128,
+      "community": 207,
       "norm_label": "socketexceptionstub"
     },
     {
@@ -39528,7 +40098,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_session_search_client_test_clientreturning",
-      "community": 128,
+      "community": 207,
       "norm_label": "clientreturning"
     },
     {
@@ -39538,7 +40108,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_session_search_client_test_jsonok",
-      "community": 128,
+      "community": 207,
       "norm_label": "jsonok"
     },
     {
@@ -39548,7 +40118,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_session_search_client_test_main",
-      "community": 128,
+      "community": 207,
       "norm_label": "main"
     },
     {
@@ -39558,7 +40128,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_session_search_client_test_tostring",
-      "community": 128,
+      "community": 207,
       "norm_label": "tostring"
     },
     {
@@ -39568,7 +40138,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_hermes_android_core_services_session_search_client_dart",
-      "community": 128,
+      "community": 207,
       "norm_label": "package:hermes_android/core/services/session_search_client.dart"
     },
     {
@@ -39688,7 +40258,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_settings_local_sections_test_nobiometricsauthenticator",
-      "community": 201,
+      "community": 185,
       "norm_label": "_nobiometricsauthenticator"
     },
     {
@@ -39868,7 +40438,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_space_migration_preview_test",
-      "community": 194,
+      "community": 101,
       "norm_label": "space_migration_preview_test.dart"
     },
     {
@@ -39878,7 +40448,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_space_migration_preview_test_brightness",
-      "community": 194,
+      "community": 101,
       "norm_label": "brightness"
     },
     {
@@ -39888,7 +40458,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_space_migration_preview_test_textscale",
-      "community": 194,
+      "community": 101,
       "norm_label": "textscale"
     },
     {
@@ -39898,7 +40468,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_space_migration_preview_test_space",
-      "community": 194,
+      "community": 101,
       "norm_label": "_space"
     },
     {
@@ -39908,7 +40478,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_space_migration_preview_test_project",
-      "community": 194,
+      "community": 101,
       "norm_label": "_project"
     },
     {
@@ -39918,7 +40488,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_space_migration_preview_test_pump",
-      "community": 194,
+      "community": 101,
       "norm_label": "_pump"
     },
     {
@@ -39928,7 +40498,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_space_migration_preview_test_pumpwidget",
-      "community": 194,
+      "community": 101,
       "norm_label": "pumpwidget"
     },
     {
@@ -39938,7 +40508,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_space_migration_preview_test_main",
-      "community": 194,
+      "community": 101,
       "norm_label": "main"
     },
     {
@@ -40168,7 +40738,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "support_fake_voice_composer_adapter_fakevoicecomposeradapter",
-      "community": 31,
+      "community": 186,
       "norm_label": "fakevoicecomposeradapter"
     },
     {
@@ -40178,7 +40748,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "partial",
-      "community": 31,
+      "community": 186,
       "norm_label": "partial"
     },
     {
@@ -40188,7 +40758,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "final",
-      "community": 31,
+      "community": 186,
       "norm_label": "final"
     },
     {
@@ -40198,7 +40768,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "status",
-      "community": 31,
+      "community": 186,
       "norm_label": "status"
     },
     {
@@ -40208,7 +40778,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "error",
-      "community": 31,
+      "community": 186,
       "norm_label": "error"
     },
     {
@@ -40438,7 +41008,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "support_inert_turn_application_session",
-      "community": 202,
+      "community": 38,
       "norm_label": "inert_turn_application_session.dart"
     },
     {
@@ -40448,7 +41018,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "support_inert_turn_application_session_inertturnapplicationsession",
-      "community": 153,
+      "community": 38,
       "norm_label": "inertturnapplicationsession"
     },
     {
@@ -40458,7 +41028,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "support_inert_turn_application_session_closed",
-      "community": 202,
+      "community": 38,
       "norm_label": "closed"
     },
     {
@@ -40468,7 +41038,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "support_inert_turn_application_session_onturnsettled",
-      "community": 202,
+      "community": 38,
       "norm_label": "onturnsettled"
     },
     {
@@ -40478,7 +41048,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "support_inert_turn_application_session_onsessionbound",
-      "community": 202,
+      "community": 38,
       "norm_label": "onsessionbound"
     },
     {
@@ -40488,7 +41058,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "support_inert_turn_application_session_recoverpending",
-      "community": 202,
+      "community": 38,
       "norm_label": "recoverpending"
     },
     {
@@ -40498,7 +41068,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "support_inert_turn_application_session_close",
-      "community": 202,
+      "community": 38,
       "norm_label": "close"
     },
     {
@@ -40508,7 +41078,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "support_inert_turn_application_session_submit",
-      "community": 202,
+      "community": 38,
       "norm_label": "submit"
     },
     {
@@ -40518,7 +41088,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "support_inert_turn_application_session_detachattachments",
-      "community": 202,
+      "community": 38,
       "norm_label": "detachattachments"
     },
     {
@@ -40528,7 +41098,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "support_inert_turn_application_session_interrupt",
-      "community": 202,
+      "community": 38,
       "norm_label": "interrupt"
     },
     {
@@ -40538,7 +41108,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "support_inert_turn_application_session_stageattachment",
-      "community": 202,
+      "community": 38,
       "norm_label": "stageattachment"
     },
     {
@@ -40808,7 +41378,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_text_size_preference_test",
-      "community": 206,
+      "community": 18,
       "norm_label": "text_size_preference_test.dart"
     },
     {
@@ -40828,7 +41398,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_text_size_preference_test_textscalefactor",
-      "community": 206,
+      "community": 18,
       "norm_label": "textscalefactor"
     },
     {
@@ -40838,7 +41408,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_text_size_preference_test_main",
-      "community": 206,
+      "community": 18,
       "norm_label": "main"
     },
     {
@@ -40848,7 +41418,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_text_size_preference_test_scale",
-      "community": 206,
+      "community": 18,
       "norm_label": "scale"
     },
     {
@@ -40858,7 +41428,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_hermes_android_core_services_text_size_preference_dart",
-      "community": 206,
+      "community": 18,
       "norm_label": "package:hermes_android/core/services/text_size_preference.dart"
     },
     {
@@ -40868,7 +41438,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_hermes_android_core_widgets_text_size_settings_card_dart",
-      "community": 206,
+      "community": 18,
       "norm_label": "package:hermes_android/core/widgets/text_size_settings_card.dart"
     },
     {
@@ -41068,7 +41638,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_workspace_entry_point_test",
-      "community": 163,
+      "community": 141,
       "norm_label": "workspace_entry_point_test.dart"
     },
     {
@@ -41088,7 +41658,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_workspace_entry_point_test_values",
-      "community": 163,
+      "community": 141,
       "norm_label": "values"
     },
     {
@@ -41098,7 +41668,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_workspace_entry_point_test_cache",
-      "community": 163,
+      "community": 141,
       "norm_label": "_cache"
     },
     {
@@ -41108,7 +41678,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_workspace_entry_point_test_delete",
-      "community": 163,
+      "community": 141,
       "norm_label": "delete"
     },
     {
@@ -41118,7 +41688,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_workspace_entry_point_test_read",
-      "community": 163,
+      "community": 141,
       "norm_label": "read"
     },
     {
@@ -41128,7 +41698,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_workspace_entry_point_test_readcached",
-      "community": 163,
+      "community": 141,
       "norm_label": "readcached"
     },
     {
@@ -41138,7 +41708,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_workspace_entry_point_test_write",
-      "community": 163,
+      "community": 141,
       "norm_label": "write"
     },
     {
@@ -41148,7 +41718,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_workspace_entry_point_test_main",
-      "community": 163,
+      "community": 141,
       "norm_label": "main"
     },
     {
@@ -41168,7 +41738,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_workspace_screen_test_controllableturnsession",
-      "community": 153,
+      "community": 38,
       "norm_label": "_controllableturnsession"
     },
     {
@@ -43975,7 +44545,7 @@
       "label": "Validated product decisions",
       "file_type": "document",
       "source_file": "docs/ANDROID_DAILY_DRIVER_ROADMAP.md",
-      "source_location": "L1292",
+      "source_location": "L1340",
       "_origin": "ast",
       "id": "docs_android_daily_driver_roadmap_validated_product_decisions",
       "community": 99,
@@ -43985,7 +44555,7 @@
       "label": "Evidence reviewed",
       "file_type": "document",
       "source_file": "docs/ANDROID_DAILY_DRIVER_ROADMAP.md",
-      "source_location": "L1302",
+      "source_location": "L1350",
       "_origin": "ast",
       "id": "docs_android_daily_driver_roadmap_evidence_reviewed",
       "community": 99,
@@ -47619,6 +48189,17 @@
       "target": "string_get"
     },
     {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/core/utils/pending_approval_probe.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "context": "variable_type",
+      "source": "utils_pending_approval_probe",
+      "target": "string_get"
+    },
+    {
       "relation": "imports",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
@@ -49102,6 +49683,17 @@
       "weight": 1.0,
       "context": "variable_type",
       "source": "test_home_pane_test",
+      "target": "models_gateway_activity_duration"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "test/pending_approval_probe_test.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "context": "variable_type",
+      "source": "test_pending_approval_probe_test",
       "target": "models_gateway_activity_duration"
     },
     {
@@ -55287,6 +55879,16 @@
       "relation": "inherits",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
+      "source_file": "lib/core/widgets/pending_approvals_banner.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "widgets_pending_approvals_banner_pendingapprovalsbanner",
+      "target": "statefulwidget"
+    },
+    {
+      "relation": "inherits",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
       "source_file": "lib/core/widgets/project_detail_screen.dart",
       "source_location": null,
       "weight": 1.0,
@@ -55677,6 +56279,16 @@
       "relation": "inherits",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
+      "source_file": "lib/core/widgets/pending_approvals_banner.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "widgets_pending_approvals_banner_pendingapprovalrow",
+      "target": "statelesswidget"
+    },
+    {
+      "relation": "inherits",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
       "source_file": "lib/core/widgets/project_detail_screen.dart",
       "source_location": null,
       "weight": 1.0,
@@ -56007,6 +56619,17 @@
       "relation": "references",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
+      "source_file": "lib/core/widgets/pending_approvals_banner.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "context": "variable_type",
+      "source": "widgets_pending_approvals_banner",
+      "target": "typedef"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
       "source_file": "lib/core/widgets/project_detail_screen.dart",
       "source_location": null,
       "weight": 1.0,
@@ -56154,6 +56777,17 @@
       "weight": 1.0,
       "context": "variable_type",
       "source": "widgets_home_pane",
+      "target": "voidcallback"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/core/widgets/pending_approvals_banner.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "context": "variable_type",
+      "source": "widgets_pending_approvals_banner",
       "target": "voidcallback"
     },
     {
@@ -56564,6 +57198,16 @@
       "relation": "imports",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
+      "source_file": "test/pending_approvals_banner_test.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "test_pending_approvals_banner_test",
+      "target": "package_flutter_material_dart"
+    },
+    {
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
       "source_file": "test/project_detail_screen_test.dart",
       "source_location": null,
       "weight": 1.0,
@@ -56898,6 +57542,16 @@
       "source_location": null,
       "weight": 1.0,
       "source": "widgets_new_chat_sheet",
+      "target": "package_flutter_material_dart"
+    },
+    {
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/core/widgets/pending_approvals_banner.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "widgets_pending_approvals_banner",
       "target": "package_flutter_material_dart"
     },
     {
@@ -58737,6 +59391,17 @@
       "relation": "references",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
+      "source_file": "lib/core/widgets/pending_approvals_banner.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "context": "variable_type",
+      "source": "widgets_pending_approvals_banner",
+      "target": "valuechanged"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
       "source_file": "lib/core/widgets/project_detail_screen.dart",
       "source_location": null,
       "weight": 1.0,
@@ -59036,6 +59701,16 @@
       "source_location": null,
       "weight": 1.0,
       "source": "widgets_new_chat_sheet",
+      "target": "theme_hermes_theme_dart"
+    },
+    {
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/core/widgets/pending_approvals_banner.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "widgets_pending_approvals_banner",
       "target": "theme_hermes_theme_dart"
     },
     {
@@ -60701,6 +61376,16 @@
       "weight": 1.0,
       "source": "screens_workspace_screen",
       "target": "screens_workspace_screen_defaultinboxcronloader"
+    },
+    {
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/core/screens/workspace_screen.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "screens_workspace_screen",
+      "target": "screens_workspace_screen_deletesession"
     },
     {
       "relation": "defines",
@@ -62591,6 +63276,16 @@
       "source_location": null,
       "weight": 1.0,
       "source": "screens_workspace_sessions_screen",
+      "target": "screens_workspace_sessions_screen_deletesession"
+    },
+    {
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/core/screens/workspace_sessions_screen.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "screens_workspace_sessions_screen",
       "target": "screens_workspace_sessions_screen_diff"
     },
     {
@@ -62812,6 +63507,16 @@
       "weight": 1.0,
       "source": "screens_workspace_sessions_screen",
       "target": "screens_workspace_sessions_screen_now"
+    },
+    {
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/core/screens/workspace_sessions_screen.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "screens_workspace_sessions_screen",
+      "target": "screens_workspace_sessions_screen_ondeletesession"
     },
     {
       "relation": "defines",
@@ -63203,6 +63908,17 @@
       "context": "variable_type",
       "source": "screens_workspace_sessions_screen",
       "target": "screens_workspace_sessions_screen_workspacechatsfilter"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/core/screens/workspace_sessions_screen.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "context": "variable_type",
+      "source": "screens_workspace_sessions_screen",
+      "target": "screens_workspace_sessions_screen_workspacesessiondeleter"
     },
     {
       "relation": "references",
@@ -78322,6 +79038,17 @@
       "relation": "references",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
+      "source_file": "test/pending_approval_probe_test.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "context": "variable_type",
+      "source": "test_pending_approval_probe_test",
+      "target": "theme_hermes_theme_hermesstatus"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
       "source_file": "lib/core/utils/activity_feed.dart",
       "source_location": null,
       "weight": 1.0,
@@ -80370,6 +81097,188 @@
       "target": "utils_new_chat_options_newchatmode"
     },
     {
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/core/utils/pending_approval_probe.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "utils_pending_approval_probe",
+      "target": "activity_feed_dart"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/core/utils/pending_approval_probe.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "context": "variable_type",
+      "source": "utils_pending_approval_probe",
+      "target": "required_activityfeed_feed_int"
+    },
+    {
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/core/utils/pending_approval_probe.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "utils_pending_approval_probe",
+      "target": "utils_pending_approval_probe_approvalprobetarget"
+    },
+    {
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/core/utils/pending_approval_probe.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "utils_pending_approval_probe",
+      "target": "utils_pending_approval_probe_chatlabel"
+    },
+    {
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/core/utils/pending_approval_probe.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "utils_pending_approval_probe",
+      "target": "utils_pending_approval_probe_command"
+    },
+    {
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/core/utils/pending_approval_probe.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "utils_pending_approval_probe",
+      "target": "utils_pending_approval_probe_description"
+    },
+    {
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/core/utils/pending_approval_probe.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "utils_pending_approval_probe",
+      "target": "utils_pending_approval_probe_fromwire"
+    },
+    {
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/core/utils/pending_approval_probe.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "utils_pending_approval_probe",
+      "target": "utils_pending_approval_probe_kpendingapprovalprobelimit"
+    },
+    {
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/core/utils/pending_approval_probe.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "utils_pending_approval_probe",
+      "target": "utils_pending_approval_probe_limit"
+    },
+    {
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/core/utils/pending_approval_probe.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "utils_pending_approval_probe",
+      "target": "utils_pending_approval_probe_pendingapprovalsummary"
+    },
+    {
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/core/utils/pending_approval_probe.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "utils_pending_approval_probe",
+      "target": "utils_pending_approval_probe_probeorder"
+    },
+    {
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/core/utils/pending_approval_probe.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "utils_pending_approval_probe",
+      "target": "utils_pending_approval_probe_seen"
+    },
+    {
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/core/utils/pending_approval_probe.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "utils_pending_approval_probe",
+      "target": "utils_pending_approval_probe_selectapprovalprobetargets"
+    },
+    {
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/core/utils/pending_approval_probe.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "utils_pending_approval_probe",
+      "target": "utils_pending_approval_probe_sessionid"
+    },
+    {
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/core/utils/pending_approval_probe.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "utils_pending_approval_probe",
+      "target": "utils_pending_approval_probe_targets"
+    },
+    {
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/core/utils/pending_approval_probe.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "utils_pending_approval_probe",
+      "target": "utils_pending_approval_probe_title"
+    },
+    {
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/core/utils/pending_approval_probe.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "utils_pending_approval_probe",
+      "target": "utils_pending_approval_probe_unmodifiable"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/core/widgets/pending_approvals_banner.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "context": "variable_type",
+      "source": "widgets_pending_approvals_banner",
+      "target": "utils_pending_approval_probe_pendingapprovalsummary"
+    },
+    {
       "relation": "defines",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
@@ -80870,6 +81779,16 @@
       "source_location": null,
       "weight": 1.0,
       "source": "widgets_more_pane",
+      "target": "hermes_components_dart"
+    },
+    {
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/core/widgets/pending_approvals_banner.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "widgets_pending_approvals_banner",
       "target": "hermes_components_dart"
     },
     {
@@ -84158,6 +85077,178 @@
       "weight": 1.0,
       "source": "widgets_new_chat_sheet",
       "target": "widgets_new_chat_sheet_projects"
+    },
+    {
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/core/widgets/pending_approvals_banner.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "widgets_pending_approvals_banner",
+      "target": "utils_pending_approval_probe_dart"
+    },
+    {
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/core/widgets/pending_approvals_banner.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "widgets_pending_approvals_banner",
+      "target": "widgets_pending_approvals_banner_approval"
+    },
+    {
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/core/widgets/pending_approvals_banner.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "widgets_pending_approvals_banner",
+      "target": "widgets_pending_approvals_banner_approvals"
+    },
+    {
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/core/widgets/pending_approvals_banner.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "widgets_pending_approvals_banner",
+      "target": "widgets_pending_approvals_banner_build"
+    },
+    {
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/core/widgets/pending_approvals_banner.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "widgets_pending_approvals_banner",
+      "target": "widgets_pending_approvals_banner_createstate"
+    },
+    {
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/core/widgets/pending_approvals_banner.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "widgets_pending_approvals_banner",
+      "target": "widgets_pending_approvals_banner_initstate"
+    },
+    {
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/core/widgets/pending_approvals_banner.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "widgets_pending_approvals_banner",
+      "target": "widgets_pending_approvals_banner_loadapprovals"
+    },
+    {
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/core/widgets/pending_approvals_banner.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "widgets_pending_approvals_banner",
+      "target": "widgets_pending_approvals_banner_onopenapproval"
+    },
+    {
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/core/widgets/pending_approvals_banner.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "widgets_pending_approvals_banner",
+      "target": "widgets_pending_approvals_banner_ontap"
+    },
+    {
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/core/widgets/pending_approvals_banner.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "widgets_pending_approvals_banner",
+      "target": "widgets_pending_approvals_banner_pendingapprovalrow"
+    },
+    {
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/core/widgets/pending_approvals_banner.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "widgets_pending_approvals_banner",
+      "target": "widgets_pending_approvals_banner_pendingapprovalsbanner"
+    },
+    {
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/core/widgets/pending_approvals_banner.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "widgets_pending_approvals_banner",
+      "target": "widgets_pending_approvals_banner_pendingapprovalsbannerstate"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/core/widgets/pending_approvals_banner.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "context": "variable_type",
+      "source": "widgets_pending_approvals_banner",
+      "target": "widgets_pending_approvals_banner_pendingapprovalsloader"
+    },
+    {
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/core/widgets/pending_approvals_banner.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "widgets_pending_approvals_banner",
+      "target": "widgets_pending_approvals_banner_refresh"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/core/widgets/pending_approvals_banner.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "widgets_pending_approvals_banner_pendingapprovalsbannerstate",
+      "target": "widgets_pending_approvals_banner_pendingapprovalsbanner"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "test/pending_approvals_banner_test.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "context": "type_lookup",
+      "source": "test_pending_approvals_banner_test",
+      "target": "widgets_pending_approvals_banner_pendingapprovalsbannerstate"
+    },
+    {
+      "relation": "inherits",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/core/widgets/pending_approvals_banner.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "widgets_pending_approvals_banner_pendingapprovalsbannerstate",
+      "target": "test_gateway_turn_journal_test_state"
     },
     {
       "relation": "references",
@@ -87699,6 +88790,26 @@
       "relation": "imports",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
+      "source_file": "test/pending_approval_probe_test.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "test_pending_approval_probe_test",
+      "target": "package_flutter_test_flutter_test_dart"
+    },
+    {
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "test/pending_approvals_banner_test.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "test_pending_approvals_banner_test",
+      "target": "package_flutter_test_flutter_test_dart"
+    },
+    {
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
       "source_file": "test/project_detail_screen_test.dart",
       "source_location": null,
       "weight": 1.0,
@@ -88329,6 +89440,26 @@
       "relation": "imports",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
+      "source_file": "test/pending_approval_probe_test.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "test_pending_approval_probe_test",
+      "target": "package_hermes_android_core_theme_hermes_theme_dart"
+    },
+    {
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "test/pending_approvals_banner_test.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "test_pending_approvals_banner_test",
+      "target": "package_hermes_android_core_theme_hermes_theme_dart"
+    },
+    {
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
       "source_file": "test/project_detail_screen_test.dart",
       "source_location": null,
       "weight": 1.0,
@@ -88393,6 +89524,16 @@
       "source_location": null,
       "weight": 1.0,
       "source": "test_activity_pane_test",
+      "target": "package_hermes_android_core_utils_activity_feed_dart"
+    },
+    {
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "test/pending_approval_probe_test.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "test_pending_approval_probe_test",
       "target": "package_hermes_android_core_utils_activity_feed_dart"
     },
     {
@@ -88621,6 +89762,17 @@
       "relation": "references",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
+      "source_file": "test/pending_approval_probe_test.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "context": "variable_type",
+      "source": "test_pending_approval_probe_test",
+      "target": "string_title_string"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
       "source_file": "test/chat_context_header_test.dart",
       "source_location": null,
       "weight": 1.0,
@@ -88688,6 +89840,16 @@
       "source_location": null,
       "weight": 1.0,
       "source": "test_home_pane_test",
+      "target": "package_hermes_android_core_widgets_hermes_components_dart"
+    },
+    {
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "test/pending_approvals_banner_test.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "test_pending_approvals_banner_test",
       "target": "package_hermes_android_core_widgets_hermes_components_dart"
     },
     {
@@ -96564,6 +97726,196 @@
       "weight": 1.0,
       "source": "test_workspace_screen_test",
       "target": "package_hermes_android_core_utils_new_chat_options_dart"
+    },
+    {
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "test/pending_approval_probe_test.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "test_pending_approval_probe_test",
+      "target": "package_hermes_android_core_utils_pending_approval_probe_dart"
+    },
+    {
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "test/pending_approval_probe_test.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "test_pending_approval_probe_test",
+      "target": "test_pending_approval_probe_test_ago"
+    },
+    {
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "test/pending_approval_probe_test.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "test_pending_approval_probe_test",
+      "target": "test_pending_approval_probe_test_built"
+    },
+    {
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "test/pending_approval_probe_test.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "test_pending_approval_probe_test",
+      "target": "test_pending_approval_probe_test_clientturnid"
+    },
+    {
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "test/pending_approval_probe_test.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "test_pending_approval_probe_test",
+      "target": "test_pending_approval_probe_test_feed"
+    },
+    {
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "test/pending_approval_probe_test.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "test_pending_approval_probe_test",
+      "target": "test_pending_approval_probe_test_item"
+    },
+    {
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "test/pending_approval_probe_test.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "test_pending_approval_probe_test",
+      "target": "test_pending_approval_probe_test_label"
+    },
+    {
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "test/pending_approval_probe_test.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "test_pending_approval_probe_test",
+      "target": "test_pending_approval_probe_test_main"
+    },
+    {
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "test/pending_approval_probe_test.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "test_pending_approval_probe_test",
+      "target": "test_pending_approval_probe_test_now"
+    },
+    {
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "test/pending_approval_probe_test.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "test_pending_approval_probe_test",
+      "target": "test_pending_approval_probe_test_status"
+    },
+    {
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "test/pending_approvals_banner_test.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "test_pending_approvals_banner_test",
+      "target": "package_hermes_android_core_utils_pending_approval_probe_dart"
+    },
+    {
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "test/pending_approvals_banner_test.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "test_pending_approvals_banner_test",
+      "target": "package_hermes_android_core_widgets_pending_approvals_banner_dart"
+    },
+    {
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "test/pending_approvals_banner_test.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "test_pending_approvals_banner_test",
+      "target": "test_pending_approvals_banner_test_command"
+    },
+    {
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "test/pending_approvals_banner_test.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "test_pending_approvals_banner_test",
+      "target": "test_pending_approvals_banner_test_description"
+    },
+    {
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "test/pending_approvals_banner_test.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "test_pending_approvals_banner_test",
+      "target": "test_pending_approvals_banner_test_main"
+    },
+    {
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "test/pending_approvals_banner_test.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "test_pending_approvals_banner_test",
+      "target": "test_pending_approvals_banner_test_pump"
+    },
+    {
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "test/pending_approvals_banner_test.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "test_pending_approvals_banner_test",
+      "target": "test_pending_approvals_banner_test_sessionid"
+    },
+    {
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "test/pending_approvals_banner_test.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "test_pending_approvals_banner_test",
+      "target": "test_pending_approvals_banner_test_summary"
+    },
+    {
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "test/pending_approvals_banner_test.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "test_pending_approvals_banner_test",
+      "target": "test_pending_approvals_banner_test_title"
     },
     {
       "relation": "imports",
@@ -106649,5 +108001,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "a90b4604addd3f41a3509fa8fc87ee0ab2884363"
+  "built_at_commit": "3f9b5a454f22026f0b102a6df1fefdcb8d01d3df"
 }
