@@ -26,6 +26,7 @@ import 'package:flutter/material.dart';
 
 import '../theme/hermes_theme.dart';
 import '../utils/activity_feed.dart';
+import '../utils/relative_time.dart';
 import 'hermes_components.dart';
 
 /// Reads the timeline. Injectable so the pane can be tested — and later
@@ -307,7 +308,7 @@ class _ActivityItemCard extends StatelessWidget {
               ),
               const SizedBox(width: HermesSpacing.sm),
               Text(
-                formatActivityAge(item.updatedAt, now),
+                formatRelativeAge(item.updatedAt, now),
                 style: tokens.typography.label.copyWith(color: tokens.muted),
               ),
             ],
@@ -318,16 +319,4 @@ class _ActivityItemCard extends StatelessWidget {
   }
 }
 
-/// How long ago [updatedAt] happened, in the compact form a timeline row uses.
-///
-/// A blocked row without an elapsed time is not actionable, so this is a
-/// first-class part of the presentation rather than a decoration. A timestamp
-/// ahead of [now] — a skewed device clock — reads as `now` rather than as a
-/// negative duration.
-String formatActivityAge(DateTime updatedAt, DateTime now) {
-  final elapsed = now.difference(updatedAt);
-  if (elapsed.isNegative || elapsed.inMinutes < 1) return 'now';
-  if (elapsed.inMinutes < 60) return '${elapsed.inMinutes}m ago';
-  if (elapsed.inHours < 24) return '${elapsed.inHours}h ago';
-  return '${elapsed.inDays}d ago';
-}
+

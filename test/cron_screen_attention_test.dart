@@ -167,7 +167,7 @@ void main() {
       // Raw ISO blobs are gone; a friendly "Failed: 30m ago" style line is
       // shown instead. Just now is acceptable for a very fresh run.
       expect(
-        find.textContaining(RegExp(r'^Failed: (\d+m ago|just now)$')),
+        find.textContaining(RegExp(r'^Failed: (\d+m ago|now)$')),
         findsOneWidget,
       );
     });

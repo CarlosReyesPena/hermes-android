@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 
 import '../services/connection_manager.dart';
 import '../utils/cron_health.dart';
+import '../utils/relative_time.dart';
 
 /// Creates the dashboard client for a connection. Injectable so widget tests
 /// can substitute a mock transport without reaching the network.
@@ -712,18 +713,13 @@ class _CronScreenState extends State<CronScreen> {
 
   /// Renders an ISO timestamp as a compact, human-friendly string. The
   /// dashboard sends absolute ISO times; a list of raw ISO blobs hides which
-  /// job just failed, so we show the time since instead.
+  /// job just failed, so we show the time since instead. Delegates to the
+  /// canonical [formatRelativeAge] so Cron reads time exactly like Activity
+  /// and the session lists.
   String _formatRunTime(String iso) {
     final parsed = DateTime.tryParse(iso);
     if (parsed == null) return iso;
-    final local = parsed.toLocal();
-    final now = DateTime.now();
-    final diff = now.difference(local);
-    if (diff.isNegative || diff.inMinutes < 1) return 'just now';
-    if (diff.inHours < 1) return '${diff.inMinutes}m ago';
-    if (diff.inDays < 1) return '${diff.inHours}h ago';
-    if (diff.inDays < 7) return '${diff.inDays}d ago';
-    return '${local.day}/${local.month}/${local.year}';
+    return formatRelativeAge(parsed, DateTime.now());
   }
 }
 
