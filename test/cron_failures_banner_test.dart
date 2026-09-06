@@ -40,7 +40,7 @@ void main() {
       expect(find.textContaining('cron job'), findsNothing);
     });
 
-    testWidgets('hides a non-zero-but-stale count? no — zero hides', (
+    testWidgets('keeps its widget mounted but collapses its body at zero', (
       tester,
     ) async {
       await pump(tester, loader: () async => 0);

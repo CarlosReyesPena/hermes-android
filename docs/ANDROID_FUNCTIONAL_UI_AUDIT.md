@@ -1,7 +1,44 @@
 # Hermes Android — functional and interface audit
 
-Audit date: 2026-08-29  
+Audit date: 2026-08-29 (updated 2026-09-06)  
 Evidence: live SM-S948B UI hierarchy, Flutter source, widget tests, and `ANDROID_DAILY_DRIVER_ROADMAP.md`.
+
+## Status update — 2026-09-06
+
+Findings below were written against the 2026-08-29 build. The following items
+from the original audit are **resolved** and must not be re-reported without
+re-verifying against current code:
+
+- **Two homes (P0)** — Workspace is now the launch surface: HomeScreen
+  auto-navigates into `WorkspaceScreen` on the last connection, and the legacy
+  All-chats flow lives on as the **Chats** destination of the shell, not in a
+  competing drawer root.
+- **Incomplete Project management (P0)** — rename/archive/restore/delete are
+  all surfaced from one consistent Project overflow menu (roadmap points 25,
+  28, 29).
+- **Unassigned/Inbox recovery surface (P0)** — Home exposes a counted Inbox
+  action (actionable-only Activity), now extended with a capability-gated
+  failing-cron banner (roadmap point 30 + follow-up).
+- **Home/Activity duplicated status strings (P1)** — idle chips are omitted in
+  the Continue-working section; status chips remain only where they carry
+  information.
+- **Quick Chat lifecycle (P1/P2)** — 72 h retention is enforced by
+  `QuickChatStore`; Archived + Promote surfaced through the Chats views.
+- **Project detail tabs (P1)** — chats/overview/search/move all present;
+  remaining tabs stay absent until their server contracts land.
+- **Cron health (new since audit)** — failing jobs are ranked first on the
+  Cron screen with an attention banner, error prose, and relative time; the
+  action Inbox shows a "N cron jobs need attention" banner when a dashboard is
+  configured.
+- **Biometric app lock (new since audit)** — optional fingerprint/face lock
+  wraps the whole Navigator (Settings → Security), device-local by design.
+
+Remaining open items from the list below: Settings offline resilience was
+fixed 2026-09-06 (local sections survive a dashboard outage); the audit body
+below is otherwise kept as the historical record and the ordered backlog
+(still valid: global search surface, pin/batch/undo, AI-assisted filing,
+tablet/foldable, full a11y pass).
+
 
 ## Product-level verdict
 
