@@ -845,13 +845,13 @@
     "semantic_hash": ""
   },
   "lib/core/screens/workspace_screen.dart": {
-    "mtime": 1788715594.0265734,
-    "ast_hash": "2a7d61d70fea89ed7eaa8e6b554ee5a1",
+    "mtime": 1788724990.605358,
+    "ast_hash": "a1e46660de01e5ec06fe56fe4b413d7f",
     "semantic_hash": ""
   },
   "test/workspace_screen_test.dart": {
-    "mtime": 1788413500.1685631,
-    "ast_hash": "c7d42471ab55ea88f19784689be124f1",
+    "mtime": 1788724990.7293596,
+    "ast_hash": "dac5ecf36fd711814a56ab53ebf7b177",
     "semantic_hash": ""
   },
   "lib/core/widgets/space_migration_preview.dart": {
@@ -1337,6 +1337,16 @@
   "test/biometric_settings_card_test.dart": {
     "mtime": 1788723694.7305548,
     "ast_hash": "d069ae7a84ae5bec94e1bd9cd82865ea",
+    "semantic_hash": ""
+  },
+  "lib/core/widgets/cron_failures_banner.dart": {
+    "mtime": 1788724631.6643941,
+    "ast_hash": "fe0d60514da7d887c869c48dc95a60c5",
+    "semantic_hash": ""
+  },
+  "test/cron_failures_banner_test.dart": {
+    "mtime": 1788724990.620358,
+    "ast_hash": "a59eaba22c3310869d52883132af342a",
     "semantic_hash": ""
   }
 }
