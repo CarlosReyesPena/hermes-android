@@ -20,6 +20,7 @@ import 'package:hermes_android/core/utils/home_digest.dart';
 import 'package:hermes_android/core/utils/home_turn_signals.dart';
 import 'package:hermes_android/core/utils/new_chat_options.dart';
 import 'package:hermes_android/core/widgets/activity_pane.dart';
+import 'package:hermes_android/core/widgets/cron_failures_banner.dart';
 import 'package:hermes_android/core/widgets/hermes_components.dart';
 import 'package:hermes_android/core/widgets/hermes_shell.dart';
 import 'package:hermes_android/core/widgets/home_pane.dart';
@@ -173,6 +174,7 @@ Future<void> _pump(
   AndroidSharePayload? initialSharedPayload,
   bool initialQuickChat = false,
   SharedAttachmentPreparer? sharedAttachmentPreparer,
+  CronFailuresLoader? inboxCronFailuresLoader,
   Size size = const Size(400, 800),
 }) async {
   tester.view.physicalSize = size;
@@ -206,6 +208,7 @@ Future<void> _pump(
         initialSharedPayload: initialSharedPayload,
         initialQuickChat: initialQuickChat,
         sharedAttachmentPreparer: sharedAttachmentPreparer,
+        inboxCronFailuresLoader: inboxCronFailuresLoader,
         onOpenDashboard: openedDashboards == null
             ? null
             : (url) async => openedDashboards.add(url),
@@ -670,6 +673,85 @@ void main() {
     await tester.tap(find.text('Approve deployment'));
     await tester.pumpAndSettle();
     expect(opened, ['blocked']);
+  });
+
+  testWidgets('the Inbox shows a cron-failure banner when the loader reports '
+      'failing jobs', (tester) async {
+    final now = DateTime.now();
+    await _pump(
+      tester,
+      connection: _connection(desktopGatewayUrl: 'https://host:8642'),
+      repository: await _repository([]),
+      sessions: [_session(id: 'blocked', title: 'Approve deployment')],
+      activityFeedLoader: (_, _) async => ActivityFeed(
+        groups: [
+          ActivityGroup(
+            kind: ActivityGroupKind.needsYou,
+            items: [
+              ActivityItem(
+                sessionId: 'blocked',
+                title: 'Approve deployment',
+                clientTurnId: 'turn-blocked',
+                label: 'Waiting for your input',
+                status: HermesStatus.blocked,
+                updatedAt: now,
+              ),
+            ],
+            totalCount: 1,
+          ),
+        ],
+        blockedCount: 1,
+        runningCount: 0,
+      ),
+      inboxCronFailuresLoader: () async => 2,
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Open inbox (1)'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('2 cron jobs need attention'), findsOneWidget);
+    expect(find.text('Approve deployment'), findsOneWidget);
+  });
+
+  testWidgets('the Inbox omits the cron banner when no job is failing', (
+    tester,
+  ) async {
+    final now = DateTime.now();
+    await _pump(
+      tester,
+      connection: _connection(desktopGatewayUrl: 'https://host:8642'),
+      repository: await _repository([]),
+      sessions: [_session(id: 'blocked', title: 'Approve deployment')],
+      activityFeedLoader: (_, _) async => ActivityFeed(
+        groups: [
+          ActivityGroup(
+            kind: ActivityGroupKind.needsYou,
+            items: [
+              ActivityItem(
+                sessionId: 'blocked',
+                title: 'Approve deployment',
+                clientTurnId: 'turn-blocked',
+                label: 'Waiting for your input',
+                status: HermesStatus.blocked,
+                updatedAt: now,
+              ),
+            ],
+            totalCount: 1,
+          ),
+        ],
+        blockedCount: 1,
+        runningCount: 0,
+      ),
+      inboxCronFailuresLoader: () async => 0,
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Open inbox (1)'));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('cron job'), findsNothing);
+    expect(find.text('Approve deployment'), findsOneWidget);
   });
 
   testWidgets('opening a Home row reports the session to the host', (

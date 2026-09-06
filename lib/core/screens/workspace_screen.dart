@@ -30,9 +30,11 @@ import '../services/session_search_controller.dart';
 import '../services/shared_attachment_preparer.dart';
 import '../theme/hermes_theme.dart';
 import '../utils/activity_feed.dart';
+import '../utils/cron_health.dart';
 import '../utils/home_turn_signals.dart';
 import '../utils/new_chat_options.dart';
 import '../widgets/activity_pane.dart';
+import '../widgets/cron_failures_banner.dart';
 import '../widgets/hermes_components.dart';
 import '../widgets/hermes_shell.dart';
 import '../widgets/home_pane.dart';
@@ -174,6 +176,11 @@ class WorkspaceScreen extends StatefulWidget {
   /// Overrides how the Hermes dashboard fallback is opened.
   final DashboardLauncher? onOpenDashboard;
 
+  /// Overrides how the Inbox counts failing cron jobs. When null, the screen
+  /// derives a loader from the connection and only shows the banner when the
+  /// connection actually configures a dashboard.
+  final CronFailuresLoader? inboxCronFailuresLoader;
+
   const WorkspaceScreen({
     required this.connection,
     this.repositoryFactory,
@@ -192,6 +199,7 @@ class WorkspaceScreen extends StatefulWidget {
     this.initialQuickChat = false,
     this.sharedAttachmentPreparer,
     this.onOpenDashboard,
+    this.inboxCronFailuresLoader,
     super.key,
   });
 
@@ -223,6 +231,13 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
 
   /// Reaches the action-only Activity view opened from Home.
   final _inboxKey = GlobalKey<ActivityPaneState>();
+
+  /// Reaches the cron-failure banner on the Inbox, so returning from Cron can
+  /// refresh the count of jobs that still need attention.
+  final _inboxCronKey = GlobalKey<CronFailuresBannerState>();
+
+  /// Lazy dashboard client used to count failing cron jobs for the Inbox.
+  DashboardClient? _inboxCronClient;
 
   /// The destination currently on screen. The New button is a Home
   /// affordance: over Projects or More it would be ambiguous what it creates.
@@ -607,6 +622,7 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
       _ownedGateway?.close();
     }
     _renameGateway?.close();
+    _inboxCronClient?.close();
     super.dispose();
   }
 
@@ -680,7 +696,7 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
           onMoveSession: repository == null
               ? null
               : (session, targetProjectId) =>
-                  repository.assignSession(session.id, targetProjectId),
+                    repository.assignSession(session.id, targetProjectId),
           projects: repository?.current.projects ?? const [],
           onRenameSession: _canRenameSessions ? _renameSession : null,
           onUpdateFlags: (session, {pinned, archived}) =>
@@ -860,19 +876,89 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
 
   /// Opens the Home action Inbox. It deliberately reuses the Activity feed but
   /// filters out informational Running/Completed rows, so this route contains
-  /// only work that can change what the user does next.
+  /// only work that can change what the user does next. When the connection
+  /// configures a dashboard, a cron-failure banner leads the route: a failing
+  /// scheduled job is actionable work too.
   void _openInbox() {
+    final cronLoader =
+        widget.inboxCronFailuresLoader ?? _defaultInboxCronLoader();
     _push(
       Scaffold(
         appBar: AppBar(title: const Text('Inbox')),
-        body: ActivityPane(
-          key: _inboxKey,
-          loadFeed: _loadActivity,
-          onOpenItem: _openActivityItem,
-          actionableOnly: true,
+        body: Column(
+          children: [
+            if (cronLoader != null)
+              CronFailuresBanner(
+                key: _inboxCronKey,
+                loadFailures: cronLoader,
+                onOpenCron: () => unawaited(_openCronFromInbox()),
+              ),
+            Expanded(
+              child: ActivityPane(
+                key: _inboxKey,
+                loadFeed: _loadActivity,
+                onOpenItem: _openActivityItem,
+                actionableOnly: true,
+              ),
+            ),
+          ],
         ),
       ),
     );
+  }
+
+  /// Default Inbox cron loader, or `null` when this connection has no
+  /// dashboard to ask. The capability gate is the connection itself: without
+  /// dashboard credentials or a proxied dashboard there is no authoritative
+  /// source, so the Inbox shows no cron row rather than inventing one.
+  CronFailuresLoader? _defaultInboxCronLoader() {
+    final connection = widget.connection;
+    final hasDashboard =
+        connection.dashboardProxied ||
+        (connection.dashboardUsername?.isNotEmpty ?? false) ||
+        (connection.dashboardPassword?.isNotEmpty ?? false);
+    if (!hasDashboard) return null;
+    return () async {
+      try {
+        final client =
+            _inboxCronClient ??
+            DashboardClient(
+              host: connection.host,
+              port: connection.dashboardPort,
+              pathPrefix: connection.dashboardPrefix ?? '',
+              proxied: connection.dashboardProxied,
+              useHttps: connection.useHttps,
+              username: connection.dashboardUsername,
+              password: connection.dashboardPassword,
+            );
+        _inboxCronClient = client;
+        final data = await client.apiGetList('cron/jobs');
+        var failing = 0;
+        for (final item in data) {
+          if (item is Map<String, dynamic> &&
+              classifyCronJobHealth(item).needsAttention) {
+            failing++;
+          }
+        }
+        return failing;
+      } catch (_) {
+        // A dashboard that is configured but unreachable (offline, moved)
+        // must not turn the Inbox into an error screen — report none.
+        return 0;
+      }
+    };
+  }
+
+  /// Opens the Cron screen from the Inbox banner, then refreshes the banner:
+  /// the user most likely went there to fix the failing job.
+  Future<void> _openCronFromInbox() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => CronScreen(connection: widget.connection),
+      ),
+    );
+    if (!mounted) return;
+    unawaited(_inboxCronKey.currentState?.refresh() ?? Future<void>.value());
   }
 
   /// Opens the chat an Activity row belongs to.
@@ -1149,10 +1235,8 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
     };
     SessionSearchController? searchController;
     if (view == WorkspaceSessionView.search) {
-      searchController =
-          _searchController ??= await SessionSearchController.fromConnection(
-            widget.connection,
-          );
+      searchController = _searchController ??=
+          await SessionSearchController.fromConnection(widget.connection);
     }
     if (!mounted) return;
     final repository = _repository;
@@ -1168,7 +1252,7 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
         onMoveSession: repository == null
             ? null
             : (session, targetProjectId) =>
-                repository.assignSession(session.id, targetProjectId),
+                  repository.assignSession(session.id, targetProjectId),
         projects: repository?.current.projects ?? const [],
         onRenameSession: _canRenameSessions ? _renameSession : null,
         onUpdateFlags: (session, {pinned, archived}) =>
@@ -1197,8 +1281,9 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
   Future<void> _renameSession(Session session, String title) async {
     final gateway =
         _ownedGateway ??
-        (_renameGateway ??=
-            DesktopGatewayClient.fromConnection(widget.connection));
+        (_renameGateway ??= DesktopGatewayClient.fromConnection(
+          widget.connection,
+        ));
     await gateway.renameSession(sessionId: session.id, title: title);
   }
 
@@ -1276,7 +1361,9 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
       case 'unassigned':
         unawaited(_openWorkspaceSessionView(WorkspaceSessionView.unassigned));
       case 'archived-quick':
-        unawaited(_openWorkspaceSessionView(WorkspaceSessionView.archivedQuick));
+        unawaited(
+          _openWorkspaceSessionView(WorkspaceSessionView.archivedQuick),
+        );
       case 'files':
         unawaited(_openFiles());
       case 'cron':
