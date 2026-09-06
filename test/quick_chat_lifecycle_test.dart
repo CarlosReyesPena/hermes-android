@@ -61,7 +61,7 @@ List<String> _idsIn(HomeDigest digest, HomeSectionKind kind) {
 SavedConnection _connection({String? desktopGatewayUrl}) => SavedConnection(
   id: 'conn-1',
   label: 'Miniserver',
-  host: 'hermes-miniserver.example',
+  host: 'hermes-miniserver',
   port: 8642,
   apiKey: 'test-key',
   desktopGatewayUrl: desktopGatewayUrl,

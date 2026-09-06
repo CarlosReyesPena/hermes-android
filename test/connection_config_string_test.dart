@@ -37,14 +37,14 @@ void main() {
       label: 'Miniserver',
       host: 'hermes-miniserver.example.ts.net',
       port: 8642,
-      apiKey: 'abc/+=123',
+      apiKey: 'unit-test-key',
       gatewayPrefix: '/gateway',
       dashboardPrefix: '/dash',
       dashboardProxied: true,
       desktopGatewayUrl: 'http://hermes-miniserver.example.ts.net:9120',
       dashboardPortOverride: 9120,
       dashboardUsername: 'carlos',
-      dashboardPassword: 'pw!@#',
+      dashboardPassword: 'unit-test-password',
     );
 
     final encoded = ConnectionConfigString.encode(original);

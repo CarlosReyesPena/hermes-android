@@ -117,7 +117,7 @@ void main() {
 
       expect(armored, isNot(contains('sk-secret-key')));
       expect(armored, isNot(contains('dash-secret')));
-      expect(armored, isNot(contains('hermes-miniserver.example')));
+      expect(armored, isNot(contains('hermes-miniserver')));
 
       final envelope = jsonDecode(armored) as Map<String, dynamic>;
       expect(envelope['format'], ConfigBackupCodec.envelopeFormat);

@@ -349,7 +349,7 @@ void main() {
     SavedConnection connection({String? desktopGatewayUrl}) => SavedConnection(
       id: 'conn-1',
       label: 'Miniserver',
-      host: 'hermes-miniserver.example',
+      host: 'hermes-miniserver',
       port: 8642,
       apiKey: 'key',
       desktopGatewayUrl: desktopGatewayUrl,
@@ -373,7 +373,7 @@ void main() {
       // coordinator stamps into every binding. Deriving it twice invites
       // drift, so this asserts the two agree.
       final saved = connection(
-        desktopGatewayUrl: 'https://hermes-miniserver.example:8788/gw',
+        desktopGatewayUrl: 'https://hermes-miniserver:8788/gw',
       );
       final client = DesktopGatewayClient.fromConnection(saved);
       addTearDown(client.close);
@@ -389,10 +389,10 @@ void main() {
       // treating them as different scopes would hide live work.
       expect(
         endpointDigestForConnection(
-          connection(desktopGatewayUrl: 'https://hermes-miniserver.example'),
+          connection(desktopGatewayUrl: 'https://hermes-miniserver'),
         ),
         endpointDigestForConnection(
-          connection(desktopGatewayUrl: 'https://hermes-miniserver.example:443'),
+          connection(desktopGatewayUrl: 'https://hermes-miniserver:443'),
         ),
       );
     });

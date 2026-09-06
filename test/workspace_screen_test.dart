@@ -46,7 +46,7 @@ Session _session({required String id, required String title}) {
 
 SavedConnection _connection({
   String? desktopGatewayUrl,
-  String host = 'hermes-miniserver.example',
+  String host = 'hermes-miniserver',
 }) {
   return SavedConnection(
     id: 'conn-1',
@@ -1033,7 +1033,7 @@ void main() {
 
     expect(opened, hasLength(1));
     // The fallback must target the dashboard, not the gateway chat port.
-    expect(opened.single, contains('hermes-miniserver.example'));
+    expect(opened.single, contains('hermes-miniserver'));
     expect(opened.single, contains('9119'));
   });
 
