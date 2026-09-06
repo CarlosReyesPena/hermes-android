@@ -5,6 +5,8 @@ import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'core/services/android_launch_intent_service.dart';
 import 'core/services/android_share_intent_service.dart';
+import 'core/services/biometric_authenticator.dart';
+import 'core/services/biometric_lock_store.dart';
 import 'core/services/config_backup.dart';
 import 'core/services/config_backup_io.dart';
 import 'core/services/config_backup_service.dart';
@@ -15,6 +17,7 @@ import 'core/services/text_size_preference.dart';
 import 'core/screens/workspace_screen.dart';
 import 'core/theme/hermes_theme.dart';
 import 'core/utils/responsive.dart';
+import 'core/widgets/biometric_lock_gate.dart';
 import 'core/widgets/config_backup_card.dart';
 
 void main() async {
@@ -37,10 +40,15 @@ class HermesApp extends StatefulWidget {
   final ConnectionManager connManager;
   final AndroidShareIntentService? shareIntents;
   final AndroidLaunchIntentService? launchIntents;
+
+  /// Overrides the OS biometric prompt for tests.
+  final BiometricAuthenticator? biometricAuthenticator;
+
   const HermesApp({
     required this.connManager,
     this.shareIntents,
     this.launchIntents,
+    this.biometricAuthenticator,
     super.key,
   });
 
@@ -78,11 +86,14 @@ class HermesApp extends StatefulWidget {
 
 class HermesAppState extends State<HermesApp> {
   late final GatewayTurnApplicationController _turnApplicationController;
+  late final BiometricAuthenticator _biometricAuthenticator;
 
   @override
   void initState() {
     super.initState();
     _turnApplicationController = GatewayTurnApplicationController();
+    _biometricAuthenticator =
+        widget.biometricAuthenticator ?? LocalAuthBiometricAuthenticator();
   }
 
   Future<void> setTextSizePreference(TextSizePreference preference) async {
@@ -102,11 +113,17 @@ class HermesAppState extends State<HermesApp> {
         final preference = HermesApp.getTextSizePreference(
           widget.connManager.prefs,
         );
-        return MediaQuery(
-          data: systemMediaQuery.copyWith(
-            textScaler: preference.applyTo(systemMediaQuery.textScaler),
+        // The biometric gate wraps the whole Navigator so pushed routes
+        // (chats, workspace, settings) can never appear above the lock.
+        return BiometricLockGate(
+          store: BiometricLockStore(widget.connManager.prefs),
+          authenticator: _biometricAuthenticator,
+          child: MediaQuery(
+            data: systemMediaQuery.copyWith(
+              textScaler: preference.applyTo(systemMediaQuery.textScaler),
+            ),
+            child: child!,
           ),
-          child: child!,
         );
       },
       home: HomeScreen(
@@ -1047,9 +1064,9 @@ class _AddDialogState extends State<_AddDialog> {
       decoded = ConnectionConfigString.decode(text);
     } on FormatException catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(error.message)),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error.message)));
       }
       return;
     }
@@ -1091,7 +1108,9 @@ class _AddDialogState extends State<_AddDialog> {
     });
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Config pasted — review and tap Connect.')),
+        const SnackBar(
+          content: Text('Config pasted — review and tap Connect.'),
+        ),
       );
     }
   }

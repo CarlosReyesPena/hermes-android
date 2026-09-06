@@ -4,7 +4,9 @@ import 'package:flutter_tts/flutter_tts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/config_backup_io.dart';
 import '../services/config_backup_service.dart';
+import '../services/biometric_authenticator.dart';
 import '../services/connection_manager.dart';
+import '../widgets/biometric_settings_card.dart';
 import '../widgets/config_backup_card.dart';
 import '../widgets/text_size_settings_card.dart';
 import '../../main.dart';
@@ -334,6 +336,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
         const SizedBox(height: 8),
         _VerboseToggle(),
+        const SizedBox(height: 16),
+
+        // ---- Section: Security ----
+        _buildSectionHeader('Security'),
+        BiometricSettingsCard(
+          preferences: context
+              .findAncestorStateOfType<HermesAppState>()!
+              .widget
+              .connManager
+              .prefs,
+          authenticator: LocalAuthBiometricAuthenticator(),
+        ),
         const SizedBox(height: 16),
 
         const SizedBox(height: 16),
