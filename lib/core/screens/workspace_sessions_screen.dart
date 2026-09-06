@@ -210,9 +210,15 @@ class WorkspaceSessionsScreen extends StatefulWidget {
   /// When non-null, the search bar gains the three search modes (on-device,
   /// full-text, AI + full-text) and the network modes use this controller.
   ///
-  /// Kept optional so the embedded Chats browser and the non-search views keep
-  /// their existing local-only filtering without a dependency on the gateway.
+  /// Kept optional so callers that already built a controller (the standalone
+  /// Search route) can hand it in directly.
   final SessionSearchController? searchController;
+
+  /// Lazily builds the controller the first time this screen appears, so the
+  /// embedded Chats browser can offer the same AI/full-text modes as the
+  /// standalone Search route without the parent having to construct a gateway
+  /// controller synchronously. Ignored when [searchController] is provided.
+  final SessionSearchControllerFactory? searchControllerFactory;
 
   /// Clock injection for deterministic filter/date tests. When null the
   /// screen uses `DateTime.now()`.
@@ -230,6 +236,7 @@ class WorkspaceSessionsScreen extends StatefulWidget {
     this.onUpdateFlags,
     this.onRenameSession,
     this.searchController,
+    this.searchControllerFactory,
     this.now,
     super.key,
   });
@@ -267,7 +274,21 @@ class _WorkspaceSessionsScreenState extends State<WorkspaceSessionsScreen> {
   int _searchRequestGeneration = 0;
 
   /// Whether the network search modes are available for this screen.
-  bool get _hasSearchController => widget.searchController != null;
+  ///
+  /// True when the caller handed in a ready controller (standalone Search) or
+  /// when this screen lazily built one from [WorkspaceSessionsScreen.searchControllerFactory]
+  /// (embedded Chats browser).
+  bool get _hasSearchController => _effectiveSearchController != null;
+
+  /// The controller to use: a caller-supplied one wins over a lazily built one.
+  SessionSearchController? get _effectiveSearchController =>
+      widget.searchController ?? _ownedSearchController;
+
+  /// Built from the factory after the first frame, when the caller supplied
+  /// one (embedded Chats browser without a ready controller).
+  SessionSearchController? _ownedSearchController;
+
+  bool _searchControllerBuildRequested = false;
 
   /// Injectable clock for deterministic tests.
   DateTime get _now => widget.now ?? DateTime.now();
@@ -280,8 +301,36 @@ class _WorkspaceSessionsScreenState extends State<WorkspaceSessionsScreen> {
       controller.restore();
       _searchMode = controller.mode;
       _aiSearchModel = controller.aiModel;
+    } else if (widget.searchControllerFactory != null) {
+      unawaited(_buildOwnedSearchController());
     }
     unawaited(_load());
+  }
+
+  /// Builds the network-search controller once the factory resolves.
+  ///
+  /// The embedded Chats browser shows local-only filtering on its first frame
+  /// and upgrades to the full AI/full-text modes as soon as the gateway-backed
+  /// controller is ready — no parent plumbing needed.
+  Future<void> _buildOwnedSearchController() async {
+    final factory = widget.searchControllerFactory;
+    if (factory == null || _searchControllerBuildRequested) return;
+    _searchControllerBuildRequested = true;
+    try {
+      final controller = await factory();
+      if (!mounted || _effectiveSearchController != null) return;
+      controller.restore();
+      setState(() {
+        _ownedSearchController = controller;
+        if (_searchMode == SessionSearchMode.local) {
+          _searchMode = controller.mode;
+        }
+        _aiSearchModel = controller.aiModel;
+      });
+    } catch (_) {
+      // A gateway that cannot build a search controller degrades to the
+      // local-only filter this screen already had; nothing to surface.
+    }
   }
 
   Future<void> _load() async {
@@ -350,9 +399,9 @@ class _WorkspaceSessionsScreenState extends State<WorkspaceSessionsScreen> {
       setState(() => _moving.remove(session.id));
       await _load();
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Moved to ${target.label}')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Moved to ${target.label}')));
     } catch (_) {
       if (!mounted) return;
       setState(() => _moving.remove(session.id));
@@ -506,7 +555,7 @@ class _WorkspaceSessionsScreenState extends State<WorkspaceSessionsScreen> {
   }
 
   Future<void> _setSearchMode(SessionSearchMode mode) async {
-    final controller = widget.searchController;
+    final controller = _effectiveSearchController;
     if (controller == null || mode == _searchMode) return;
     if (mode == SessionSearchMode.ai && _aiSearchModel == null) {
       final selected = await _showAiModelSelector();
@@ -552,7 +601,7 @@ class _WorkspaceSessionsScreenState extends State<WorkspaceSessionsScreen> {
   }
 
   Future<void> _runServerSearch(String query) async {
-    final controller = widget.searchController;
+    final controller = _effectiveSearchController;
     if (!mounted || controller == null || query.isEmpty) return;
     final requestGeneration = ++_searchRequestGeneration;
     setState(() {
@@ -599,7 +648,7 @@ class _WorkspaceSessionsScreenState extends State<WorkspaceSessionsScreen> {
   }
 
   Future<AiSearchModel?> _showAiModelSelector() async {
-    final controller = widget.searchController;
+    final controller = _effectiveSearchController;
     if (controller == null || _loadingAiModels) return null;
     setState(() => _loadingAiModels = true);
     try {
@@ -716,10 +765,12 @@ class _WorkspaceSessionsScreenState extends State<WorkspaceSessionsScreen> {
 
   Widget _buildLoaded(WorkspaceSessionsData data) {
     final tokens = HermesTokens.of(context);
-    final serverMode = _hasSearchController && _searchMode != SessionSearchMode.local;
+    final serverMode =
+        _hasSearchController && _searchMode != SessionSearchMode.local;
     final aiMode = _hasSearchController && _searchMode == SessionSearchMode.ai;
-    final serverHitsCurrent =
-        serverMode && _serverQuery == _query.trim() ? _serverResults : null;
+    final serverHitsCurrent = serverMode && _serverQuery == _query.trim()
+        ? _serverResults
+        : null;
 
     final sessions = serverMode
         ? (serverHitsCurrent?.map((hit) => hit.session).toList() ??
@@ -755,7 +806,12 @@ class _WorkspaceSessionsScreenState extends State<WorkspaceSessionsScreen> {
             ),
           ];
 
-    final showSearchModes = _hasSearchController && widget.embedded == false;
+    // The standalone Search route and the embedded Chats browser both gain the
+    // mode menu once a controller is available. The old embedded gate existed
+    // only because the Chats destination never supplied a controller; with the
+    // lazy factory it does, so the browser offers the same AI search its users
+    // expect from the standalone route.
+    final showSearchModes = _hasSearchController;
 
     return RefreshIndicator(
       onRefresh: serverMode && _query.trim().isNotEmpty
@@ -843,13 +899,15 @@ class _WorkspaceSessionsScreenState extends State<WorkspaceSessionsScreen> {
                                   contentPadding: EdgeInsets.zero,
                                   leading: Icon(Icons.phone_android),
                                   title: Text('On-device'),
-                                  subtitle: Text('Titles, previews, and models'),
+                                  subtitle: Text(
+                                    'Titles, previews, and models',
+                                  ),
                                 ),
                               ),
                               CheckedPopupMenuItem(
                                 value: SessionSearchMode.server,
-                                checked: _searchMode ==
-                                    SessionSearchMode.server,
+                                checked:
+                                    _searchMode == SessionSearchMode.server,
                                 child: const ListTile(
                                   contentPadding: EdgeInsets.zero,
                                   leading: Icon(Icons.manage_search),
@@ -899,7 +957,9 @@ class _WorkspaceSessionsScreenState extends State<WorkspaceSessionsScreen> {
                     'AI searched for: $_aiRewrittenQuery',
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: tokens.typography.label.copyWith(color: tokens.muted),
+                    style: tokens.typography.label.copyWith(
+                      color: tokens.muted,
+                    ),
                   ),
                 ),
               ],
@@ -1015,7 +1075,9 @@ class _WorkspaceSessionsScreenState extends State<WorkspaceSessionsScreen> {
         widget.onUpdateFlags != null || widget.onRenameSession != null;
     return HermesCard(
       onTap: () => widget.onOpenSession(session),
-      onLongPress: showActions ? () => unawaited(_showSessionMenu(session)) : null,
+      onLongPress: showActions
+          ? () => unawaited(_showSessionMenu(session))
+          : null,
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1092,8 +1154,7 @@ class _WorkspaceSessionsScreenState extends State<WorkspaceSessionsScreen> {
                 : IconButton(
                     key: Key('move-session-${session.id}'),
                     tooltip: 'Move conversation',
-                    onPressed: () =>
-                        unawaited(_chooseMoveDestination(session)),
+                    onPressed: () => unawaited(_chooseMoveDestination(session)),
                     icon: const Icon(Icons.drive_file_move_outline),
                   ),
           if (showPromote)

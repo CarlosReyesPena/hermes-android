@@ -267,10 +267,17 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
   /// used to carry context into chats opened from the global Chats browser.
   Map<String, String> _chatProjectLabels = const {};
 
-  /// Lazily-built AI search controller for the global Search view. Held here so
-  /// opening and re-opening Search does not rebuild the dashboard/gateway
-  /// clients or reload model options every time.
+  /// Lazily builds the AI search controller shared by the standalone Search
+  /// route and the embedded Chats browser. Held here so opening either surface
+  /// does not rebuild the dashboard/gateway clients or reload model options
+  /// every time.
   SessionSearchController? _searchController;
+
+  Future<SessionSearchController> _ensureSearchController() async {
+    return _searchController ??= await SessionSearchController.fromConnection(
+      widget.connection,
+    );
+  }
 
   /// Draft session ids of Project chats this workspace started, mapped to the
   /// Project they were committed to. When `session.open` first binds such a
@@ -681,6 +688,21 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
     }
   }
 
+  /// Whether this connection can serve network (full-text / AI) chat search.
+  ///
+  /// Mirrors the client's own gate: the search controller talks to the REST
+  /// API and the dashboard, so a bare legacy connection keeps the browser
+  /// local-only instead of building clients that would only fail.
+  bool get _supportsNetworkSearch {
+    final hasGateway =
+        widget.connection.desktopGatewayUrl?.trim().isNotEmpty == true;
+    final hasDashboard =
+        widget.connection.dashboardProxied ||
+        (widget.connection.dashboardUsername?.trim().isNotEmpty == true &&
+            widget.connection.dashboardPassword?.trim().isNotEmpty == true);
+    return hasGateway || hasDashboard;
+  }
+
   Widget _pane(BuildContext context, HermesDestination destination) {
     switch (destination) {
       case HermesDestination.chats:
@@ -690,6 +712,12 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
           view: WorkspaceSessionView.all,
           embedded: true,
           load: _loadWorkspaceSessionsData,
+          // The Chats browser searches the same way the standalone Search
+          // route does: local-only until the gateway-backed controller is
+          // ready, then full-text and AI modes appear in the search bar.
+          searchControllerFactory: _supportsNetworkSearch
+              ? _ensureSearchController
+              : null,
           onOpenSession: (session) => unawaited(
             _openSession(session, projectName: _chatProjectLabels[session.id]),
           ),

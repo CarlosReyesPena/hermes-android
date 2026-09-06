@@ -16,6 +16,15 @@ class SessionSearchResult {
   const SessionSearchResult({required this.hits, this.rewrittenQuery});
 }
 
+/// Builds a [SessionSearchController] on demand.
+///
+/// The standalone Search route hands in an already-built controller; an
+/// embedded browser (the Chats destination) supplies a factory so it can
+/// create one lazily after its first frame instead of forcing the parent to
+/// build gateway clients synchronously.
+typedef SessionSearchControllerFactory =
+    Future<SessionSearchController> Function();
+
 /// Orchestrates the three chat-search modes for one saved connection.
 ///
 /// Local search is handled by the caller (it filters the in-memory list
@@ -133,7 +142,8 @@ class SessionSearchController {
       apiKey: connection.apiKey,
       pathPrefix: connection.gatewayPrefix ?? '',
     );
-    final identity = '${connection.baseUrl}|'
+    final identity =
+        '${connection.baseUrl}|'
         '${connection.gatewayPrefix ?? ''}|'
         '${connection.desktopGatewayUrl ?? ''}';
     return SessionSearchController(

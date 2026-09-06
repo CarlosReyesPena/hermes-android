@@ -443,7 +443,12 @@ void main() {
               onOpenSession: (_) {},
               onMoveSession: (_, _) async {},
               projects: const [
-                HermesProject(id: 'p-arch', slug: 'arch', name: 'Old', archived: true),
+                HermesProject(
+                  id: 'p-arch',
+                  slug: 'arch',
+                  name: 'Old',
+                  archived: true,
+                ),
                 HermesProject(id: 'p-tuk', slug: 'tuk', name: 'Tuk-tuk'),
               ],
             ),
@@ -710,10 +715,7 @@ void main() {
 
       await pumpSearch(tester, controller);
 
-      await tester.enterText(
-        find.byKey(kWorkspaceSessionSearchKey),
-        'tuk',
-      );
+      await tester.enterText(find.byKey(kWorkspaceSessionSearchKey), 'tuk');
       // Let the debounce fire, then settle the network result.
       await tester.pump(const Duration(milliseconds: 400));
       await tester.pumpAndSettle();
@@ -746,5 +748,41 @@ void main() {
       expect(find.text('AI searched for: electric vehicle'), findsOneWidget);
       expect(find.text('Electric tuk-tuk build'), findsOneWidget);
     });
+
+    testWidgets(
+      'the embedded Chats browser offers the search modes once its lazy '
+      'factory resolves',
+      (tester) async {
+        final controller = await buildController();
+        var factoryCalls = 0;
+
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: hermesTheme(Brightness.dark),
+            home: WorkspaceSessionsScreen(
+              title: 'Chats',
+              view: WorkspaceSessionView.all,
+              embedded: true,
+              load: () async => WorkspaceSessionsData(
+                sessions: [_session('s1', 'Local chat')],
+              ),
+              onOpenSession: (_) {},
+              searchControllerFactory: () async {
+                factoryCalls += 1;
+                return controller;
+              },
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // Local-only on the first frame, then the factory resolves and the mode
+        // menu (full-text / AI) appears in the embedded browser's search bar —
+        // the same search the standalone route offers.
+        expect(factoryCalls, 1);
+        expect(find.byTooltip('Search mode'), findsOneWidget);
+        expect(find.byIcon(Icons.phone_android), findsOneWidget);
+      },
+    );
   });
 }
