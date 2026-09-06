@@ -145,13 +145,13 @@
     "semantic_hash": ""
   },
   "lib/core/screens/chat_screen.dart": {
-    "mtime": 1788168107.2061887,
-    "ast_hash": "05dc17767f0be4a27e307141225d6c33",
+    "mtime": 1788727095.6707606,
+    "ast_hash": "8e6ca6c46ba43c458df562e839e078c0",
     "semantic_hash": ""
   },
   "lib/core/screens/cron_screen.dart": {
-    "mtime": 1788718796.557961,
-    "ast_hash": "6e4686181399273f357af5e1882a97bd",
+    "mtime": 1788726494.4582503,
+    "ast_hash": "e2c9fcf1614c74bca6515302fb127185",
     "semantic_hash": ""
   },
   "lib/core/screens/memory_screen.dart": {
@@ -160,8 +160,8 @@
     "semantic_hash": ""
   },
   "lib/core/screens/settings_screen.dart": {
-    "mtime": 1788722722.9144077,
-    "ast_hash": "51ad86d150ccd64fa7801e6058dc7198",
+    "mtime": 1788726103.1267955,
+    "ast_hash": "8c2c05f32747776b1f582a5bf87b6a9b",
     "semantic_hash": ""
   },
   "lib/core/screens/skills_screen.dart": {
@@ -195,8 +195,8 @@
     "semantic_hash": ""
   },
   "lib/core/services/desktop_gateway_client.dart": {
-    "mtime": 1788079783.5760136,
-    "ast_hash": "5330298a64ee9ecc63b6500a53125e59",
+    "mtime": 1788727124.7541761,
+    "ast_hash": "07da30a04120f8530f5ae4977c396383",
     "semantic_hash": ""
   },
   "lib/core/services/gateway_turn_application_controller.dart": {
@@ -250,8 +250,8 @@
     "semantic_hash": ""
   },
   "lib/core/services/ws_client.dart": {
-    "mtime": 1787513018.5098422,
-    "ast_hash": "b8d6efde9c99affa0fbc93e6fb835a60",
+    "mtime": 1788727204.83232,
+    "ast_hash": "29a743f062c4bf863e6b73da1f28661d",
     "semantic_hash": ""
   },
   "lib/core/utils/chat_history_scroll.dart": {
@@ -985,8 +985,8 @@
     "semantic_hash": ""
   },
   "lib/core/widgets/activity_pane.dart": {
-    "mtime": 1788413318.8522105,
-    "ast_hash": "1d46b9b39026a0b2abfbe19a0a5012c0",
+    "mtime": 1788726465.3258443,
+    "ast_hash": "d633d36d7a174c47af7ddb1d07a0fceb",
     "semantic_hash": ""
   },
   "test/activity_feed_test.dart": {
@@ -1130,8 +1130,8 @@
     "semantic_hash": ""
   },
   "docs/ANDROID_FUNCTIONAL_UI_AUDIT.md": {
-    "mtime": 1788040779.1987102,
-    "ast_hash": "c5afffca8e047f07ee96a896639cbb24",
+    "mtime": 1788726577.2664046,
+    "ast_hash": "5bda299dbabf9ffd7b694697dc34bcb3",
     "semantic_hash": ""
   },
   "lib/core/screens/workspace_sessions_screen.dart": {
@@ -1180,8 +1180,8 @@
     "semantic_hash": ""
   },
   "lib/core/utils/relative_time.dart": {
-    "mtime": 1788086502.7677042,
-    "ast_hash": "2ec19256eb68d95dada5f3ca98bc61d6",
+    "mtime": 1788726403.32298,
+    "ast_hash": "0dae3d50a49c2744b0a7928079373610",
     "semantic_hash": ""
   },
   "docs/plans/2026-08-30-project-detail-5-tabs.md": {
@@ -1295,8 +1295,8 @@
     "semantic_hash": ""
   },
   "test/cron_screen_attention_test.dart": {
-    "mtime": 1788718718.183619,
-    "ast_hash": "62e7157487151ae15aeaada02f082df1",
+    "mtime": 1788726508.2944431,
+    "ast_hash": "0d04a3d6bb432cc7dcbda5b6a20350bd",
     "semantic_hash": ""
   },
   "lib/core/services/biometric_authenticator.dart": {
@@ -1345,8 +1345,23 @@
     "semantic_hash": ""
   },
   "test/cron_failures_banner_test.dart": {
-    "mtime": 1788724990.620358,
-    "ast_hash": "a59eaba22c3310869d52883132af342a",
+    "mtime": 1788726561.9621913,
+    "ast_hash": "cd2cf7b3c9bde78744de11e4e07b3d8e",
+    "semantic_hash": ""
+  },
+  "test/chat_approval_replay_test.dart": {
+    "mtime": 1788727204.9883223,
+    "ast_hash": "0832a8318d4f37cdffed511d36f4d7a0",
+    "semantic_hash": ""
+  },
+  "test/relative_time_test.dart": {
+    "mtime": 1788726519.7366028,
+    "ast_hash": "be927da2811a33eb0745307ab7eb4748",
+    "semantic_hash": ""
+  },
+  "test/settings_local_sections_test.dart": {
+    "mtime": 1788726299.0535266,
+    "ast_hash": "83585d210495fdef455be93bf84a7d57",
     "semantic_hash": ""
   }
 }
