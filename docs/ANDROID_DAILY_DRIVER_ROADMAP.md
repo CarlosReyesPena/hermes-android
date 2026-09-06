@@ -1275,6 +1275,52 @@ Projects.
     failures, due tasks, and approvals outside an open chat still require an
     authoritative aggregation contract and are not claimed by this slice.
 
+31. **Approvals that outlive their chat screen** —
+    `test/pending_approval_probe_test.dart`,
+    `test/pending_approvals_banner_test.dart`. The first of the three sources
+    the previous slice deferred. An approval requested while no chat screen was
+    open has no live `approval.request` event anywhere on the device: the
+    gateway queues it per session and `chat_screen.dart` only replays it when
+    that exact chat is reopened. A user who never reopens the right chat stays
+    blocked with nothing on screen saying so.
+
+    The gateway exposes no aggregate "list every pending approval" RPC — the
+    only contract is session-scoped `approval.pending` — so the slice is split
+    the same way the rest of Phase 1 is: `selectApprovalProbeTargets` in
+    `lib/core/utils/pending_approval_probe.dart` owns *which* chats are worth
+    asking about, and `PendingApprovalsBanner` owns presentation.
+
+    Pinned on the decision side: blocked work is probed before running work and
+    running before failed (a turn reported as *stalled* is very often one
+    sitting behind an undelivered approval), a **completed** turn is never
+    probed because a finished turn holds no approval and the request would only
+    slow the Inbox, a chat that ran three turns is asked **once** because
+    approvals are session-keyed while the Activity feed emits one row per turn,
+    titles are carried only when the feed actually knew them, the probe count
+    is capped so one Inbox open cannot spend an unbounded number of round
+    trips, and a cap of zero throws rather than silently returning nothing —
+    an empty probe must never be indistinguishable from "nothing is pending".
+
+    On the presentation side the banner matches `CronFailuresBanner` on purpose
+    so the two Inbox sources never disagree: it renders **only** from an
+    authoritative answer, a `null` loader (a legacy REST connection with no
+    Desktop Gateway, where `approval.pending` does not exist) draws nothing
+    rather than claiming nothing is pending on a question it never asked, a
+    probe that throws hides the banner instead of turning the Inbox into an
+    error screen, an untitled chat is labelled `Untitled chat` rather than
+    named after an id the user has never seen, and a pending approval whose
+    payload carries no command still renders — it is still blocking — showing
+    the gateway's prose instead. Tapping a row opens its chat, where the
+    existing replay path shows the real dialog; the banner deliberately offers
+    **no** inline Approve/Deny, because answering a command the user cannot see
+    in context is exactly the mistake the notification section warns against.
+    A 200 % text-scale test guards the row layout.
+
+    Not yet wired into `WorkspaceScreen._openInbox`: that file was being
+    modified concurrently by another change during this slice, and editing it
+    would have risked clobbering unrelated work. The banner and its probe are
+    complete and covered; the call-site wiring is the next slice.
+
 Phase 0 is **complete**. Step 7 (real Gateway smoke test on a device) passed on
 2026-08-29 against the live Miniserver gateway from a physical SM-S948B over
 wireless debugging, and the migration *write* path it gated is implemented and
@@ -1283,9 +1329,11 @@ covered (`ProjectsRepository.migrateSpaces`,
 (Home, Projects, Activity, More) is implemented, covered, and now validated on
 hardware, so *screen* slices may begin.
 
-Next slice: extend the action Inbox with authoritative Cron failures, due tasks,
-and approvals that outlive an open chat. Keep each source capability-gated and
-never fabricate actionable rows when its server contract is unavailable.
+Next slice: wire `PendingApprovalsBanner` into `WorkspaceScreen._openInbox`
+(the probe and banner landed in point 31 but the call site was owned by a
+concurrent change), then extend the action Inbox with authoritative Cron due
+tasks. Keep each source capability-gated and never fabricate actionable rows
+when its server contract is unavailable.
 
 ---
 
