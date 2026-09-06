@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hermes_android/core/screens/chat_screen.dart';
-import 'package:hermes_android/core/screens/session_list_screen.dart';
 import 'package:hermes_android/core/screens/workspace_screen.dart';
 import 'package:hermes_android/core/services/android_launch_intent_service.dart';
 import 'package:hermes_android/core/services/android_share_intent_service.dart';
@@ -107,7 +106,6 @@ void main() {
     await tester.pump(const Duration(milliseconds: 400));
 
     expect(find.byType(WorkspaceScreen), findsOneWidget);
-    expect(find.byType(SessionListScreen), findsNothing);
     for (final destination in HermesDestination.values) {
       expect(find.text(destination.label), findsWidgets);
     }
