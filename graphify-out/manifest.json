@@ -5,8 +5,8 @@
     "semantic_hash": ""
   },
   "android/app/src/main/java/io/flutter/plugins/GeneratedPluginRegistrant.java": {
-    "mtime": 1787513057.1902766,
-    "ast_hash": "c72b34a839f98e27879ede58388f2113",
+    "mtime": 1788722209.294657,
+    "ast_hash": "ab45ae6c382b2a0e70ab1c079f20b550",
     "semantic_hash": ""
   },
   "android/app/src/main/kotlin/com/hermesagent/hermes_android/MainActivity.kt": {
@@ -70,8 +70,8 @@
     "semantic_hash": ""
   },
   "ios/Runner/GeneratedPluginRegistrant.m": {
-    "mtime": 1787513057.1955054,
-    "ast_hash": "146e4d4fed283873dd28468dcb842cec",
+    "mtime": 1788722209.309657,
+    "ast_hash": "34a7e83e17617e2bcde64300d4babc97",
     "semantic_hash": ""
   },
   "ios/Runner/Runner-Bridging-Header.h": {
@@ -150,8 +150,8 @@
     "semantic_hash": ""
   },
   "lib/core/screens/cron_screen.dart": {
-    "mtime": 1787513018.503842,
-    "ast_hash": "05ca8ce8f804c4b445bb640d7c72a1e0",
+    "mtime": 1788718796.557961,
+    "ast_hash": "6e4686181399273f357af5e1882a97bd",
     "semantic_hash": ""
   },
   "lib/core/screens/memory_screen.dart": {
@@ -160,8 +160,8 @@
     "semantic_hash": ""
   },
   "lib/core/screens/settings_screen.dart": {
-    "mtime": 1787907693.8669934,
-    "ast_hash": "d96abd387e167713bc99c7b7206254dc",
+    "mtime": 1788722722.9144077,
+    "ast_hash": "51ad86d150ccd64fa7801e6058dc7198",
     "semantic_hash": ""
   },
   "lib/core/screens/skills_screen.dart": {
@@ -315,8 +315,8 @@
     "semantic_hash": ""
   },
   "lib/main.dart": {
-    "mtime": 1788651143.2117908,
-    "ast_hash": "6393db035ae9e38a0041c6feb5394611",
+    "mtime": 1788723694.6945543,
+    "ast_hash": "fc0eced56572d37101886382f20dffc9",
     "semantic_hash": ""
   },
   "test/ai_search_query_rewriter_test.dart": {
@@ -575,8 +575,8 @@
     "semantic_hash": ""
   },
   "pubspec.yaml": {
-    "mtime": 1787905562.4694073,
-    "ast_hash": "aeebc803ebae9e8284be2cd979a387ea",
+    "mtime": 1788722207.7106357,
+    "ast_hash": "aded6982c7e6047154ad42cce23e16aa",
     "semantic_hash": ""
   },
   "tools/fake_gateway/README.md": {
@@ -1282,6 +1282,61 @@
   "lib/core/widgets/session_name_dialog.dart": {
     "mtime": 1788715362.4925268,
     "ast_hash": "c0bfbe7cf3637eb513b985398e8faaab",
+    "semantic_hash": ""
+  },
+  "lib/core/utils/cron_health.dart": {
+    "mtime": 1788718796.5729613,
+    "ast_hash": "8ced2a84b028dd11eea7a809634e4dc2",
+    "semantic_hash": ""
+  },
+  "test/cron_health_test.dart": {
+    "mtime": 1788718382.0821261,
+    "ast_hash": "31902ea3797b5e0844e5a773fbfa7434",
+    "semantic_hash": ""
+  },
+  "test/cron_screen_attention_test.dart": {
+    "mtime": 1788718718.183619,
+    "ast_hash": "62e7157487151ae15aeaada02f082df1",
+    "semantic_hash": ""
+  },
+  "lib/core/services/biometric_authenticator.dart": {
+    "mtime": 1788723694.4675512,
+    "ast_hash": "4cee7173f2ff7facb9ef7d7ec0858f58",
+    "semantic_hash": ""
+  },
+  "lib/core/services/biometric_lock_store.dart": {
+    "mtime": 1788722316.4410985,
+    "ast_hash": "7b034397fda0610fdff90c709c7e6ff8",
+    "semantic_hash": ""
+  },
+  "lib/core/widgets/biometric_lock_gate.dart": {
+    "mtime": 1788723694.4945517,
+    "ast_hash": "f883ac5dccc85de243eeb72987e5804a",
+    "semantic_hash": ""
+  },
+  "lib/core/widgets/biometric_settings_card.dart": {
+    "mtime": 1788723694.4985516,
+    "ast_hash": "8c8abdc98ffd52cab8a294a48b8426d3",
+    "semantic_hash": ""
+  },
+  "test/biometric_app_entry_test.dart": {
+    "mtime": 1788723786.2608092,
+    "ast_hash": "e5bb959e172da1fda8d5485c4be1c7b2",
+    "semantic_hash": ""
+  },
+  "test/biometric_lock_gate_test.dart": {
+    "mtime": 1788723694.7215548,
+    "ast_hash": "14c7dcd8452e0374d100f6bcc2ab3efa",
+    "semantic_hash": ""
+  },
+  "test/biometric_lock_store_test.dart": {
+    "mtime": 1788722305.3579493,
+    "ast_hash": "85565ca7474e85033c375fba29de8ab1",
+    "semantic_hash": ""
+  },
+  "test/biometric_settings_card_test.dart": {
+    "mtime": 1788723694.7305548,
+    "ast_hash": "d069ae7a84ae5bec94e1bd9cd82865ea",
     "semantic_hash": ""
   }
 }
