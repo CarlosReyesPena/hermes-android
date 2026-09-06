@@ -202,6 +202,7 @@ class WorkspaceScreen extends StatefulWidget {
 class _WorkspaceScreenState extends State<WorkspaceScreen> {
   ProjectsRepository? _repository;
   DesktopGatewayClient? _ownedGateway;
+  DesktopGatewayClient? _renameGateway;
   ChatSpaceStore? _spaceStore;
   QuickChatStore? _quickChats;
   ApiClient? _sessionsApi;
@@ -605,6 +606,7 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
       unawaited(_repository?.close());
       _ownedGateway?.close();
     }
+    _renameGateway?.close();
     super.dispose();
   }
 
@@ -680,6 +682,7 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
               : (session, targetProjectId) =>
                   repository.assignSession(session.id, targetProjectId),
           projects: repository?.current.projects ?? const [],
+          onRenameSession: _canRenameSessions ? _renameSession : null,
           onUpdateFlags: (session, {pinned, archived}) =>
               (_sessionsApi ??= ApiClient(
                 baseUrl: widget.connection.baseUrl,
@@ -1167,6 +1170,7 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
             : (session, targetProjectId) =>
                 repository.assignSession(session.id, targetProjectId),
         projects: repository?.current.projects ?? const [],
+        onRenameSession: _canRenameSessions ? _renameSession : null,
         onUpdateFlags: (session, {pinned, archived}) =>
             (_sessionsApi ??= ApiClient(
               baseUrl: widget.connection.baseUrl,
@@ -1180,6 +1184,22 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
         searchController: searchController,
       ),
     );
+  }
+
+  /// Renames a conversation from the Chats browser.
+  ///
+  /// Offered only when the connection carries a Desktop Gateway URL, because
+  /// `session.title` is a JSON-RPC capability, not a REST one. The client is
+  /// created lazily so an unused affordance costs no connection.
+  bool get _canRenameSessions =>
+      widget.connection.desktopGatewayUrl?.trim().isNotEmpty == true;
+
+  Future<void> _renameSession(Session session, String title) async {
+    final gateway =
+        _ownedGateway ??
+        (_renameGateway ??=
+            DesktopGatewayClient.fromConnection(widget.connection));
+    await gateway.renameSession(sessionId: session.id, title: title);
   }
 
   Future<void> _promoteQuickChat(Session session) async {

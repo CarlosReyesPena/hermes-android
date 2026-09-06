@@ -12,6 +12,7 @@ import '../services/session_search_preferences.dart';
 import '../theme/hermes_theme.dart';
 import '../utils/relative_time.dart';
 import '../widgets/hermes_components.dart';
+import '../widgets/session_name_dialog.dart';
 
 const kWorkspaceSessionSearchKey = Key('workspace-session-search');
 
@@ -147,6 +148,10 @@ typedef WorkspaceSessionMover =
 typedef WorkspaceSessionFlagUpdater =
     Future<void> Function(Session session, {bool? pinned, bool? archived});
 
+/// Renames one conversation to a user-supplied title.
+typedef WorkspaceSessionRenamer =
+    Future<void> Function(Session session, String title);
+
 class QuickChatPromotionCancelled implements Exception {
   const QuickChatPromotionCancelled();
 }
@@ -197,6 +202,11 @@ class WorkspaceSessionsScreen extends StatefulWidget {
   /// Archive/Unarchive, backed by this callback (single-session `PATCH`).
   final WorkspaceSessionFlagUpdater? onUpdateFlags;
 
+  /// When non-null, the long-press menu also offers Rename, backed by this
+  /// callback. The legacy session list exposed rename; the new Chats browser
+  /// must not silently lose it.
+  final WorkspaceSessionRenamer? onRenameSession;
+
   /// When non-null, the search bar gains the three search modes (on-device,
   /// full-text, AI + full-text) and the network modes use this controller.
   ///
@@ -218,6 +228,7 @@ class WorkspaceSessionsScreen extends StatefulWidget {
     this.onMoveSession,
     this.projects = const [],
     this.onUpdateFlags,
+    this.onRenameSession,
     this.searchController,
     this.now,
     super.key,
@@ -424,7 +435,8 @@ class _WorkspaceSessionsScreenState extends State<WorkspaceSessionsScreen> {
 
   Future<void> _showSessionMenu(Session session) async {
     final update = widget.onUpdateFlags;
-    if (update == null) return;
+    final rename = widget.onRenameSession;
+    if (update == null && rename == null) return;
     final action = await showModalBottomSheet<String>(
       context: context,
       builder: (context) => SafeArea(
@@ -432,27 +444,64 @@ class _WorkspaceSessionsScreenState extends State<WorkspaceSessionsScreen> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            ListTile(
-              leading: Icon(
-                session.pinned ? Icons.push_pin_outlined : Icons.push_pin,
+            if (update != null)
+              ListTile(
+                leading: Icon(
+                  session.pinned ? Icons.push_pin_outlined : Icons.push_pin,
+                ),
+                title: Text(session.pinned ? 'Unpin' : 'Pin'),
+                onTap: () => Navigator.pop(context, 'pin'),
               ),
-              title: Text(session.pinned ? 'Unpin' : 'Pin'),
-              onTap: () => Navigator.pop(context, 'pin'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.archive_outlined),
-              title: Text(session.archived ? 'Unarchive' : 'Archive'),
-              onTap: () => Navigator.pop(context, 'archive'),
-            ),
+            if (update != null)
+              ListTile(
+                leading: const Icon(Icons.archive_outlined),
+                title: Text(session.archived ? 'Unarchive' : 'Archive'),
+                onTap: () => Navigator.pop(context, 'archive'),
+              ),
+            if (rename != null)
+              ListTile(
+                leading: const Icon(Icons.edit_outlined),
+                title: const Text('Rename'),
+                onTap: () => Navigator.pop(context, 'rename'),
+              ),
           ],
         ),
       ),
     );
     if (action == null || !mounted) return;
+    if (action == 'rename') {
+      await _renameSession(session);
+      return;
+    }
     if (action == 'pin') {
       await _updateFlag(session, pinned: !session.pinned);
-    } else {
+    } else if (action == 'archive') {
       await _updateFlag(session, archived: !session.archived);
+    }
+  }
+
+  Future<void> _renameSession(Session session) async {
+    final rename = widget.onRenameSession;
+    if (rename == null || _updatingFlags.contains(session.id)) return;
+    final title = await showSessionNameDialog(
+      context: context,
+      title: 'Rename chat',
+      initialValue: session.title,
+      actionLabel: 'Rename',
+    );
+    if (title == null || title == session.title || !mounted) return;
+    setState(() => _updatingFlags.add(session.id));
+    try {
+      await rename(session, title);
+      if (!mounted) return;
+      setState(() => _updatingFlags.remove(session.id));
+      await _load();
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _updatingFlags.remove(session.id));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Couldn’t rename conversation')),
+      );
     }
   }
 
@@ -962,11 +1011,11 @@ class _WorkspaceSessionsScreenState extends State<WorkspaceSessionsScreen> {
         widget.view == WorkspaceSessionView.archivedQuick &&
         widget.onPromote != null;
     final showMove = widget.onMoveSession != null;
-    final showFlags = widget.onUpdateFlags != null;
+    final showActions =
+        widget.onUpdateFlags != null || widget.onRenameSession != null;
     return HermesCard(
       onTap: () => widget.onOpenSession(session),
-      onLongPress:
-          showFlags ? () => unawaited(_showSessionMenu(session)) : null,
+      onLongPress: showActions ? () => unawaited(_showSessionMenu(session)) : null,
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

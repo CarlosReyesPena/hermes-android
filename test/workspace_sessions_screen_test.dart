@@ -531,6 +531,74 @@ void main() {
       expect(find.text('Unpin'), findsOneWidget);
       expect(find.text('Unarchive'), findsOneWidget);
     });
+
+    testWidgets('long-press offers Rename and renames through the callback', (
+      tester,
+    ) async {
+      final renames = <String>[];
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: hermesTheme(Brightness.dark),
+          home: Scaffold(
+            body: WorkspaceSessionsScreen(
+              title: 'Chats',
+              view: WorkspaceSessionView.all,
+              embedded: true,
+              now: now,
+              load: () async => WorkspaceSessionsData(
+                sessions: [_session('s1', 'Unfiled research')],
+              ),
+              onOpenSession: (_) {},
+              onRenameSession: (session, title) async {
+                renames.add('${session.id}:$title');
+              },
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.longPress(find.text('Unfiled research'));
+      await tester.pumpAndSettle();
+      expect(find.text('Rename'), findsOneWidget);
+
+      await tester.tap(find.text('Rename'));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextFormField), 'Renamed research');
+      await tester.tap(find.widgetWithText(FilledButton, 'Rename'));
+      await tester.pumpAndSettle();
+
+      expect(renames, ['s1:Renamed research']);
+    });
+
+    testWidgets('long-press without a renamer never offers Rename', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: hermesTheme(Brightness.dark),
+          home: Scaffold(
+            body: WorkspaceSessionsScreen(
+              title: 'Chats',
+              view: WorkspaceSessionView.all,
+              embedded: true,
+              now: now,
+              load: () async => WorkspaceSessionsData(
+                sessions: [_session('s1', 'Unfiled research')],
+              ),
+              onOpenSession: (_) {},
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.longPress(find.text('Unfiled research'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Rename'), findsNothing);
+    });
   });
 
   testWidgets('search opens a result and Archived Quick offers Promote', (
