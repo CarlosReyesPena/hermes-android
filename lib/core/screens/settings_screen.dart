@@ -159,48 +159,26 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Widget _buildBody() {
-    if (_loading) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
-    if (_error != null && _modelOptions == null) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(32),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.error_outline, size: 48, color: Colors.orange),
-              const SizedBox(height: 16),
-              Text(
-                'Failed to load settings',
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                _error!,
-                style: Theme.of(context).textTheme.bodySmall,
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 24),
-              ElevatedButton(onPressed: _loadData, child: const Text('Retry')),
-            ],
-          ),
-        ),
-      );
-    }
-
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        // ---- Section: Model ----
+        // ---- Section: Model (server-backed; its failure is local to this
+        // section so purely local controls below stay reachable offline) ----
         _buildSectionHeader('Profile default model'),
-        Text(
-          'Changes the default for ${widget.connection.label}. Use the selector in a chat to override only that conversation.',
-          style: Theme.of(context).textTheme.bodySmall,
-        ),
-        const SizedBox(height: 8),
-        if (_modelInfo != null)
+        if (_loading)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 24),
+            child: Center(child: CircularProgressIndicator()),
+          )
+        else if (_error != null && _modelOptions == null)
+          _ModelSectionError(onRetry: _loadData)
+        else ...[
+          Text(
+            'Changes the default for ${widget.connection.label}. Use the selector in a chat to override only that conversation.',
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+          const SizedBox(height: 8),
+          if (_modelInfo != null)
           Card(
             child: Padding(
               padding: const EdgeInsets.all(16),
@@ -317,7 +295,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               child: Text(_error!, style: const TextStyle(color: Colors.white)),
             ),
           ),
-
+        ],
         const SizedBox(height: 16),
 
         // ---- Section: Theme ----
@@ -853,6 +831,59 @@ class _SessionSourcesFilterState extends State<_SessionSourcesFilter> {
             controlAffinity: ListTileControlAffinity.leading,
           );
         }).toList(),
+      ),
+    );
+  }
+}
+
+/// Localized error card for the server-backed Model section.
+///
+/// Unlike the previous full-screen error, this keeps every local Settings
+/// section (Appearance, Security, Voice, Backup…) reachable when the
+/// dashboard is unreachable — those controls must survive a network outage,
+/// because they are exactly what the user needs to repair the connection.
+class _ModelSectionError extends StatelessWidget {
+  const _ModelSectionError({required this.onRetry});
+
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.error_outline, color: Colors.orange),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Model settings are unavailable',
+                    style: Theme.of(context).textTheme.titleSmall,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'The dashboard could not be reached, so the default model '
+              'cannot be loaded. Local settings below still work.',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+            const SizedBox(height: 12),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: OutlinedButton.icon(
+                onPressed: onRetry,
+                icon: const Icon(Icons.refresh, size: 18),
+                label: const Text('Retry'),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
