@@ -121,6 +121,31 @@ void main() {
     );
   });
 
+  testWidgets('a Continue working row omits the redundant Idle chip', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      loadSessions: () async => [
+        _session(id: 'idle', title: 'Resume this', startedAgo: const Duration(hours: 1)),
+        _session(id: 'live', title: 'Working now'),
+        _session(
+          id: 'done',
+          title: 'Finished work',
+          endedAgo: const Duration(hours: 2),
+        ),
+      ],
+      running: const {'live'},
+    );
+    await tester.pumpAndSettle();
+
+    // The section header already says "Continue working"; a grey "Idle" chip
+    // on every row is noise, not signal. Running and Done chips stay.
+    expect(find.text('Idle'), findsNothing);
+    expect(find.text('Running'), findsOneWidget);
+    expect(find.text('Done'), findsOneWidget);
+  });
+
   testWidgets(
     'a blocked session states its reason and never doubles as running',
     (tester) async {

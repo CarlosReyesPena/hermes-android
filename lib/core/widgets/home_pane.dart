@@ -291,7 +291,11 @@ class _HomeItemCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: HermesSpacing.sm),
-              StatusChip(status: item.status),
+              // An idle row sits under a "Continue working" header; a grey
+              // "Idle" chip on every row would be noise, not signal. Running,
+              // blocked, and completed rows keep their chips.
+              if (item.status != HermesStatus.idle)
+                StatusChip(status: item.status),
             ],
           ),
           if (reason != null) ...[
