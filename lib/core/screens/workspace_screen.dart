@@ -727,6 +727,7 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
                     repository.assignSession(session.id, targetProjectId),
           projects: repository?.current.projects ?? const [],
           onRenameSession: _canRenameSessions ? _renameSession : null,
+          onDeleteSession: _deleteSession,
           onUpdateFlags: (session, {pinned, archived}) =>
               (_sessionsApi ??= ApiClient(
                 baseUrl: widget.connection.baseUrl,
@@ -1283,6 +1284,7 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
                   repository.assignSession(session.id, targetProjectId),
         projects: repository?.current.projects ?? const [],
         onRenameSession: _canRenameSessions ? _renameSession : null,
+        onDeleteSession: _deleteSession,
         onUpdateFlags: (session, {pinned, archived}) =>
             (_sessionsApi ??= ApiClient(
               baseUrl: widget.connection.baseUrl,
@@ -1313,6 +1315,19 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
           widget.connection,
         ));
     await gateway.renameSession(sessionId: session.id, title: title);
+  }
+
+  /// Deletes a conversation from the Chats browser.
+  ///
+  /// Uses the same lazily-created REST client as the pin/archive PATCH so an
+  /// unused affordance costs no connection; `DELETE /api/sessions/{id}` is a
+  /// gateway REST capability available on every saved connection.
+  Future<void> _deleteSession(Session session) async {
+    await (_sessionsApi ??= ApiClient(
+      baseUrl: widget.connection.baseUrl,
+      apiKey: widget.connection.apiKey,
+      pathPrefix: widget.connection.gatewayPrefix ?? '',
+    )).deleteSession(session.id);
   }
 
   Future<void> _promoteQuickChat(Session session) async {

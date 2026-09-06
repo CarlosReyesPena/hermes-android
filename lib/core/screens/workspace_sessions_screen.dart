@@ -152,6 +152,12 @@ typedef WorkspaceSessionFlagUpdater =
 typedef WorkspaceSessionRenamer =
     Future<void> Function(Session session, String title);
 
+/// Deletes one conversation irreversibly (server-authoritative `DELETE`).
+///
+/// The UI asks for explicit confirmation before invoking this because the
+/// action cannot be undone: archiving keeps the content, deletion removes it.
+typedef WorkspaceSessionDeleter = Future<void> Function(Session session);
+
 class QuickChatPromotionCancelled implements Exception {
   const QuickChatPromotionCancelled();
 }
@@ -207,6 +213,11 @@ class WorkspaceSessionsScreen extends StatefulWidget {
   /// must not silently lose it.
   final WorkspaceSessionRenamer? onRenameSession;
 
+  /// When non-null, the long-press menu also offers Delete, backed by this
+  /// callback. Destructive and irreversible: the row asks for confirmation
+  /// before calling it, and a deleted conversation disappears for good.
+  final WorkspaceSessionDeleter? onDeleteSession;
+
   /// When non-null, the search bar gains the three search modes (on-device,
   /// full-text, AI + full-text) and the network modes use this controller.
   ///
@@ -235,6 +246,7 @@ class WorkspaceSessionsScreen extends StatefulWidget {
     this.projects = const [],
     this.onUpdateFlags,
     this.onRenameSession,
+    this.onDeleteSession,
     this.searchController,
     this.searchControllerFactory,
     this.now,
@@ -485,7 +497,9 @@ class _WorkspaceSessionsScreenState extends State<WorkspaceSessionsScreen> {
   Future<void> _showSessionMenu(Session session) async {
     final update = widget.onUpdateFlags;
     final rename = widget.onRenameSession;
-    if (update == null && rename == null) return;
+    if (update == null && rename == null && widget.onDeleteSession == null) {
+      return;
+    }
     final action = await showModalBottomSheet<String>(
       context: context,
       builder: (context) => SafeArea(
@@ -513,6 +527,15 @@ class _WorkspaceSessionsScreenState extends State<WorkspaceSessionsScreen> {
                 title: const Text('Rename'),
                 onTap: () => Navigator.pop(context, 'rename'),
               ),
+            if (widget.onDeleteSession != null)
+              ListTile(
+                leading: const Icon(Icons.delete_outline),
+                title: const Text('Delete'),
+                titleTextStyle: TextStyle(
+                  color: Theme.of(context).colorScheme.error,
+                ),
+                onTap: () => Navigator.pop(context, 'delete'),
+              ),
           ],
         ),
       ),
@@ -522,10 +545,57 @@ class _WorkspaceSessionsScreenState extends State<WorkspaceSessionsScreen> {
       await _renameSession(session);
       return;
     }
+    if (action == 'delete') {
+      await _deleteSession(session);
+      return;
+    }
     if (action == 'pin') {
       await _updateFlag(session, pinned: !session.pinned);
     } else if (action == 'archive') {
       await _updateFlag(session, archived: !session.archived);
+    }
+  }
+
+  /// Confirms and performs the irreversible deletion of [session].
+  Future<void> _deleteSession(Session session) async {
+    final deleter = widget.onDeleteSession;
+    if (deleter == null || _updatingFlags.contains(session.id)) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Delete this conversation?'),
+        content: Text(
+          '“${session.title}” and its full history will be permanently '
+          'removed. Archiving keeps it; deleting cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(dialogContext).colorScheme.error,
+            ),
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    setState(() => _updatingFlags.add(session.id));
+    try {
+      await deleter(session);
+      if (!mounted) return;
+      setState(() => _updatingFlags.remove(session.id));
+      await _load();
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _updatingFlags.remove(session.id));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Couldn’t delete conversation')),
+      );
     }
   }
 
@@ -1072,7 +1142,9 @@ class _WorkspaceSessionsScreenState extends State<WorkspaceSessionsScreen> {
         widget.onPromote != null;
     final showMove = widget.onMoveSession != null;
     final showActions =
-        widget.onUpdateFlags != null || widget.onRenameSession != null;
+        widget.onUpdateFlags != null ||
+        widget.onRenameSession != null ||
+        widget.onDeleteSession != null;
     return HermesCard(
       onTap: () => widget.onOpenSession(session),
       onLongPress: showActions

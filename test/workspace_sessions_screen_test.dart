@@ -604,6 +604,79 @@ void main() {
 
       expect(find.text('Rename'), findsNothing);
     });
+
+    testWidgets('long-press offers Delete and deletes after confirmation', (
+      tester,
+    ) async {
+      final deleted = <String>[];
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: hermesTheme(Brightness.dark),
+          home: Scaffold(
+            body: WorkspaceSessionsScreen(
+              title: 'Chats',
+              view: WorkspaceSessionView.all,
+              embedded: true,
+              now: now,
+              load: () async => WorkspaceSessionsData(
+                sessions: [_session('s1', 'Unfiled research')],
+              ),
+              onOpenSession: (_) {},
+              onDeleteSession: (session) async => deleted.add(session.id),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.longPress(find.text('Unfiled research'));
+      await tester.pumpAndSettle();
+      expect(find.text('Delete'), findsOneWidget);
+
+      // A destructive action must not fire without explicit confirmation.
+      await tester.tap(find.text('Delete'));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('Delete this conversation'), findsOneWidget);
+
+      await tester.tap(find.text('Delete').last);
+      await tester.pumpAndSettle();
+      expect(deleted, ['s1']);
+    });
+
+    testWidgets('cancelling the delete confirmation keeps the conversation', (
+      tester,
+    ) async {
+      final deleted = <String>[];
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: hermesTheme(Brightness.dark),
+          home: Scaffold(
+            body: WorkspaceSessionsScreen(
+              title: 'Chats',
+              view: WorkspaceSessionView.all,
+              embedded: true,
+              now: now,
+              load: () async => WorkspaceSessionsData(
+                sessions: [_session('s1', 'Unfiled research')],
+              ),
+              onOpenSession: (_) {},
+              onDeleteSession: (session) async => deleted.add(session.id),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.longPress(find.text('Unfiled research'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Delete'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Cancel'));
+      await tester.pumpAndSettle();
+      expect(deleted, isEmpty);
+      expect(find.text('Unfiled research'), findsOneWidget);
+    });
   });
 
   testWidgets('search opens a result and Archived Quick offers Promote', (
