@@ -695,6 +695,31 @@ class WsClient {
     }
   }
 
+  /// Fetches approvals that are still waiting on this gateway session.
+  ///
+  /// A session that requested approval while the mobile app was closed (or
+  /// the socket was down) has no live `approval.request` event to replay — the
+  /// gateway keeps the request in its pending queue, and this reads it back so
+  /// the chat can re-show the dialog instead of leaving the turn blocked
+  /// forever with no visible prompt. Returns an empty list when nothing is
+  /// pending.
+  Future<List<Map<String, dynamic>>> fetchPendingApprovals(
+    String sessionId,
+  ) async {
+    final response = await send('approval.pending', {'session_id': sessionId});
+    final error = response['error'];
+    if (error != null) {
+      throw _gatewayResponseError(
+        'approval.pending',
+        error,
+        fallbackMessage: 'Gateway approval read failed',
+      );
+    }
+    final raw = response['result']?['approvals'];
+    if (raw is! List) return const [];
+    return raw.whereType<Map<String, dynamic>>().toList(growable: false);
+  }
+
   /// Resolves the single in-flight Hermes approval for one gateway session.
   Future<void> respondToApproval({
     required String sessionId,

@@ -99,6 +99,16 @@ typedef TestRemoteAttachmentUpload =
       required String dataUrl,
     });
 
+/// Reads the approvals the gateway still has pending for a session.
+///
+/// The real implementation calls `approval.pending` over the desktop gateway
+/// socket; tests substitute a canned list. Injectable exactly like
+/// [TestRemotePromptSubmit] so the replay behaviour can be asserted without
+/// a live gateway.
+@visibleForTesting
+typedef TestPendingApprovalLoader =
+    Future<List<Map<String, dynamic>>> Function(String sessionId);
+
 class _PendingSensitivePrompt {
   final GatewaySensitivePromptRequest request;
   final int responseGeneration;
@@ -159,6 +169,11 @@ class ChatScreen extends StatefulWidget {
   @visibleForTesting
   final TurnNotificationService? testTurnNotifications;
 
+  /// Overrides how the chat reads approvals that are still pending on the
+  /// gateway (see [TestPendingApprovalLoader]).
+  @visibleForTesting
+  final TestPendingApprovalLoader? testPendingApprovalLoader;
+
   const ChatScreen({
     required this.connection,
     required this.session,
@@ -175,6 +190,7 @@ class ChatScreen extends StatefulWidget {
     this.testInitialAttachmentDrafts = const [],
     this.testVoiceComposerAdapter,
     this.testTurnNotifications,
+    this.testPendingApprovalLoader,
     super.key,
   });
 
@@ -413,6 +429,39 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
       // The composer remains available. The next send retries with a fresh
       // single-use ticket and surfaces an actionable error if it still fails.
     }
+    // An approval requested while this chat was closed (or the socket was
+    // down) has no live event to replay — the gateway keeps it in its pending
+    // queue. Read it back so the turn is never blocked behind an invisible
+    // prompt. Best-effort: a gateway without `approval.pending`, or a socket
+    // that never connected, simply reports none.
+    if (widget.testPendingApprovalLoader != null) {
+      await _replayPendingApprovals(
+        () => widget.testPendingApprovalLoader!(widget.session.id),
+      );
+    } else if (gateway.isConnected) {
+      await _replayPendingApprovals(
+        () => gateway.fetchPendingApprovals(widget.session.id),
+      );
+    }
+  }
+
+  /// Re-shows the first unanswered approval, if any.
+  ///
+  /// Guarded by [_approvalDialogOpen] so a live `approval.request` that is
+  /// already on screen is never duplicated, and by the response generation so
+  /// a replay from an older turn cannot pop over a newer one.
+  Future<void> _replayPendingApprovals(
+    Future<List<Map<String, dynamic>>> Function() load,
+  ) async {
+    if (!mounted || _approvalDialogOpen || _desktopGateway == null) return;
+    List<Map<String, dynamic>> pending;
+    try {
+      pending = await load();
+    } catch (_) {
+      return;
+    }
+    if (!mounted || _approvalDialogOpen || pending.isEmpty) return;
+    _showGatewayApproval(pending.first, _responseGeneration);
   }
 
   void _editAndResend(String text) {

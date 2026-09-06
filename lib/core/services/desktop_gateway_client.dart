@@ -60,6 +60,9 @@ class DesktopGatewayClient {
     required this._documentProfile,
   });
 
+  /// Whether the shared gateway socket is currently connected.
+  bool get isConnected => _ws?.isConnected ?? false;
+
   /// The canonical gateway origin for [connection].
   ///
   /// Extracted so the recovery-journal scope can be derived without opening a
@@ -356,6 +359,22 @@ class DesktopGatewayClient {
     }
     await client.interruptSession(gatewaySessionId);
     return true;
+  }
+
+  /// Fetches approvals still pending on the gateway session mapped to
+  /// [sessionId]. Returns an empty list when the mobile chat has no bound
+  /// gateway session, the socket is down, or nothing is pending — the chat
+  /// replays the first one so a request that outlived the open screen is
+  /// never silently lost.
+  Future<List<Map<String, dynamic>>> fetchPendingApprovals(
+    String sessionId,
+  ) async {
+    final gatewaySessionId = _gatewaySessionIds[sessionId];
+    final client = _ws;
+    if (gatewaySessionId == null || client == null || !client.isConnected) {
+      return const [];
+    }
+    return client.fetchPendingApprovals(gatewaySessionId);
   }
 
   /// Resolves an approval against the gateway session mapped to this mobile
