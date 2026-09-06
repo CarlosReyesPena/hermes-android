@@ -200,8 +200,8 @@
     "semantic_hash": ""
   },
   "lib/core/services/connection_manager.dart": {
-    "mtime": 1788082642.7243512,
-    "ast_hash": "962b612ee5d59d7c29be6d2d743f3559",
+    "mtime": 1788663325.7013512,
+    "ast_hash": "8e1dfd7c135cec9a7c034b1f65a14d9b",
     "semantic_hash": ""
   },
   "lib/core/services/desktop_gateway_client.dart": {
@@ -375,8 +375,8 @@
     "semantic_hash": ""
   },
   "test/connection_manager_test.dart": {
-    "mtime": 1788079783.940018,
-    "ast_hash": "6ac70727bda2f20f3fa5a6d53afa1914",
+    "mtime": 1788663154.297123,
+    "ast_hash": "ae42e63406ec44863da8eeea46129951",
     "semantic_hash": ""
   },
   "test/document_intake_profile_test.dart": {
@@ -860,8 +860,8 @@
     "semantic_hash": ""
   },
   "lib/core/screens/workspace_screen.dart": {
-    "mtime": 1788652070.0959945,
-    "ast_hash": "16366d4e3ec80e07243bf20d941c8925",
+    "mtime": 1788663285.9168339,
+    "ast_hash": "1886e46a444dc4756e88a06d5db67ba8",
     "semantic_hash": ""
   },
   "test/workspace_screen_test.dart": {
@@ -1150,13 +1150,13 @@
     "semantic_hash": ""
   },
   "lib/core/screens/workspace_sessions_screen.dart": {
-    "mtime": 1788652030.4493911,
-    "ast_hash": "baf6facab09ee811f9b2b30abd0da05e",
+    "mtime": 1788663250.0303674,
+    "ast_hash": "ebc4b1aa1a0012e7085750ee1805eb87",
     "semantic_hash": ""
   },
   "test/workspace_sessions_screen_test.dart": {
-    "mtime": 1788652353.5483775,
-    "ast_hash": "6d3781fd573a8087e0787865ca885be5",
+    "mtime": 1788663364.9888618,
+    "ast_hash": "e1a6eed757eb66f9823547643d7c16ef",
     "semantic_hash": ""
   },
   "docs/ANDROID_PHASE1_COHERENCE_GOAL.md": {

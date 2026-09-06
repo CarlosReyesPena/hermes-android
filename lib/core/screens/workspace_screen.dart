@@ -680,6 +680,16 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
               : (session, targetProjectId) =>
                   repository.assignSession(session.id, targetProjectId),
           projects: repository?.current.projects ?? const [],
+          onUpdateFlags: (session, {pinned, archived}) =>
+              (_sessionsApi ??= ApiClient(
+                baseUrl: widget.connection.baseUrl,
+                apiKey: widget.connection.apiKey,
+                pathPrefix: widget.connection.gatewayPrefix ?? '',
+              )).updateSessionFlags(
+                session.id,
+                pinned: pinned,
+                archived: archived,
+              ),
         );
       case HermesDestination.projects:
         final repository = _repository;
@@ -1157,6 +1167,16 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
             : (session, targetProjectId) =>
                 repository.assignSession(session.id, targetProjectId),
         projects: repository?.current.projects ?? const [],
+        onUpdateFlags: (session, {pinned, archived}) =>
+            (_sessionsApi ??= ApiClient(
+              baseUrl: widget.connection.baseUrl,
+              apiKey: widget.connection.apiKey,
+              pathPrefix: widget.connection.gatewayPrefix ?? '',
+            )).updateSessionFlags(
+              session.id,
+              pinned: pinned,
+              archived: archived,
+            ),
         searchController: searchController,
       ),
     );

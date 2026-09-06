@@ -458,6 +458,79 @@ void main() {
       expect(find.text('Old'), findsNothing);
       expect(find.text('Tuk-tuk'), findsOneWidget);
     });
+
+    testWidgets('long-press pins and archives a conversation', (tester) async {
+      final updates = <(String, bool?, bool?)>[];
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: hermesTheme(Brightness.dark),
+          home: Scaffold(
+            body: WorkspaceSessionsScreen(
+              title: 'Chats',
+              view: WorkspaceSessionView.all,
+              embedded: true,
+              now: now,
+              load: () async => WorkspaceSessionsData(
+                sessions: [_session('s1', 'Unfiled research')],
+              ),
+              onOpenSession: (_) {},
+              onUpdateFlags: (session, {pinned, archived}) async {
+                updates.add((session.id, pinned, archived));
+              },
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.longPress(find.text('Unfiled research'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Pin'), findsOneWidget);
+      expect(find.text('Archive'), findsOneWidget);
+
+      await tester.tap(find.text('Pin'));
+      await tester.pumpAndSettle();
+      expect(updates, [('s1', true, null)]);
+
+      await tester.longPress(find.text('Unfiled research'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Archive'));
+      await tester.pumpAndSettle();
+      expect(updates, [('s1', true, null), ('s1', null, true)]);
+    });
+
+    testWidgets('long-press offers Unpin/Unarchive when already set', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: hermesTheme(Brightness.dark),
+          home: Scaffold(
+            body: WorkspaceSessionsScreen(
+              title: 'Chats',
+              view: WorkspaceSessionView.all,
+              embedded: true,
+              now: now,
+              load: () async => WorkspaceSessionsData(
+                sessions: [
+                  _session('s1', 'Kept', pinned: true, archived: true),
+                ],
+              ),
+              onOpenSession: (_) {},
+              onUpdateFlags: (_, {pinned, archived}) async {},
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.longPress(find.text('Kept'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Unpin'), findsOneWidget);
+      expect(find.text('Unarchive'), findsOneWidget);
+    });
   });
 
   testWidgets('search opens a result and Archived Quick offers Promote', (

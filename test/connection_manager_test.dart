@@ -472,6 +472,56 @@ void main() {
       await client.deleteSession('mob-absent');
       client.close();
     });
+
+    test('updateSessionFlags PATCHes pinned and archived in one call', () async {
+      final client = ApiClient(
+        baseUrl: 'http://hermes.local:8642',
+        apiKey: 'valid-key',
+        httpClient: MockClient((request) async {
+          expect(request.method, 'PATCH');
+          expect(request.url.path, '/api/sessions/mob-123');
+          expect(request.headers['authorization'], 'Bearer valid-key');
+          final body = jsonDecode(request.body) as Map<String, dynamic>;
+          expect(body, {'pinned': true, 'archived': false});
+          return http.Response('{"object":"hermes.session"}', 200);
+        }),
+      );
+
+      await client.updateSessionFlags('mob-123', pinned: true, archived: false);
+      client.close();
+    });
+
+    test('updateSessionFlags sends only the flags it was given', () async {
+      final client = ApiClient(
+        baseUrl: 'http://hermes.local:8642',
+        apiKey: 'valid-key',
+        httpClient: MockClient((request) async {
+          expect(request.method, 'PATCH');
+          final body = jsonDecode(request.body) as Map<String, dynamic>;
+          expect(body, {'pinned': false});
+          return http.Response('{"object":"hermes.session"}', 200);
+        }),
+      );
+
+      await client.updateSessionFlags('mob-123', pinned: false);
+      client.close();
+    });
+
+    test('updateSessionFlags surfaces a non-2xx gateway response', () async {
+      final client = ApiClient(
+        baseUrl: 'http://hermes.local:8642',
+        apiKey: 'valid-key',
+        httpClient: MockClient((request) async {
+          return http.Response('bad flag', 400);
+        }),
+      );
+
+      await expectLater(
+        client.updateSessionFlags('mob-123', pinned: true),
+        throwsException,
+      );
+      client.close();
+    });
   });
 
   group('GatewayChatClient', () {

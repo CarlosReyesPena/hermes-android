@@ -654,6 +654,38 @@ class ApiClient {
     }
   }
 
+  // ── Session flags ─────────────────────────────────────────────────────
+
+  /// Updates one session's durable flags via `PATCH /api/sessions/{id}`.
+  ///
+  /// At least one of [pinned], [archived], [hidden], or [unread] must be
+  /// non-null; the gateway rejects an empty patch. The gateway applies each
+  /// flag across the session's whole compression lineage, and `pinned` exempts
+  /// it from the auto-archive sweep.
+  Future<void> updateSessionFlags(
+    String sessionId, {
+    bool? pinned,
+    bool? archived,
+    bool? hidden,
+    bool? unread,
+  }) async {
+    final encodedId = Uri.encodeComponent(sessionId);
+    final body = <String, dynamic>{
+      'pinned': ?pinned,
+      'archived': ?archived,
+      'hidden': ?hidden,
+      'unread': ?unread,
+    };
+    final res = await _http.patch(
+      Uri.parse('$baseUrl/api/sessions/$encodedId'),
+      headers: _headers,
+      body: jsonEncode(body),
+    );
+    if (res.statusCode < 200 || res.statusCode >= 300) {
+      throw Exception('HTTP ${res.statusCode}: ${res.body}');
+    }
+  }
+
   // ── Models ───────────────────────────────────────────────────────────
 
   Future<List<String>> getModels() async {

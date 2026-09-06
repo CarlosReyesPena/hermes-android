@@ -142,6 +142,11 @@ typedef WorkspaceSessionPromoter = Future<void> Function(Session session);
 typedef WorkspaceSessionMover =
     Future<void> Function(Session session, String? projectId);
 
+/// Updates one conversation's durable flags (pin / archive) server-side. The
+/// gateway persists each flag across the session's compression lineage.
+typedef WorkspaceSessionFlagUpdater =
+    Future<void> Function(Session session, {bool? pinned, bool? archived});
+
 class QuickChatPromotionCancelled implements Exception {
   const QuickChatPromotionCancelled();
 }
@@ -188,6 +193,10 @@ class WorkspaceSessionsScreen extends StatefulWidget {
   final WorkspaceSessionMover? onMoveSession;
   final List<HermesProject> projects;
 
+  /// When non-null, each row gains a long-press menu with Pin/Unpin and
+  /// Archive/Unarchive, backed by this callback (single-session `PATCH`).
+  final WorkspaceSessionFlagUpdater? onUpdateFlags;
+
   /// When non-null, the search bar gains the three search modes (on-device,
   /// full-text, AI + full-text) and the network modes use this controller.
   ///
@@ -208,6 +217,7 @@ class WorkspaceSessionsScreen extends StatefulWidget {
     this.embedded = false,
     this.onMoveSession,
     this.projects = const [],
+    this.onUpdateFlags,
     this.searchController,
     this.now,
     super.key,
@@ -228,6 +238,7 @@ class _WorkspaceSessionsScreenState extends State<WorkspaceSessionsScreen> {
   String _query = '';
   final Set<String> _promoting = {};
   final Set<String> _moving = {};
+  final Set<String> _updatingFlags = {};
 
   /// The active chip filter in the embedded Chats browser.
   WorkspaceChatsFilter _filter = WorkspaceChatsFilter.all;
@@ -387,6 +398,62 @@ class _WorkspaceSessionsScreenState extends State<WorkspaceSessionsScreen> {
     );
     if (target == null || !mounted) return;
     await _moveSession(session, target);
+  }
+
+  Future<void> _updateFlag(
+    Session session, {
+    bool? pinned,
+    bool? archived,
+  }) async {
+    final update = widget.onUpdateFlags;
+    if (update == null || _updatingFlags.contains(session.id)) return;
+    setState(() => _updatingFlags.add(session.id));
+    try {
+      await update(session, pinned: pinned, archived: archived);
+      if (!mounted) return;
+      setState(() => _updatingFlags.remove(session.id));
+      await _load();
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _updatingFlags.remove(session.id));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Couldn’t update conversation')),
+      );
+    }
+  }
+
+  Future<void> _showSessionMenu(Session session) async {
+    final update = widget.onUpdateFlags;
+    if (update == null) return;
+    final action = await showModalBottomSheet<String>(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            ListTile(
+              leading: Icon(
+                session.pinned ? Icons.push_pin_outlined : Icons.push_pin,
+              ),
+              title: Text(session.pinned ? 'Unpin' : 'Pin'),
+              onTap: () => Navigator.pop(context, 'pin'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.archive_outlined),
+              title: Text(session.archived ? 'Unarchive' : 'Archive'),
+              onTap: () => Navigator.pop(context, 'archive'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (action == null || !mounted) return;
+    if (action == 'pin') {
+      await _updateFlag(session, pinned: !session.pinned);
+    } else {
+      await _updateFlag(session, archived: !session.archived);
+    }
   }
 
   Future<void> _setSearchMode(SessionSearchMode mode) async {
@@ -895,8 +962,11 @@ class _WorkspaceSessionsScreenState extends State<WorkspaceSessionsScreen> {
         widget.view == WorkspaceSessionView.archivedQuick &&
         widget.onPromote != null;
     final showMove = widget.onMoveSession != null;
+    final showFlags = widget.onUpdateFlags != null;
     return HermesCard(
       onTap: () => widget.onOpenSession(session),
+      onLongPress:
+          showFlags ? () => unawaited(_showSessionMenu(session)) : null,
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
