@@ -1408,6 +1408,34 @@ Projects.
     and returning from Cron refreshes **both** banners — the user most likely
     went there to run the overdue job.
 
+34. **The Pinned Smart View** — `test/workspace_sessions_screen_test.dart`.
+    Phase 1 lists `Pinned` among the Smart Views the flat session list is
+    replaced by, and the audit backlog puts pin/batch/undo before AI filing.
+    Pinning already *worked* — the long-press menu writes `pinned` server-side
+    and a pinned row draws its marker — but there was nowhere to see the
+    result: the Chats browser offered All / Recent / Unassigned / Archived, so
+    a pinned conversation was still found by scrolling. The pin was a marker
+    with no view behind it.
+
+    The slice is deliberately small: `WorkspaceChatsFilter` gains a `pinned`
+    member between `all` and `recent`, and `filterChats` reads the durable
+    `Session.pinned` flag the gateway already persists across a session's
+    compression lineage. **No new server contract, no new store, and no new
+    RPC** — a legacy REST connection gets the view for free, because the flag
+    ships in the session payload the browser already fetches.
+
+    The rule that matters most is pinned by test in its own right: the Pinned
+    view is **not** narrowed by archive state. A pin is an explicit "keep this
+    reachable", so a conversation that is both pinned and archived — server
+    archived or past its quick-chat deadline — still appears here. Filtering
+    it out would make the pin silently stop working, which is worse than
+    showing a row the user deliberately marked. Also pinned: ordering is the
+    same most-recent-activity sort every other chip uses (a pinned list that
+    ranked differently would be a second, competing order), the search query
+    narrows the Pinned view like any other, and the empty state says how to
+    pin something rather than rendering a bare "no results" — an empty Smart
+    View whose entry action is undiscoverable is a dead end.
+
 Phase 0 is **complete**. Step 7 (real Gateway smoke test on a device) passed on
 2026-08-29 against the live Miniserver gateway from a physical SM-S948B over
 wireless debugging, and the migration *write* path it gated is implemented and
@@ -1420,7 +1448,8 @@ Next slice: the third and last Inbox source deferred in point 30 — approvals
 and cron are covered, so what remains is an authoritative aggregation contract
 for work that belongs to no open chat and no scheduled job. Keep each source
 capability-gated and never fabricate actionable rows when its server contract
-is unavailable.
+is unavailable. The remaining half of audit backlog item 7 (batch select and
+undo for pin/move/archive) is the other candidate and needs no new contract.
 
 ---
 

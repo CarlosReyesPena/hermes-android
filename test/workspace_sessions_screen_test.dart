@@ -52,9 +52,10 @@ void main() {
   });
 
   group('WorkspaceChatsFilter', () {
-    test('declares the four validated chip filters in order', () {
+    test('declares the validated chip filters in order', () {
       expect(WorkspaceChatsFilter.values, [
         WorkspaceChatsFilter.all,
+        WorkspaceChatsFilter.pinned,
         WorkspaceChatsFilter.recent,
         WorkspaceChatsFilter.unassigned,
         WorkspaceChatsFilter.archived,
@@ -62,6 +63,61 @@ void main() {
       for (final filter in WorkspaceChatsFilter.values) {
         expect(filter.label, isNotEmpty);
       }
+    });
+
+    test('Pinned keeps only conversations the user pinned', () {
+      final result = filterChats(
+        sessions: [
+          _session('s1', 'Kept', pinned: true),
+          _session('s2', 'Ordinary'),
+        ],
+        filter: WorkspaceChatsFilter.pinned,
+        now: DateTime.fromMillisecondsSinceEpoch(1750000000 * 1000),
+      );
+      expect(result.map((s) => s.id), ['s1']);
+    });
+
+    test('Pinned still lists a pinned conversation that was archived', () {
+      // A pin is an explicit "keep this reachable". Hiding it because the
+      // conversation was archived — server-side or by the quick-chat timer —
+      // would make the pin silently stop working, which is worse than showing
+      // an archived row the user deliberately marked.
+      final result = filterChats(
+        sessions: [
+          _session('s1', 'Pinned and archived', archived: true, pinned: true),
+          _session('s2', 'Pinned quick', pinned: true),
+          _session('s3', 'Ordinary'),
+        ],
+        filter: WorkspaceChatsFilter.pinned,
+        archivedQuickChatIds: const {'s2'},
+        now: DateTime.fromMillisecondsSinceEpoch(1750000000 * 1000),
+      );
+      expect(result.map((s) => s.id).toSet(), {'s1', 's2'});
+    });
+
+    test('Pinned sorts by most recent activity like every other filter', () {
+      final result = filterChats(
+        sessions: [
+          _session('old', 'Older pin', lastActive: 1745000000, pinned: true),
+          _session('new', 'Newer pin', lastActive: 1750000000, pinned: true),
+        ],
+        filter: WorkspaceChatsFilter.pinned,
+        now: DateTime.fromMillisecondsSinceEpoch(1750000000 * 1000),
+      );
+      expect(result.map((s) => s.id), ['new', 'old']);
+    });
+
+    test('query narrows the Pinned view', () {
+      final result = filterChats(
+        sessions: [
+          _session('s1', 'Migration', pinned: true),
+          _session('s2', 'Taxes', pinned: true),
+        ],
+        filter: WorkspaceChatsFilter.pinned,
+        query: 'migration',
+        now: DateTime.fromMillisecondsSinceEpoch(1750000000 * 1000),
+      );
+      expect(result.map((s) => s.id), ['s1']);
     });
 
     test('All keeps every session', () {
@@ -205,7 +261,7 @@ void main() {
     final now = DateTime.fromMillisecondsSinceEpoch(1750000000 * 1000);
     final recent = _session('s1', 'Fresh', lastActive: 1750000000);
     final old = _session('s2', 'Stale', lastActive: 1745000000);
-    final claimed = _session('s3', 'Filed');
+    final claimed = _session('s3', 'Filed', pinned: true);
     final quickArchived = _session('s4', 'Quick archived');
 
     Future<void> pumpChats(WidgetTester tester) async {
@@ -229,7 +285,7 @@ void main() {
       await tester.pumpAndSettle();
     }
 
-    testWidgets('offers the four validated chips in embedded mode', (
+    testWidgets('offers every validated chip in embedded mode', (
       tester,
     ) async {
       await pumpChats(tester);
@@ -269,6 +325,46 @@ void main() {
 
       expect(find.text('Quick archived'), findsOneWidget);
       expect(find.text('Fresh'), findsNothing);
+    });
+
+    testWidgets('Pinned shows only pinned conversations', (tester) async {
+      await pumpChats(tester);
+
+      await tester.tap(find.widgetWithText(ChoiceChip, 'Pinned'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Filed'), findsOneWidget);
+      expect(find.text('Fresh'), findsNothing);
+      expect(find.text('Stale'), findsNothing);
+    });
+
+    testWidgets('Pinned states its own empty message when nothing is pinned', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: hermesTheme(Brightness.dark),
+          home: WorkspaceSessionsScreen(
+            title: 'Chats',
+            view: WorkspaceSessionView.all,
+            embedded: true,
+            now: now,
+            load: () async =>
+                WorkspaceSessionsData(sessions: [_session('s1', 'Ordinary')]),
+            onOpenSession: (_) {},
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.widgetWithText(ChoiceChip, 'Pinned'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Ordinary'), findsNothing);
+      expect(
+        find.textContaining('Pinned conversations', findRichText: true),
+        findsOneWidget,
+      );
     });
 
     testWidgets('groups rows under date headers', (tester) async {

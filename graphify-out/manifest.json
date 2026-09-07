@@ -775,8 +775,8 @@
     "semantic_hash": ""
   },
   "docs/ANDROID_DAILY_DRIVER_ROADMAP.md": {
-    "mtime": 1788756195.6811488,
-    "ast_hash": "685c8c3508808ceb445589551f3bb717",
+    "mtime": 1788778567.0647302,
+    "ast_hash": "ae1a3fbb58e30ada863c2c900c9d224c",
     "semantic_hash": ""
   },
   "lib/core/models/hermes_project.dart": {
@@ -1135,13 +1135,13 @@
     "semantic_hash": ""
   },
   "lib/core/screens/workspace_sessions_screen.dart": {
-    "mtime": 1788734040.930723,
-    "ast_hash": "2c25722e1ee9b67c15b094e127790208",
+    "mtime": 1788800518.0333872,
+    "ast_hash": "a1b10fcc8bc22fa7d3ddccdc37b1097b",
     "semantic_hash": ""
   },
   "test/workspace_sessions_screen_test.dart": {
-    "mtime": 1788734700.1104698,
-    "ast_hash": "e000edbbcfe1289dfeed42d586b266fc",
+    "mtime": 1788800538.1886387,
+    "ast_hash": "0b959f6a6798529132e5932b70dbac26",
     "semantic_hash": ""
   },
   "docs/ANDROID_PHASE1_COHERENCE_GOAL.md": {

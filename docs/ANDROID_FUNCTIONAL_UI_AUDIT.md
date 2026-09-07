@@ -32,6 +32,10 @@ re-verifying against current code:
   configured.
 - **Biometric app lock (new since audit)** — optional fingerprint/face lock
   wraps the whole Navigator (Settings → Security), device-local by design.
+- **Pinned Smart View (backlog item 7, partial)** — the Chats browser now
+  offers a **Pinned** chip backed by the durable server `pinned` flag, so the
+  existing pin action finally has a view behind it. A pinned conversation is
+  listed even when archived. Batch select and undo remain open.
 
 Remaining open items from the list below: Settings offline resilience was
 fixed 2026-09-06 (local sections survive a dashboard outage); the audit body

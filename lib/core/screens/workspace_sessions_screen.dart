@@ -19,9 +19,11 @@ const kWorkspaceSessionSearchKey = Key('workspace-session-search');
 enum WorkspaceSessionView { all, unassigned, archivedQuick, search }
 
 /// The chip filters the Chats browser offers (decision #4 of the final UI
-/// spec): every conversation, recent activity, unassigned, and archived.
+/// spec): every conversation, pinned, recent activity, unassigned, and
+/// archived.
 enum WorkspaceChatsFilter {
   all('All'),
+  pinned('Pinned'),
   recent('Recent'),
   unassigned('Unassigned'),
   archived('Archived');
@@ -80,6 +82,10 @@ List<Session> filterChats({
     for (final session in sessions)
       if (switch (filter) {
             WorkspaceChatsFilter.all => true,
+            // A pin is an explicit "keep this reachable", so this view is
+            // deliberately not narrowed by archive state: an archived pin is
+            // still the row the user asked to keep in reach.
+            WorkspaceChatsFilter.pinned => session.pinned,
             WorkspaceChatsFilter.recent => session.lastActive >= recentCutoff,
             WorkspaceChatsFilter.unassigned => !claimedSessionIds.contains(
               session.id,
@@ -1251,6 +1257,7 @@ class _WorkspaceSessionsScreenState extends State<WorkspaceSessionsScreen> {
         WorkspaceChatsFilter.unassigned => Icons.inbox_outlined,
         WorkspaceChatsFilter.archived => Icons.archive_outlined,
         WorkspaceChatsFilter.recent => Icons.history_outlined,
+        WorkspaceChatsFilter.pinned => Icons.push_pin_outlined,
         WorkspaceChatsFilter.all => Icons.search_off,
       };
     }
@@ -1265,6 +1272,9 @@ class _WorkspaceSessionsScreenState extends State<WorkspaceSessionsScreen> {
         WorkspaceChatsFilter.unassigned =>
           'Every conversation is already assigned to a Project.',
         WorkspaceChatsFilter.archived => 'Archived conversations appear here.',
+        WorkspaceChatsFilter.pinned =>
+          'Pinned conversations appear here. Long-press a chat and choose '
+              'Pin to keep it in reach.',
         WorkspaceChatsFilter.recent =>
           'Nothing changed in the last seven days.',
         WorkspaceChatsFilter.all => 'No conversation matches this view.',

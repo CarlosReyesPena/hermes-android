@@ -1,16 +1,16 @@
 # Graph Report - hermes-android  (2026-09-07)
 
 ## Corpus Check
-- 234 files · ~243,606 words
+- 234 files · ~244,497 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 4694 nodes · 6178 edges · 212 communities (199 shown, 13 thin omitted)
+- 4694 nodes · 6178 edges · 211 communities (198 shown, 13 thin omitted)
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 14 edges (avg confidence: 0.5)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `d8debc93`
+- Built from commit: `9b1610cc`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -208,7 +208,6 @@
 - [[_COMMUNITY_Community 197|Community 197]]
 - [[_COMMUNITY_Community 198|Community 198]]
 - [[_COMMUNITY_Community 199|Community 199]]
-- [[_COMMUNITY_Community 200|Community 200]]
 - [[_COMMUNITY_Community 201|Community 201]]
 - [[_COMMUNITY_Community 202|Community 202]]
 - [[_COMMUNITY_Community 203|Community 203]]
@@ -248,7 +247,7 @@
 ## Import Cycles
 - None detected.
 
-## Communities (212 total, 13 thin omitted)
+## Communities (211 total, 13 thin omitted)
 
 ### Community 0 - "Community 0"
 Cohesion: 0.01
@@ -497,8 +496,8 @@ Cohesion: 0.08
 Nodes (25): projectChat,, required List, buildNewChatDraft, buildNewChatOptions, buildNewChatOptionsFor, description, disabledReason, enabled (+17 more)
 
 ### Community 58 - "Community 58"
-Cohesion: 0.29
-Nodes (6): android_share_intent_service.dart, attachment_draft_service.dart, ../models/attachment_draft.dart, drafts, draftService, prepareAndroidSharedFiles
+Cohesion: 0.14
+Nodes (10): android_share_intent_service.dart, attachment_draft_service.dart, dart:io, ../models/attachment_draft.dart, drafts, draftService, prepareAndroidSharedFiles, main (+2 more)
 
 ### Community 59 - "Community 59"
 Cohesion: 0.17
@@ -802,7 +801,7 @@ Nodes (12): GatewayToolActivity, activities, activity, build, createState, _emoj
 
 ### Community 141 - "Community 141"
 Cohesion: 0.12
-Nodes (17): dart:async, http.BaseClient, StreamedResponse, body, _HangingHttpClient, _JsonHttpClient, main, send (+9 more)
+Nodes (16): http.BaseClient, StreamedResponse, body, _HangingHttpClient, _JsonHttpClient, main, send, _EmptyHttpClient (+8 more)
 
 ### Community 142 - "Community 142"
 Cohesion: 0.07
@@ -857,8 +856,8 @@ Cohesion: 0.22
 Nodes (8): Définition de terminé pour chaque tranche, Hermes Android — produit indispensable, Pilier 11 — Sécurité, Pilier 12 — Automatisations, Pilier 8 — Continuité et mode dégradé, Pilier 9 — Accès instantané Android, Principes non négociables, Vision
 
 ### Community 155 - "Community 155"
-Cohesion: 0.10
-Nodes (19): package:hermes_android/core/services/quick_chat_store.dart, package:hermes_android/core/utils/home_digest.dart, package:hermes_android/core/utils/new_chat_options.dart, _connection, _idsIn, main, _now, _projectJson (+11 more)
+Cohesion: 0.11
+Nodes (18): package:hermes_android/core/services/quick_chat_store.dart, package:hermes_android/core/utils/new_chat_options.dart, _connection, _idsIn, main, _now, _projectJson, pumpAndSettle (+10 more)
 
 ### Community 156 - "Community 156"
 Cohesion: 0.22
@@ -890,10 +889,10 @@ Nodes (14): package:hermes_android/core/widgets/chat_context_header.dart, Size, 
   String, connection, main, model, _pump, pumpAndSettle (+6 more)
 
 ### Community 163 - "Community 163"
-Cohesion: 0.14
-Nodes (13): Duration? endedAgo,
-  int, required String id,
-  String, _epoch, _ids, main, messageCount, _now, null (+5 more)
+Cohesion: 0.13
+Nodes (14): Duration? endedAgo,
+  int, package:hermes_android/core/utils/home_digest.dart, required String id,
+  String, _epoch, _ids, main, messageCount, _now (+6 more)
 
 ### Community 164 - "Community 164"
 Cohesion: 0.50
@@ -1016,8 +1015,8 @@ Cohesion: 0.11
 Nodes (16): package:hermes_android/core/models/project_sessions_tree.dart, package:hermes_android/core/models/session.dart, package:hermes_android/core/utils/project_session_filter.dart, package:hermes_android/core/widgets/project_detail_screen.dart, ProjectSessionsView, main, projectId, projectName (+8 more)
 
 ### Community 195 - "Community 195"
-Cohesion: 0.18
-Nodes (9): package:hermes_android/core/services/capability_registry.dart, package:hermes_android/core/services/gateway_turn_coordinator.dart, package:hermes_android/core/services/ws_client.dart, package:hermes_android/core/utils/turn_recovery_fallback.dart, main, protocolMajor, protocolName, _readyFrame (+1 more)
+Cohesion: 0.17
+Nodes (10): dart:async, package:hermes_android/core/services/capability_registry.dart, package:hermes_android/core/services/gateway_turn_coordinator.dart, package:hermes_android/core/services/ws_client.dart, package:hermes_android/core/utils/turn_recovery_fallback.dart, main, protocolMajor, protocolName (+2 more)
 
 ### Community 196 - "Community 196"
 Cohesion: 0.15
@@ -1034,10 +1033,6 @@ Nodes (11): bool get, LocalAuthentication, package:local_auth/local_auth.dart, _
 ### Community 199 - "Community 199"
 Cohesion: 0.25
 Nodes (7): package:hermes_android/core/services/session_search_client.dart, SessionSearchException, clientReturning, jsonOk, main, SocketExceptionStub, toString
-
-### Community 200 - "Community 200"
-Cohesion: 0.29
-Nodes (4): dart:io, main, main, main
 
 ### Community 201 - "Community 201"
 Cohesion: 0.29
@@ -1079,9 +1074,9 @@ _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `list` connect `Community 183` to `Community 0`, `Community 2`, `Community 3`, `Community 132`, `Community 133`, `Community 7`, `Community 9`, `Community 10`, `Community 140`, `Community 142`, `Community 15`, `Community 17`, `Community 19`, `Community 22`, `Community 152`, `Community 28`, `Community 29`, `Community 32`, `Community 42`, `Community 45`, `Community 47`, `Community 48`, `Community 52`, `Community 55`, `Community 187`, `Community 62`, `Community 64`, `Community 65`, `Community 69`, `Community 87`, `Community 109`, `Community 113`, `Community 118`, `Community 119`, `Community 120`, `Community 123`, `Community 125`, `Community 127`?**
   _High betweenness centrality (0.107) - this node is a cross-community bridge._
-- **Why does `_` connect `Community 2` to `Community 132`, `Community 37`, `Community 5`, `Community 198`, `Community 7`, `Community 135`, `Community 170`, `Community 203`, `Community 137`, `Community 141`, `Community 138`, `Community 15`, `Community 16`, `Community 18`, `Community 183`?**
+- **Why does `_` connect `Community 2` to `Community 195`, `Community 132`, `Community 37`, `Community 5`, `Community 198`, `Community 7`, `Community 135`, `Community 170`, `Community 203`, `Community 137`, `Community 138`, `Community 15`, `Community 16`, `Community 18`, `Community 183`?**
   _High betweenness centrality (0.089) - this node is a cross-community bridge._
-- **Why does `_` connect `Community 1` to `Community 64`, `Community 2`, `Community 3`, `Community 132`, `Community 37`, `Community 198`, `Community 167`, `Community 200`, `Community 203`, `Community 11`, `Community 141`, `Community 15`, `Community 111`, `Community 22`, `Community 151`, `Community 25`, `Community 61`?**
+- **Why does `_` connect `Community 1` to `Community 64`, `Community 2`, `Community 195`, `Community 3`, `Community 37`, `Community 198`, `Community 132`, `Community 167`, `Community 203`, `Community 11`, `Community 15`, `Community 111`, `Community 22`, `Community 151`, `Community 25`, `Community 58`, `Community 61`?**
   _High betweenness centrality (0.044) - this node is a cross-community bridge._
 - **What connects `Bundle`, `FlutterEngine`, `Boolean` to the rest of the system?**
   _3558 weakly-connected nodes found - possible documentation gaps or missing edges._

@@ -1078,7 +1078,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "dart_async",
-      "community": 141,
+      "community": 195,
       "norm_label": "dart:async"
     },
     {
@@ -12138,7 +12138,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "dart_io",
-      "community": 200,
+      "community": 58,
       "norm_label": "dart:io"
     },
     {
@@ -32308,7 +32308,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_android_launcher_shortcut_contract_test",
-      "community": 200,
+      "community": 58,
       "norm_label": "android_launcher_shortcut_contract_test.dart"
     },
     {
@@ -32318,7 +32318,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_android_launcher_shortcut_contract_test_main",
-      "community": 200,
+      "community": 58,
       "norm_label": "main"
     },
     {
@@ -32368,7 +32368,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_android_share_platform_contract_test",
-      "community": 200,
+      "community": 58,
       "norm_label": "android_share_platform_contract_test.dart"
     },
     {
@@ -32378,7 +32378,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_android_share_platform_contract_test_main",
-      "community": 200,
+      "community": 58,
       "norm_label": "main"
     },
     {
@@ -38168,7 +38168,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_hermes_android_core_utils_home_digest_dart",
-      "community": 155,
+      "community": 163,
       "norm_label": "package:hermes_android/core/utils/home_digest.dart"
     },
     {
@@ -40388,7 +40388,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_release_identity_test",
-      "community": 200,
+      "community": 58,
       "norm_label": "release_identity_test.dart"
     },
     {
@@ -40398,7 +40398,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_release_identity_test_main",
-      "community": 200,
+      "community": 58,
       "norm_label": "main"
     },
     {
@@ -45275,7 +45275,7 @@
       "label": "Validated product decisions",
       "file_type": "document",
       "source_file": "docs/ANDROID_DAILY_DRIVER_ROADMAP.md",
-      "source_location": "L1372",
+      "source_location": "L1427",
       "_origin": "ast",
       "id": "docs_android_daily_driver_roadmap_validated_product_decisions",
       "community": 99,
@@ -45285,7 +45285,7 @@
       "label": "Evidence reviewed",
       "file_type": "document",
       "source_file": "docs/ANDROID_DAILY_DRIVER_ROADMAP.md",
-      "source_location": "L1382",
+      "source_location": "L1437",
       "_origin": "ast",
       "id": "docs_android_daily_driver_roadmap_evidence_reviewed",
       "community": 99,
@@ -109796,5 +109796,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "d8debc93165c31cf9f2462765e38d492b26abe43"
+  "built_at_commit": "9b1610cc74cce81a026f2cf4865fa199813a9e96"
 }
