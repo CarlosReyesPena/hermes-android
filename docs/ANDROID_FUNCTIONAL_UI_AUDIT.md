@@ -37,6 +37,11 @@ re-verifying against current code:
   including archived pins. Its long-press menu now enters multi-selection for
   grouped Pin, Move, and Archive actions; every successful batch exposes Undo
   and restores each conversation’s original flag or Project destination.
+- **Project card counts and current focus (backlog item 6, resolved)** — cards
+  carry the server's own chat count, last activity, and the chat the server
+  ranks first, all from the `projects.tree` overview the pane already loads. An
+  uncounted project (older gateway) stays name-only rather than claiming
+  `No chats yet` (roadmap point 36).
 
 Remaining open items from the list below: Settings offline resilience was
 fixed 2026-09-06 (local sections survive a dashboard outage); the audit body

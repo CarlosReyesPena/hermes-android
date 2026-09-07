@@ -835,13 +835,13 @@
     "semantic_hash": ""
   },
   "lib/core/widgets/projects_pane.dart": {
-    "mtime": 1788043050.5025213,
-    "ast_hash": "c1f5358122008346c000bb336556d5f6",
+    "mtime": 1788822708.417473,
+    "ast_hash": "d7ec2b780ac81ee99969788e333c939a",
     "semantic_hash": ""
   },
   "test/projects_pane_test.dart": {
-    "mtime": 1788042785.5254338,
-    "ast_hash": "e88bfb63401b09401b73160a3d031aac",
+    "mtime": 1788822725.925701,
+    "ast_hash": "791babb627c5603f694edc5bcf14b4e6",
     "semantic_hash": ""
   },
   "lib/core/screens/workspace_screen.dart": {
@@ -1407,6 +1407,16 @@
   "test/workspace_sessions_batch_actions_test.dart": {
     "mtime": 1788803798.7235477,
     "ast_hash": "9e96c5f0a6d434c3f431783c63e2d64a",
+    "semantic_hash": ""
+  },
+  "lib/core/utils/project_card_summary.dart": {
+    "mtime": 1788822633.5374982,
+    "ast_hash": "0f6e17befd7bb70c899a825507cc6671",
+    "semantic_hash": ""
+  },
+  "test/project_card_summary_test.dart": {
+    "mtime": 1788822605.4581327,
+    "ast_hash": "05c7e419470f93cde1ceda899bf4b457",
     "semantic_hash": ""
   }
 }

@@ -1455,6 +1455,41 @@ Projects.
     existing labels so Move undo never guesses a destination. Failures keep the
     selection active and report an error instead of implying success.
 
+36. **Project card counts, activity, and current focus** —
+    `test/project_card_summary_test.dart`, `test/projects_pane_test.dart`.
+    Backlog item 6 of the functional audit was only half done: the card showed
+    a raw chat count but neither the last activity nor what the project is
+    currently working on, so the Projects list still read as sparse next to the
+    operationally dense Home cards. Split the same way the rest of Phase 1 is:
+    the pure `buildProjectCardSummary` helper in
+    `lib/core/utils/project_card_summary.dart` owns every wording decision and
+    `_ProjectCard` owns only layout.
+
+    Every line comes from the `projects.tree` overview the pane **already**
+    loads on entry, so this costs **no new request and no new gateway
+    contract**, and lateness is worded through the one canonical
+    `formatRelativeTime` helper so a project reads the same here as in Activity
+    and Cron.
+
+    The rule that shapes the slice: a card may stay quiet, but it may never
+    state something nobody measured. Pinned by test: an **uncounted** project
+    (a gateway predating `projects.tree`, or a project absent from the
+    overview) claims nothing at all rather than printing `No chats yet` over a
+    project no one counted, and a zero count sitting beside a real preview row
+    also claims nothing — `No chats yet` printed above a chat title is a
+    self-contradiction the user cannot resolve from the phone. Also pinned: the
+    count is the server's and is never derived from the previews (deriving it
+    from the deliberately-emptied lanes would make every card read zero), a
+    zero or negative `lastActive` renders no date rather than 1970, current
+    focus is the first preview row **in server order** so an older-but-first
+    row still wins (re-ranking on device is the duplicated-authority mistake
+    this phase exists to avoid), the parser's own `Untitled` fallback is
+    skipped rather than displayed and a project whose only preview is untitled
+    shows no focus rather than an id the user has never seen, and the caller's
+    preview list is never mutated or reordered. Count and activity share one
+    meta line because two rows of grey micro-text read as noise and the pair
+    only makes sense together. A 200 % text-scale test guards the card layout.
+
 Phase 0 is **complete**. Step 7 (real Gateway smoke test on a device) passed on
 2026-08-29 against the live Miniserver gateway from a physical SM-S948B over
 wireless debugging, and the migration *write* path it gated is implemented and

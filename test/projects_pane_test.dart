@@ -33,6 +33,14 @@ class _FakeGateway {
   final List<Map<String, dynamic>> assignments = [];
   final Map<String, int> counts;
 
+  /// Title of the chat the server ranks first for each project, surfaced by
+  /// the overview's `previewSessions`.
+  final Map<String, String> focus;
+
+  /// Simulates a gateway that serves `projects.list` but predates
+  /// `projects.tree`.
+  bool treeUnsupported = false;
+
   /// When set, `projects.list` waits on this before answering, so a test can
   /// observe the pane's loading state deterministically.
   Completer<void>? gate;
@@ -41,6 +49,7 @@ class _FakeGateway {
     List<Map<String, dynamic>>? projects,
     this.activeId,
     this.counts = const {},
+    this.focus = const {},
   }) : projects = projects ?? [];
 
   Future<Map<String, dynamic>> call(
@@ -59,6 +68,13 @@ class _FakeGateway {
         listCalls++;
         return _ok({'projects': projects, 'active_id': activeId});
       case 'projects.tree':
+        if (treeUnsupported) {
+          return {
+            'jsonrpc': '2.0',
+            'id': 1,
+            'error': {'code': -32601, 'message': 'Unknown method'},
+          };
+        }
         return _ok({
           'projects': [
             for (final project in projects)
@@ -67,8 +83,19 @@ class _FakeGateway {
                   'id': project['id'],
                   'label': project['name'],
                   'sessionCount': counts[project['id']] ?? 0,
-                  'lastActive': 1750000100,
-                  'previewSessions': const [],
+                  'lastActive':
+                      DateTime.now()
+                          .subtract(const Duration(hours: 3))
+                          .millisecondsSinceEpoch /
+                      1000.0,
+                  'previewSessions': [
+                    if (focus[project['id']] != null)
+                      {
+                        'id': 'preview-${project['id']}',
+                        'title': focus[project['id']],
+                        'started_at': 1750000100,
+                      },
+                  ],
                   'repos': const [],
                 },
           ],
@@ -219,7 +246,80 @@ void main() {
     await _pumpPane(tester, repository);
     await tester.pumpAndSettle();
 
-    expect(find.text('3 chats'), findsOneWidget);
+    expect(find.textContaining('3 chats'), findsOneWidget);
+  });
+
+  testWidgets('states what a project is currently working on', (tester) async {
+    // Backlog item 6: the card must carry the server's own counts, activity,
+    // and current focus, not just a name and a path.
+    final repository = await _repo(
+      _FakeGateway(
+        projects: [_projectJson(id: 'p1', name: 'Hermes Android')],
+        counts: const {'p1': 3},
+        focus: const {'p1': 'Wire the Inbox banner'},
+      ),
+    );
+
+    await _pumpPane(tester, repository);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Wire the Inbox banner'), findsOneWidget);
+    // The count and the relative activity share one meta line.
+    expect(find.textContaining('3 chats'), findsOneWidget);
+    expect(find.textContaining('ago'), findsOneWidget);
+  });
+
+  testWidgets('says a server-counted empty project has no chats yet', (
+    tester,
+  ) async {
+    final repository = await _repo(
+      _FakeGateway(
+        projects: [_projectJson(id: 'p1', name: 'Fresh')],
+        counts: const {'p1': 0},
+      ),
+    );
+
+    await _pumpPane(tester, repository);
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('No chats yet'), findsOneWidget);
+  });
+
+  testWidgets('claims no counts on a gateway without projects.tree', (
+    tester,
+  ) async {
+    // An older gateway serves projects.list but not the overview. The card
+    // must degrade to name-only rather than printing "No chats yet" over a
+    // project nobody counted.
+    final gateway = _FakeGateway(
+      projects: [_projectJson(id: 'p1', name: 'Legacy')],
+    )..treeUnsupported = true;
+    final repository = await _repo(gateway);
+
+    await _pumpPane(tester, repository);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Legacy'), findsOneWidget);
+    expect(find.textContaining('No chats yet'), findsNothing);
+    expect(find.textContaining('chats'), findsNothing);
+  });
+
+  testWidgets('keeps the project card readable at 200% text scale', (
+    tester,
+  ) async {
+    final repository = await _repo(
+      _FakeGateway(
+        projects: [_projectJson(id: 'p1', name: 'Hermes Android')],
+        counts: const {'p1': 3},
+        focus: const {'p1': 'Wire the Inbox banner'},
+      ),
+    );
+
+    await _pumpPane(tester, repository, textScale: 2.0);
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(find.text('Wire the Inbox banner'), findsOneWidget);
   });
 
   testWidgets('separates archived projects from the active section', (

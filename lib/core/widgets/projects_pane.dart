@@ -16,6 +16,7 @@ import '../models/projects_tree_overview.dart';
 import '../services/chat_space_store.dart';
 import '../services/projects_repository.dart';
 import '../theme/hermes_theme.dart';
+import '../utils/project_card_summary.dart';
 import 'hermes_components.dart';
 import 'space_migration_preview.dart';
 
@@ -515,6 +516,16 @@ class _ProjectCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final tokens = HermesTokens.of(context);
     final path = project.workingDirectory;
+    final summary = buildProjectCardSummary(
+      overview: overview,
+      now: DateTime.now(),
+    );
+    // Count and activity share one line: two separate rows of grey micro-text
+    // read as noise, and the pair only makes sense together.
+    final meta = [
+      if (summary.chats != null) summary.chats!,
+      if (summary.lastActivity != null) summary.lastActivity!,
+    ].join(' · ');
 
     return HermesCard(
       onTap: onTap,
@@ -543,14 +554,23 @@ class _ProjectCard extends StatelessWidget {
                     color: tokens.onSurface,
                   ),
                 ),
-                if (overview != null) ...[
+                if (meta.isNotEmpty) ...[
                   const SizedBox(height: HermesSpacing.xs),
                   Text(
-                    overview!.sessionCount == 1
-                        ? '1 chat'
-                        : '${overview!.sessionCount} chats',
+                    meta,
                     style: tokens.typography.label.copyWith(
                       color: tokens.muted,
+                    ),
+                  ),
+                ],
+                if (summary.currentFocus != null) ...[
+                  const SizedBox(height: HermesSpacing.xs),
+                  Text(
+                    summary.currentFocus!,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: tokens.typography.body.copyWith(
+                      color: tokens.onSurface,
                     ),
                   ),
                 ],
