@@ -1,4 +1,6 @@
 // Settings screen for model selection, theme toggle, and app info.
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -9,6 +11,7 @@ import '../services/connection_manager.dart';
 import '../widgets/biometric_settings_card.dart';
 import '../widgets/config_backup_card.dart';
 import '../widgets/text_size_settings_card.dart';
+import '../widgets/session_organizer_settings_card.dart';
 import '../../main.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
@@ -27,6 +30,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _loading = true;
   String? _error;
   String? _successMsg;
+  SessionOrganizerSettings? _organizerSettings;
+  bool _organizerLoading = true;
+  bool _organizerUnavailable = false;
 
   // Selected values
   String _selectedProvider = '';
@@ -47,6 +53,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       password: widget.connection.dashboardPassword,
     );
     _loadData();
+    unawaited(_loadOrganizerSettings());
   }
 
   @override
@@ -79,6 +86,49 @@ class _SettingsScreenState extends State<SettingsScreen> {
         _loading = false;
       });
     }
+  }
+
+  Future<void> _loadOrganizerSettings() async {
+    try {
+      final data = await _client.apiGet(
+        'plugins/session-project-organizer/settings',
+      );
+      if (!mounted) return;
+      setState(() {
+        _organizerSettings = SessionOrganizerSettings.fromJson(data);
+        _organizerLoading = false;
+        _organizerUnavailable = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _organizerLoading = false;
+        _organizerUnavailable = true;
+      });
+    }
+  }
+
+  Future<void> _saveOrganizerSettings(
+    SessionOrganizerSettings settings,
+  ) async {
+    final data = await _client.apiPut(
+      'plugins/session-project-organizer/settings',
+      body: settings.toJson(),
+    );
+    if (!mounted) return;
+    setState(() {
+      _organizerSettings = SessionOrganizerSettings.fromJson(data);
+    });
+  }
+
+  Map<String, List<String>> _organizerProviderModels() {
+    return {
+      for (final entry in _providerModels.entries)
+        entry.key: entry.value
+            .map((model) => model['id'] as String? ?? '')
+            .where((model) => model.isNotEmpty)
+            .toList(),
+    };
   }
 
   void _parseModelOptions() {
@@ -296,6 +346,37 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
           ),
         ],
+        const SizedBox(height: 16),
+
+        // ---- Section: Automatic Project organization ----
+        _buildSectionHeader('Conversation organization'),
+        if (_organizerLoading)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 16),
+            child: Center(child: CircularProgressIndicator()),
+          )
+        else if (_organizerSettings != null &&
+            _organizerProviderModels().isNotEmpty)
+          SessionOrganizerSettingsCard(
+            key: ValueKey(
+              '${_organizerSettings!.aiEnabled}-'
+              '${_organizerSettings!.provider}-'
+              '${_organizerSettings!.model}',
+            ),
+            initialSettings: _organizerSettings!,
+            providerModels: _organizerProviderModels(),
+            onSave: _saveOrganizerSettings,
+          )
+        else if (_organizerUnavailable)
+          const Card(
+            child: ListTile(
+              leading: Icon(Icons.cloud_off),
+              title: Text('AI curator settings are unavailable'),
+              subtitle: Text(
+                'The session-project-organizer plugin must be enabled on the server.',
+              ),
+            ),
+          ),
         const SizedBox(height: 16),
 
         // ---- Section: Theme ----

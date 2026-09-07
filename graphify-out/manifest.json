@@ -160,8 +160,8 @@
     "semantic_hash": ""
   },
   "lib/core/screens/settings_screen.dart": {
-    "mtime": 1788726103.1267955,
-    "ast_hash": "8c2c05f32747776b1f582a5bf87b6a9b",
+    "mtime": 1788760091.780648,
+    "ast_hash": "3e7560ec6befa0e1e97d47bb36aecb47",
     "semantic_hash": ""
   },
   "lib/core/screens/skills_screen.dart": {
@@ -775,8 +775,8 @@
     "semantic_hash": ""
   },
   "docs/ANDROID_DAILY_DRIVER_ROADMAP.md": {
-    "mtime": 1788734140.2140403,
-    "ast_hash": "6f3486fbc225deb086d9a166a49e9553",
+    "mtime": 1788756195.6811488,
+    "ast_hash": "685c8c3508808ceb445589551f3bb717",
     "semantic_hash": ""
   },
   "lib/core/models/hermes_project.dart": {
@@ -1382,6 +1382,16 @@
   "test/pending_approvals_banner_test.dart": {
     "mtime": 1788733820.9128892,
     "ast_hash": "680f554e5cc1638333176d3b12d4e228",
+    "semantic_hash": ""
+  },
+  "lib/core/widgets/session_organizer_settings_card.dart": {
+    "mtime": 1788759962.9930112,
+    "ast_hash": "9f2bd0603bd1f76ccbc9bcd715402a45",
+    "semantic_hash": ""
+  },
+  "test/session_organizer_settings_card_test.dart": {
+    "mtime": 1788759524.0364325,
+    "ast_hash": "50fa95116efe76b6803384be07f98a52",
     "semantic_hash": ""
   }
 }
