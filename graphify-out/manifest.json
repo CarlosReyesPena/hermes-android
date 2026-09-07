@@ -365,8 +365,8 @@
     "semantic_hash": ""
   },
   "test/connection_manager_test.dart": {
-    "mtime": 1788663154.297123,
-    "ast_hash": "ae42e63406ec44863da8eeea46129951",
+    "mtime": 1788735782.8569047,
+    "ast_hash": "344749e31ef067228db7cd8a55e12b07",
     "semantic_hash": ""
   },
   "test/document_intake_profile_test.dart": {
@@ -845,13 +845,13 @@
     "semantic_hash": ""
   },
   "lib/core/screens/workspace_screen.dart": {
-    "mtime": 1788734687.924308,
-    "ast_hash": "df34086c19f22929b7054a0341a8837a",
+    "mtime": 1788756097.340902,
+    "ast_hash": "667830a697259bcbadf44f4f5b41044a",
     "semantic_hash": ""
   },
   "test/workspace_screen_test.dart": {
-    "mtime": 1788733994.9101124,
-    "ast_hash": "dac5ecf36fd711814a56ab53ebf7b177",
+    "mtime": 1788756007.2157593,
+    "ast_hash": "9cbeafc8cc6c3aec37928673e4aa010d",
     "semantic_hash": ""
   },
   "lib/core/widgets/space_migration_preview.dart": {
@@ -955,8 +955,8 @@
     "semantic_hash": ""
   },
   "test/home_turn_signals_test.dart": {
-    "mtime": 1788079784.1060197,
-    "ast_hash": "95e9c369658164e307d2e4d13fca1022",
+    "mtime": 1788735791.8825448,
+    "ast_hash": "85e37c0235ab3ffdaaeef34de2ec114d",
     "semantic_hash": ""
   },
   "test/support/memory_turn_journal_store.dart": {
@@ -1020,13 +1020,13 @@
     "semantic_hash": ""
   },
   "test/config_backup_service_test.dart": {
-    "mtime": 1788079783.8920174,
-    "ast_hash": "c883643a87bbc5fb1a9e8dd9b3d87533",
+    "mtime": 1788735782.8545287,
+    "ast_hash": "5488c6e739d86c745756049025a74bad",
     "semantic_hash": ""
   },
   "test/config_backup_test.dart": {
-    "mtime": 1788079783.8950174,
-    "ast_hash": "ee3fd8e7a4b9143217ad0b6bb047f3b7",
+    "mtime": 1788735791.885283,
+    "ast_hash": "29dd377028712a12226509b80f271890",
     "semantic_hash": ""
   },
   "lib/core/services/config_backup_io.dart": {
@@ -1035,8 +1035,8 @@
     "semantic_hash": ""
   },
   "test/home_config_restore_test.dart": {
-    "mtime": 1788716491.4133604,
-    "ast_hash": "60f2fcb4d365b5ef2a43a8c38871e65b",
+    "mtime": 1788735782.861222,
+    "ast_hash": "fbcb27053fb26f1ba6d83914c1b0f6fe",
     "semantic_hash": ""
   },
   "lib/core/models/project_sessions_tree.dart": {
@@ -1110,8 +1110,8 @@
     "semantic_hash": ""
   },
   "test/quick_chat_lifecycle_test.dart": {
-    "mtime": 1788079784.1670206,
-    "ast_hash": "1ab1089496f64086332bc4fd3236fcb3",
+    "mtime": 1788735791.883099,
+    "ast_hash": "549dabb239c31cb7c3476181dae993f1",
     "semantic_hash": ""
   },
   "test/quick_chat_store_test.dart": {
@@ -1160,8 +1160,8 @@
     "semantic_hash": ""
   },
   "docs/plans/2026-08-30-workspace-unique-chats.md": {
-    "mtime": 1788083217.9254153,
-    "ast_hash": "6384d70c18860f7f711ef5a988802a8a",
+    "mtime": 1788735770.329571,
+    "ast_hash": "acd4abb1acdb70ce62f3c907a89b40f3",
     "semantic_hash": ""
   },
   "test/api_client_timeout_test.dart": {
@@ -1275,8 +1275,8 @@
     "semantic_hash": ""
   },
   "test/connection_config_string_test.dart": {
-    "mtime": 1788650936.473102,
-    "ast_hash": "569bc38c900e0e2b975c722df6590d4d",
+    "mtime": 1788735770.3283951,
+    "ast_hash": "c8e19ec4ff0629818f318415cd2c2078",
     "semantic_hash": ""
   },
   "lib/core/widgets/session_name_dialog.dart": {

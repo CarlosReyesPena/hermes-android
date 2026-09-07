@@ -33,6 +33,7 @@ import '../utils/activity_feed.dart';
 import '../utils/cron_health.dart';
 import '../utils/home_turn_signals.dart';
 import '../utils/new_chat_options.dart';
+import '../utils/pending_approval_probe.dart';
 import '../widgets/activity_pane.dart';
 import '../widgets/cron_failures_banner.dart';
 import '../widgets/hermes_components.dart';
@@ -40,6 +41,7 @@ import '../widgets/hermes_shell.dart';
 import '../widgets/home_pane.dart';
 import '../widgets/more_pane.dart';
 import '../widgets/new_chat_sheet.dart';
+import '../widgets/pending_approvals_banner.dart';
 import '../widgets/project_detail_screen.dart';
 import '../widgets/projects_pane.dart';
 import 'chat_screen.dart';
@@ -181,6 +183,12 @@ class WorkspaceScreen extends StatefulWidget {
   /// connection actually configures a dashboard.
   final CronFailuresLoader? inboxCronFailuresLoader;
 
+  /// Overrides how the Inbox reads approvals that outlived their chat screen.
+  /// When null, the screen derives a loader from the connection and only asks
+  /// when a Desktop Gateway is actually configured — `approval.pending` is a
+  /// JSON-RPC capability that a legacy REST connection cannot answer.
+  final PendingApprovalsLoader? inboxPendingApprovalsLoader;
+
   const WorkspaceScreen({
     required this.connection,
     this.repositoryFactory,
@@ -200,6 +208,7 @@ class WorkspaceScreen extends StatefulWidget {
     this.sharedAttachmentPreparer,
     this.onOpenDashboard,
     this.inboxCronFailuresLoader,
+    this.inboxPendingApprovalsLoader,
     super.key,
   });
 
@@ -235,6 +244,10 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
   /// Reaches the cron-failure banner on the Inbox, so returning from Cron can
   /// refresh the count of jobs that still need attention.
   final _inboxCronKey = GlobalKey<CronFailuresBannerState>();
+
+  /// Reaches the pending-approvals banner on the Inbox, so returning from the
+  /// chat that replayed the dialog can drop a row the user has now answered.
+  final _inboxApprovalsKey = GlobalKey<PendingApprovalsBannerState>();
 
   /// Lazy dashboard client used to count failing cron jobs for the Inbox.
   DashboardClient? _inboxCronClient;
@@ -911,6 +924,8 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
   void _openInbox() {
     final cronLoader =
         widget.inboxCronFailuresLoader ?? _defaultInboxCronLoader();
+    final approvalsLoader =
+        widget.inboxPendingApprovalsLoader ?? _defaultInboxApprovalsLoader();
     _push(
       Scaffold(
         appBar: AppBar(title: const Text('Inbox')),
@@ -922,6 +937,12 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
                 loadFailures: cronLoader,
                 onOpenCron: () => unawaited(_openCronFromInbox()),
               ),
+            PendingApprovalsBanner(
+              key: _inboxApprovalsKey,
+              loadApprovals: approvalsLoader,
+              onOpenApproval: (approval) =>
+                  unawaited(_openApprovalFromInbox(approval)),
+            ),
             Expanded(
               child: ActivityPane(
                 key: _inboxKey,
@@ -934,6 +955,77 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
         ),
       ),
     );
+  }
+
+  /// Default Inbox approvals loader, or `null` when this connection cannot be
+  /// asked at all.
+  ///
+  /// `approval.pending` is a Desktop Gateway JSON-RPC capability, so a legacy
+  /// REST connection has nowhere to ask: the banner then renders nothing
+  /// rather than claiming that nothing is pending on a question it never
+  /// asked. The gateway client is reused, never created here, so opening the
+  /// Inbox on a connection that has not built one costs no socket.
+  PendingApprovalsLoader? _defaultInboxApprovalsLoader() {
+    if (widget.connection.desktopGatewayUrl?.trim().isEmpty != false) {
+      return null;
+    }
+    return () async {
+      final gateway = _ownedGateway;
+      if (gateway == null) return const <PendingApprovalSummary>[];
+      final ActivityFeed feed;
+      try {
+        feed = await _loadActivity();
+      } catch (_) {
+        // A timeline we could not read is not an error state for the Inbox;
+        // it only means we have no candidate chats to probe this time.
+        return const <PendingApprovalSummary>[];
+      }
+      final targets = selectApprovalProbeTargets(feed: feed);
+      final approvals = <PendingApprovalSummary>[];
+      for (final target in targets) {
+        List<Map<String, dynamic>> pending;
+        try {
+          pending = await gateway.fetchPendingApprovals(target.sessionId);
+        } catch (_) {
+          // One unreachable chat must not hide the approvals of the others.
+          continue;
+        }
+        for (final entry in pending) {
+          approvals.add(
+            PendingApprovalSummary.fromWire(
+              sessionId: target.sessionId,
+              title: target.title,
+              data: entry,
+            ),
+          );
+        }
+      }
+      return approvals;
+    };
+  }
+
+  /// Opens the chat holding a pending approval, then refreshes the banner: the
+  /// existing replay path shows the real dialog there, so the row the user
+  /// just answered must not survive the return.
+  Future<void> _openApprovalFromInbox(PendingApprovalSummary approval) async {
+    final title = _sessionTitles[approval.sessionId] ?? approval.chatLabel;
+    await _openSession(
+      Session(
+        id: approval.sessionId,
+        title: title,
+        model: '',
+        source: '',
+        messageCount: 0,
+        isActive: true,
+        preview: '',
+        startedAt: DateTime.now().millisecondsSinceEpoch / 1000.0,
+      ),
+    );
+    if (!mounted) return;
+    unawaited(
+      _inboxApprovalsKey.currentState?.refresh() ?? Future<void>.value(),
+    );
+    unawaited(_inboxKey.currentState?.refresh() ?? Future<void>.value());
   }
 
   /// Default Inbox cron loader, or `null` when this connection has no

@@ -1321,6 +1321,40 @@ Projects.
     would have risked clobbering unrelated work. The banner and its probe are
     complete and covered; the call-site wiring is the next slice.
 
+32. **The pending-approvals banner wired into the Inbox** —
+    `test/workspace_screen_test.dart`. The call site the previous slice
+    deferred. `WorkspaceScreen._openInbox` now renders
+    `PendingApprovalsBanner` above the actionable Activity feed, beside the
+    cron-failure banner, and the default loader lives in
+    `_defaultInboxApprovalsLoader`.
+
+    The capability gate is the connection itself, exactly like the cron
+    loader: a connection with **no Desktop Gateway URL** returns a `null`
+    loader, because `approval.pending` is a JSON-RPC capability a legacy REST
+    connection cannot answer — the banner then draws nothing rather than
+    claiming nothing is pending on a question it never asked. The loader also
+    reuses `_ownedGateway` and never constructs a client of its own, so
+    opening the Inbox on a connection that has not already built a gateway
+    costs no socket.
+
+    Where a gateway does exist, the loader reads the Activity feed it has
+    already wired, passes it to `selectApprovalProbeTargets` (so the
+    blocked > running > failed ranking and the probe cap decide what is asked,
+    not the widget), and maps each raw `approval.pending` entry through
+    `PendingApprovalSummary.fromWire`. Two degradation rules are deliberate: a
+    timeline that cannot be read yields **no candidates** rather than an error
+    state, and one chat whose probe throws is skipped rather than hiding the
+    approvals of every other chat.
+
+    Tapping a row opens that chat through the same `_openSession` path every
+    other Inbox row uses — so the chat inherits the application-scoped turn
+    controller and the existing replay path shows the real dialog — and
+    returning refreshes both the banner and the feed, since the row the user
+    just answered must not survive the return. Pinned by test at the real call
+    site: a gateway connection surfaces the waiting approval with its command
+    and opens the right chat on tap, and a legacy connection mounts the banner
+    but renders nothing in it while the actionable feed behind it still works.
+
 Phase 0 is **complete**. Step 7 (real Gateway smoke test on a device) passed on
 2026-08-29 against the live Miniserver gateway from a physical SM-S948B over
 wireless debugging, and the migration *write* path it gated is implemented and
@@ -1329,11 +1363,9 @@ covered (`ProjectsRepository.migrateSpaces`,
 (Home, Projects, Activity, More) is implemented, covered, and now validated on
 hardware, so *screen* slices may begin.
 
-Next slice: wire `PendingApprovalsBanner` into `WorkspaceScreen._openInbox`
-(the probe and banner landed in point 31 but the call site was owned by a
-concurrent change), then extend the action Inbox with authoritative Cron due
-tasks. Keep each source capability-gated and never fabricate actionable rows
-when its server contract is unavailable.
+Next slice: extend the action Inbox with authoritative Cron due tasks (the
+pending-approval source landed in point 32). Keep each source capability-gated
+and never fabricate actionable rows when its server contract is unavailable.
 
 ---
 

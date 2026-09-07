@@ -19,12 +19,14 @@ import 'package:hermes_android/core/utils/activity_feed.dart';
 import 'package:hermes_android/core/utils/home_digest.dart';
 import 'package:hermes_android/core/utils/home_turn_signals.dart';
 import 'package:hermes_android/core/utils/new_chat_options.dart';
+import 'package:hermes_android/core/utils/pending_approval_probe.dart';
 import 'package:hermes_android/core/widgets/activity_pane.dart';
 import 'package:hermes_android/core/widgets/cron_failures_banner.dart';
 import 'package:hermes_android/core/widgets/hermes_components.dart';
 import 'package:hermes_android/core/widgets/hermes_shell.dart';
 import 'package:hermes_android/core/widgets/home_pane.dart';
 import 'package:hermes_android/core/widgets/more_pane.dart';
+import 'package:hermes_android/core/widgets/pending_approvals_banner.dart';
 import 'package:hermes_android/core/widgets/projects_pane.dart';
 import 'package:hermes_android/core/widgets/project_detail_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -175,6 +177,7 @@ Future<void> _pump(
   bool initialQuickChat = false,
   SharedAttachmentPreparer? sharedAttachmentPreparer,
   CronFailuresLoader? inboxCronFailuresLoader,
+  PendingApprovalsLoader? inboxPendingApprovalsLoader,
   Size size = const Size(400, 800),
 }) async {
   tester.view.physicalSize = size;
@@ -209,6 +212,7 @@ Future<void> _pump(
         initialQuickChat: initialQuickChat,
         sharedAttachmentPreparer: sharedAttachmentPreparer,
         inboxCronFailuresLoader: inboxCronFailuresLoader,
+        inboxPendingApprovalsLoader: inboxPendingApprovalsLoader,
         onOpenDashboard: openedDashboards == null
             ? null
             : (url) async => openedDashboards.add(url),
@@ -751,6 +755,103 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.textContaining('cron job'), findsNothing);
+    expect(find.text('Approve deployment'), findsOneWidget);
+  });
+
+  testWidgets('the Inbox surfaces an approval that outlived its chat screen', (
+    tester,
+  ) async {
+    final now = DateTime.now();
+    final opened = <String>[];
+    await _pump(
+      tester,
+      connection: _connection(desktopGatewayUrl: 'https://host:8642'),
+      repository: await _repository([]),
+      sessions: [_session(id: 'blocked', title: 'Approve deployment')],
+      openedSessions: opened,
+      activityFeedLoader: (_, _) async => ActivityFeed(
+        groups: [
+          ActivityGroup(
+            kind: ActivityGroupKind.needsYou,
+            items: [
+              ActivityItem(
+                sessionId: 'blocked',
+                title: 'Approve deployment',
+                clientTurnId: 'turn-blocked',
+                label: 'Waiting for your input',
+                status: HermesStatus.blocked,
+                updatedAt: now,
+              ),
+            ],
+            totalCount: 1,
+          ),
+        ],
+        blockedCount: 1,
+        runningCount: 0,
+      ),
+      inboxPendingApprovalsLoader: () async => const [
+        PendingApprovalSummary(
+          sessionId: 'blocked',
+          title: 'Approve deployment',
+          command: 'rm -rf build',
+          description: 'Hermes wants to clear the build directory.',
+        ),
+      ],
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Open inbox (1)'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('1 approval is waiting'), findsOneWidget);
+    expect(find.textContaining('rm -rf build'), findsOneWidget);
+
+    // Tapping the banner row opens the chat that replays the real dialog.
+    await tester.tap(find.textContaining('rm -rf build'));
+    await tester.pumpAndSettle();
+    expect(opened, ['blocked']);
+  });
+
+  testWidgets('the Inbox stays silent about approvals on a legacy connection', (
+    tester,
+  ) async {
+    // No Desktop Gateway URL means `approval.pending` does not exist here, so
+    // the Inbox must not claim that nothing is pending on a question it never
+    // asked — and must not construct a gateway client to find out.
+    final now = DateTime.now();
+    await _pump(
+      tester,
+      connection: _connection(),
+      repository: await _repository([]),
+      sessions: [_session(id: 'blocked', title: 'Approve deployment')],
+      activityFeedLoader: (_, _) async => ActivityFeed(
+        groups: [
+          ActivityGroup(
+            kind: ActivityGroupKind.needsYou,
+            items: [
+              ActivityItem(
+                sessionId: 'blocked',
+                title: 'Approve deployment',
+                clientTurnId: 'turn-blocked',
+                label: 'Waiting for your input',
+                status: HermesStatus.blocked,
+                updatedAt: now,
+              ),
+            ],
+            totalCount: 1,
+          ),
+        ],
+        blockedCount: 1,
+        runningCount: 0,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Open inbox (1)'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(PendingApprovalsBanner), findsOneWidget);
+    expect(find.textContaining('approval is waiting'), findsNothing);
     expect(find.text('Approve deployment'), findsOneWidget);
   });
 
