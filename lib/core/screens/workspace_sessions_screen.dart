@@ -132,11 +132,16 @@ class WorkspaceSessionsData {
   /// project is unknown stays honest as "Unassigned" in the UI.
   final Map<String, String> projectLabels;
 
+  /// Best-effort session id → project id mapping used to restore each original
+  /// destination when a batch Move is undone.
+  final Map<String, String?> projectIds;
+
   const WorkspaceSessionsData({
     this.sessions = const [],
     this.claimedSessionIds = const {},
     this.archivedQuickChatIds = const {},
     this.projectLabels = const {},
+    this.projectIds = const {},
   });
 }
 
@@ -148,6 +153,11 @@ typedef WorkspaceSessionPromoter = Future<void> Function(Session session);
 /// can file a chat from where the user sees it, not only from inside a Project.
 typedef WorkspaceSessionMover =
     Future<void> Function(Session session, String? projectId);
+
+/// Resolves original Project ids for selected conversations not present in the
+/// cheap overview previews. Used only before a batch move so Undo never guesses.
+typedef WorkspaceSessionProjectResolver =
+    Future<Map<String, String?>> Function(List<Session> sessions);
 
 /// Updates one conversation's durable flags (pin / archive) server-side. The
 /// gateway persists each flag across the session's compression lineage.
@@ -208,6 +218,7 @@ class WorkspaceSessionsScreen extends StatefulWidget {
   /// callback. [projects] supplies the move destinations (Unassigned plus each
   /// non-archived Project).
   final WorkspaceSessionMover? onMoveSession;
+  final WorkspaceSessionProjectResolver? resolveProjectIds;
   final List<HermesProject> projects;
 
   /// When non-null, each row gains a long-press menu with Pin/Unpin and
@@ -249,6 +260,7 @@ class WorkspaceSessionsScreen extends StatefulWidget {
     this.onPromote,
     this.embedded = false,
     this.onMoveSession,
+    this.resolveProjectIds,
     this.projects = const [],
     this.onUpdateFlags,
     this.onRenameSession,
@@ -275,6 +287,8 @@ class _WorkspaceSessionsScreenState extends State<WorkspaceSessionsScreen> {
   final Set<String> _promoting = {};
   final Set<String> _moving = {};
   final Set<String> _updatingFlags = {};
+  final Set<String> _selectedSessionIds = {};
+  bool _batchActionRunning = false;
 
   /// The active chip filter in the embedded Chats browser.
   WorkspaceChatsFilter _filter = WorkspaceChatsFilter.all;
@@ -384,6 +398,7 @@ class _WorkspaceSessionsScreenState extends State<WorkspaceSessionsScreen> {
                 if (id != session.id) id,
             },
             projectLabels: data.projectLabels,
+            projectIds: data.projectIds,
           );
           _promoting.remove(session.id);
         });
@@ -478,6 +493,243 @@ class _WorkspaceSessionsScreenState extends State<WorkspaceSessionsScreen> {
     await _moveSession(session, target);
   }
 
+  Future<void> _chooseBatchMoveDestination() async {
+    if (_selectedSessionIds.isEmpty || widget.onMoveSession == null) return;
+    final target = await showModalBottomSheet<_MoveTarget>(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Padding(
+              padding: EdgeInsets.fromLTRB(
+                HermesSpacing.lg,
+                HermesSpacing.lg,
+                HermesSpacing.lg,
+                HermesSpacing.sm,
+              ),
+              child: Text('Move selected conversations'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.inbox_outlined),
+              title: const Text('Unassigned'),
+              onTap: () => Navigator.pop(
+                context,
+                const _MoveTarget(projectId: null, label: 'Unassigned'),
+              ),
+            ),
+            for (final project in widget.projects)
+              if (!project.archived)
+                ListTile(
+                  leading: const Icon(Icons.folder_outlined),
+                  title: Text(project.name),
+                  onTap: () => Navigator.pop(
+                    context,
+                    _MoveTarget(projectId: project.id, label: project.name),
+                  ),
+                ),
+          ],
+        ),
+      ),
+    );
+    if (target == null || !mounted) return;
+    await _moveSelected(target);
+  }
+
+  List<Session> get _selectedSessions {
+    final data = _data;
+    if (data == null) return const [];
+    return [
+      for (final session in data.sessions)
+        if (_selectedSessionIds.contains(session.id)) session,
+    ];
+  }
+
+  void _startSelection(Session session) {
+    setState(() => _selectedSessionIds.add(session.id));
+  }
+
+  void _toggleSelection(Session session) {
+    if (_batchActionRunning) return;
+    setState(() {
+      if (!_selectedSessionIds.add(session.id)) {
+        _selectedSessionIds.remove(session.id);
+      }
+    });
+  }
+
+  void _clearSelection() {
+    if (_batchActionRunning) return;
+    setState(_selectedSessionIds.clear);
+  }
+
+  Future<void> _updateSelectedFlag({
+    required bool pinned,
+    required bool archived,
+  }) async {
+    final update = widget.onUpdateFlags;
+    final selected = _selectedSessions;
+    if (update == null || selected.isEmpty || _batchActionRunning) return;
+    final originals = {
+      for (final session in selected)
+        session.id: (pinned: session.pinned, archived: session.archived),
+    };
+    setState(() => _batchActionRunning = true);
+    try {
+      await Future.wait([
+        for (final session in selected)
+          update(
+            session,
+            pinned: pinned ? true : null,
+            archived: archived ? true : null,
+          ),
+      ]);
+      if (!mounted) return;
+      setState(() {
+        _batchActionRunning = false;
+        _selectedSessionIds.clear();
+      });
+      await _load();
+      if (!mounted) return;
+      final verb = pinned ? 'Pinned' : 'Archived';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('$verb ${selected.length} conversations'),
+          action: SnackBarAction(
+            label: 'Undo',
+            onPressed: () => unawaited(
+              _restoreSelectedFlags(
+                selected,
+                originals,
+                restorePinned: pinned,
+                restoreArchived: archived,
+              ),
+            ),
+          ),
+        ),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _batchActionRunning = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Couldn’t update selected conversations')),
+      );
+    }
+  }
+
+  Future<void> _restoreSelectedFlags(
+    List<Session> sessions,
+    Map<String, ({bool pinned, bool archived})> originals, {
+    required bool restorePinned,
+    required bool restoreArchived,
+  }) async {
+    final update = widget.onUpdateFlags;
+    if (update == null) return;
+    try {
+      await Future.wait([
+        for (final session in sessions)
+          update(
+            session,
+            pinned: restorePinned ? originals[session.id]!.pinned : null,
+            archived: restoreArchived ? originals[session.id]!.archived : null,
+          ),
+      ]);
+      await _load();
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Couldn’t undo batch action')),
+      );
+    }
+  }
+
+  Future<void> _moveSelected(_MoveTarget target) async {
+    final move = widget.onMoveSession;
+    final data = _data;
+    final selected = _selectedSessions;
+    if (move == null ||
+        data == null ||
+        selected.isEmpty ||
+        _batchActionRunning) {
+      return;
+    }
+    setState(() => _batchActionRunning = true);
+    try {
+      final originalProjectIds = <String, String?>{};
+      final unresolved = <Session>[];
+      for (final session in selected) {
+        if (data.projectIds.containsKey(session.id)) {
+          originalProjectIds[session.id] = data.projectIds[session.id];
+        } else if (!data.claimedSessionIds.contains(session.id)) {
+          originalProjectIds[session.id] = null;
+        } else {
+          unresolved.add(session);
+        }
+      }
+      if (unresolved.isNotEmpty) {
+        final resolver = widget.resolveProjectIds;
+        if (resolver == null) {
+          throw StateError('Original Project destinations are unavailable');
+        }
+        final resolved = await resolver(unresolved);
+        for (final session in unresolved) {
+          if (!resolved.containsKey(session.id)) {
+            throw StateError('Could not resolve ${session.id}');
+          }
+          originalProjectIds[session.id] = resolved[session.id];
+        }
+      }
+      await Future.wait([
+        for (final session in selected) move(session, target.projectId),
+      ]);
+      if (!mounted) return;
+      setState(() {
+        _batchActionRunning = false;
+        _selectedSessionIds.clear();
+      });
+      await _load();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Moved ${selected.length} conversations to ${target.label}',
+          ),
+          action: SnackBarAction(
+            label: 'Undo',
+            onPressed: () =>
+                unawaited(_restoreMovedSessions(selected, originalProjectIds)),
+          ),
+        ),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _batchActionRunning = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Couldn’t move selected conversations')),
+      );
+    }
+  }
+
+  Future<void> _restoreMovedSessions(
+    List<Session> sessions,
+    Map<String, String?> projectIds,
+  ) async {
+    final move = widget.onMoveSession;
+    if (move == null) return;
+    try {
+      await Future.wait([
+        for (final session in sessions) move(session, projectIds[session.id]),
+      ]);
+      await _load();
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Couldn’t undo batch move')));
+    }
+  }
+
   Future<void> _updateFlag(
     Session session, {
     bool? pinned,
@@ -503,7 +755,11 @@ class _WorkspaceSessionsScreenState extends State<WorkspaceSessionsScreen> {
   Future<void> _showSessionMenu(Session session) async {
     final update = widget.onUpdateFlags;
     final rename = widget.onRenameSession;
-    if (update == null && rename == null && widget.onDeleteSession == null) {
+    final supportsBatch = update != null || widget.onMoveSession != null;
+    if (update == null &&
+        rename == null &&
+        widget.onDeleteSession == null &&
+        !supportsBatch) {
       return;
     }
     final action = await showModalBottomSheet<String>(
@@ -513,6 +769,12 @@ class _WorkspaceSessionsScreenState extends State<WorkspaceSessionsScreen> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            if (supportsBatch)
+              ListTile(
+                leading: const Icon(Icons.checklist),
+                title: const Text('Select'),
+                onTap: () => Navigator.pop(context, 'select'),
+              ),
             if (update != null)
               ListTile(
                 leading: Icon(
@@ -547,6 +809,10 @@ class _WorkspaceSessionsScreenState extends State<WorkspaceSessionsScreen> {
       ),
     );
     if (action == null || !mounted) return;
+    if (action == 'select') {
+      _startSelection(session);
+      return;
+    }
     if (action == 'rename') {
       await _renameSession(session);
       return;
@@ -1022,6 +1288,10 @@ class _WorkspaceSessionsScreenState extends State<WorkspaceSessionsScreen> {
             const SizedBox(height: HermesSpacing.md),
             _buildChips(),
           ],
+          if (_selectedSessionIds.isNotEmpty) ...[
+            const SizedBox(height: HermesSpacing.md),
+            _buildBatchToolbar(),
+          ],
           if (aiMode && _aiRewrittenQuery != null) ...[
             const SizedBox(height: HermesSpacing.sm),
             Row(
@@ -1090,6 +1360,67 @@ class _WorkspaceSessionsScreenState extends State<WorkspaceSessionsScreen> {
     );
   }
 
+  Widget _buildBatchToolbar() {
+    final tokens = HermesTokens.of(context);
+    return Material(
+      color: tokens.raised,
+      borderRadius: BorderRadius.circular(HermesRadius.md),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: HermesSpacing.sm,
+          vertical: HermesSpacing.xs,
+        ),
+        child: Row(
+          children: [
+            IconButton(
+              tooltip: 'Cancel selection',
+              onPressed: _batchActionRunning ? null : _clearSelection,
+              icon: const Icon(Icons.close),
+            ),
+            Expanded(
+              child: Text(
+                '${_selectedSessionIds.length} selected',
+                style: tokens.typography.label,
+              ),
+            ),
+            if (_batchActionRunning)
+              const Padding(
+                padding: EdgeInsets.all(HermesSpacing.sm),
+                child: SizedBox.square(
+                  dimension: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+              )
+            else ...[
+              if (widget.onUpdateFlags != null)
+                IconButton(
+                  tooltip: 'Pin selected',
+                  onPressed: () => unawaited(
+                    _updateSelectedFlag(pinned: true, archived: false),
+                  ),
+                  icon: const Icon(Icons.push_pin_outlined),
+                ),
+              if (widget.onMoveSession != null)
+                IconButton(
+                  tooltip: 'Move selected',
+                  onPressed: () => unawaited(_chooseBatchMoveDestination()),
+                  icon: const Icon(Icons.drive_file_move_outline),
+                ),
+              if (widget.onUpdateFlags != null)
+                IconButton(
+                  tooltip: 'Archive selected',
+                  onPressed: () => unawaited(
+                    _updateSelectedFlag(pinned: false, archived: true),
+                  ),
+                  icon: const Icon(Icons.archive_outlined),
+                ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildSearchError(HermesTokens tokens) {
     return Material(
       color: tokens.raised,
@@ -1149,16 +1480,33 @@ class _WorkspaceSessionsScreenState extends State<WorkspaceSessionsScreen> {
     final showMove = widget.onMoveSession != null;
     final showActions =
         widget.onUpdateFlags != null ||
+        widget.onMoveSession != null ||
         widget.onRenameSession != null ||
         widget.onDeleteSession != null;
+    final selectionActive = _selectedSessionIds.isNotEmpty;
+    final selected = _selectedSessionIds.contains(session.id);
     return HermesCard(
-      onTap: () => widget.onOpenSession(session),
-      onLongPress: showActions
+      onTap: selectionActive
+          ? () => _toggleSelection(session)
+          : () => widget.onOpenSession(session),
+      onLongPress: selectionActive
+          ? () => _toggleSelection(session)
+          : showActions
           ? () => unawaited(_showSessionMenu(session))
           : null,
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          if (selectionActive) ...[
+            Checkbox(
+              key: Key('select-session-${session.id}'),
+              value: selected,
+              onChanged: _batchActionRunning
+                  ? null
+                  : (_) => _toggleSelection(session),
+            ),
+            const SizedBox(width: HermesSpacing.xs),
+          ],
           Icon(
             session.pinned
                 ? Icons.push_pin_outlined
@@ -1223,7 +1571,7 @@ class _WorkspaceSessionsScreenState extends State<WorkspaceSessionsScreen> {
               ],
             ),
           ),
-          if (showMove)
+          if (showMove && !selectionActive)
             _moving.contains(session.id)
                 ? const SizedBox.square(
                     dimension: 24,
@@ -1235,7 +1583,7 @@ class _WorkspaceSessionsScreenState extends State<WorkspaceSessionsScreen> {
                     onPressed: () => unawaited(_chooseMoveDestination(session)),
                     icon: const Icon(Icons.drive_file_move_outline),
                   ),
-          if (showPromote)
+          if (showPromote && !selectionActive)
             _promoting.contains(session.id)
                 ? const SizedBox.square(
                     dimension: 24,

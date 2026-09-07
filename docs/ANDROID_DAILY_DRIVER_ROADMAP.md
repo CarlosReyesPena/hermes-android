@@ -1436,6 +1436,25 @@ Projects.
     pin something rather than rendering a bare "no results" — an empty Smart
     View whose entry action is undiscoverable is a dead end.
 
+35. **Batch select with reversible Pin, Move, and Archive** —
+    `test/workspace_sessions_batch_actions_test.dart`. The remaining half of
+    audit backlog item 7 now lands without inventing a bulk server endpoint:
+    long-pressing a conversation offers **Select**, selected rows switch to
+    explicit checkboxes, and a compact toolbar applies Pin, Move, or Archive
+    through the same idempotent single-session callbacks already used by each
+    row. This keeps the feature compatible with both REST-only and full Desktop
+    Gateway connections.
+
+    Undo is state-preserving rather than merely applying the opposite action.
+    Before a batch starts, the screen snapshots every selected conversation's
+    pin/archive flags and best-effort Project id. A successful batch clears
+    selection and exposes a SnackBar Undo action; undo writes each original
+    value back independently, including mixed pinned/unpinned selections and
+    moves that began across different Projects or Unassigned. The Projects
+    overview loader now carries a session-to-project-id map alongside its
+    existing labels so Move undo never guesses a destination. Failures keep the
+    selection active and report an error instead of implying success.
+
 Phase 0 is **complete**. Step 7 (real Gateway smoke test on a device) passed on
 2026-08-29 against the live Miniserver gateway from a physical SM-S948B over
 wireless debugging, and the migration *write* path it gated is implemented and
@@ -1448,8 +1467,9 @@ Next slice: the third and last Inbox source deferred in point 30 — approvals
 and cron are covered, so what remains is an authoritative aggregation contract
 for work that belongs to no open chat and no scheduled job. Keep each source
 capability-gated and never fabricate actionable rows when its server contract
-is unavailable. The remaining half of audit backlog item 7 (batch select and
-undo for pin/move/archive) is the other candidate and needs no new contract.
+is unavailable. Batch select and reversible pin/move/archive are complete; the
+next Android-only candidate is AI filing review/accept/reject UI once the
+organizer exposes its suggestion feed.
 
 ---
 

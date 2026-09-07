@@ -751,6 +751,9 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
               ? null
               : (session, targetProjectId) =>
                     repository.assignSession(session.id, targetProjectId),
+          resolveProjectIds: repository == null
+              ? null
+              : _resolveSessionProjectIds,
           projects: repository?.current.projects ?? const [],
           onRenameSession: _canRenameSessions ? _renameSession : null,
           onDeleteSession: _deleteSession,
@@ -1370,6 +1373,7 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
 
     Set<String> claimed = const {};
     Map<String, String> projectLabels = const {};
+    Map<String, String?> projectIds = const {};
     final repository = _repository;
     if (repository != null) {
       try {
@@ -1388,6 +1392,11 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
           for (final project in overview.projects)
             for (final preview in project.previewSessions)
               preview.id: project.label,
+        };
+        projectIds = {
+          for (final project in overview.projects)
+            for (final preview in project.previewSessions)
+              preview.id: project.isUserOwned ? project.id : null,
         };
       } catch (_) {
         // A gateway without projects.tree still gets All chats and Search.
@@ -1408,7 +1417,46 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
       claimedSessionIds: Set.unmodifiable(claimed),
       archivedQuickChatIds: Set.unmodifiable(archived),
       projectLabels: _chatProjectLabels,
+      projectIds: Map.unmodifiable(projectIds),
     );
+  }
+
+  Future<Map<String, String?>> _resolveSessionProjectIds(
+    List<Session> sessions,
+  ) async {
+    final repository = _repository;
+    if (repository == null || sessions.isEmpty) return const {};
+    final wanted = sessions.map((session) => session.id).toSet();
+    final overview = await repository.overview(refresh: true);
+    final candidates =
+        overview.projects
+            .where((project) => !project.isNoProject)
+            .toList(growable: false)
+          ..sort((a, b) {
+            if (a.isUserOwned == b.isUserOwned) return 0;
+            return a.isUserOwned ? -1 : 1;
+          });
+    final views = await Future.wait([
+      for (final project in candidates)
+        repository.projectSessions(project.id, refresh: true),
+    ]);
+    if (views.any(
+      (view) => view.error != null || view.support != ProjectsSupport.native,
+    )) {
+      throw StateError('Could not read every original Project destination');
+    }
+    final resolved = <String, String?>{};
+    for (var index = 0; index < candidates.length; index++) {
+      final project = candidates[index];
+      for (final session in views[index].sessions) {
+        if (wanted.contains(session.id) && !resolved.containsKey(session.id)) {
+          // Auto-project membership comes from cwd/repo inference rather than an
+          // explicit assignment. Removing the explicit move (null) restores it.
+          resolved[session.id] = project.isUserOwned ? project.id : null;
+        }
+      }
+    }
+    return resolved;
   }
 
   Future<void> _openWorkspaceSessionView(WorkspaceSessionView view) async {
@@ -1438,6 +1486,9 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
             ? null
             : (session, targetProjectId) =>
                   repository.assignSession(session.id, targetProjectId),
+        resolveProjectIds: repository == null
+            ? null
+            : _resolveSessionProjectIds,
         projects: repository?.current.projects ?? const [],
         onRenameSession: _canRenameSessions ? _renameSession : null,
         onDeleteSession: _deleteSession,
