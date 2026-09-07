@@ -1355,6 +1355,59 @@ Projects.
     and opens the right chat on tap, and a legacy connection mounts the banner
     but renders nothing in it while the actionable feed behind it still works.
 
+33. **Cron due tasks — the second deferred Inbox source** —
+    `test/cron_health_test.dart`, `test/cron_due_banner_test.dart`,
+    `test/workspace_screen_test.dart`. Point 30 deferred three sources; point 32
+    landed approvals, and this lands *due tasks*. A scheduled job whose
+    `next_run_at` has passed and which simply never ran was invisible
+    everywhere: the failures banner only reports a run that **errored**, so a
+    scheduler that silently stopped firing produced no row at all — the one
+    failure mode a cron user most needs told about.
+
+    Split the same way the rest of Phase 1 is: the pure `selectOverdueCronJobs`
+    helper in `lib/core/utils/cron_health.dart` owns the decision, and
+    `CronDueBanner` in `lib/core/widgets/cron_due_banner.dart` owns only
+    presentation. It reads the existing authenticated `/api/cron/jobs`
+    dashboard route, so **no new server contract is required**, and the
+    payload shape was verified against the live scheduler state
+    (`~/.hermes/cron/jobs.json`, 33 real jobs) rather than assumed.
+
+    The rule that matters most is that the two cron sources are **disjoint**: a
+    job whose last run errored is left entirely to the failures banner, so the
+    same job can never be reported twice under two different reasons. Also
+    pinned by test: paused work is never overdue however old its `next_run_at`
+    is (pausing is a deliberate stop, and all three server spellings —
+    `paused_at`, `state: paused`, `enabled: false` — are honoured), a run late
+    by less than `kCronOverdueGrace` (15 min) is normal scheduler jitter rather
+    than a fault and the grace boundary itself has **not** elapsed, offset
+    timestamps are compared as instants and not as wall-clock text (the server
+    sends `+02:00`, so a naive string or local-time comparison would be wrong
+    by the offset), a job with **no** `next_run_at` or an unparseable one is
+    dropped rather than assumed late — claiming work is overdue on a guess is
+    worse than staying quiet — the most overdue job is reported first, the list
+    is capped, a cap of zero throws rather than making an empty probe
+    indistinguishable from "nothing is due", a blank name falls back to the id
+    instead of rendering an empty row, an id-less job is dropped because it
+    could only ever be a dead row, and the caller's list is never mutated or
+    reordered.
+
+    On the presentation side the banner matches `CronFailuresBanner` and
+    `PendingApprovalsBanner` on purpose so the three Inbox sources never
+    disagree: it renders **only** from an authoritative answer, a `null` loader
+    (a connection with no dashboard configured) draws nothing rather than
+    claiming nothing is due on a question it never asked, a loader that throws
+    hides the banner instead of turning the Inbox into an error screen, and
+    lateness is worded through the one canonical `formatRelativeAge` helper so
+    a late run reads identically here and in Activity. A 200 % text-scale test
+    on a 320 dp phone guards the row layout.
+
+    At the real call site in `WorkspaceScreen._openInbox` the banner sits
+    beside the other two, the capability gate is the connection's dashboard
+    exactly like the failures loader, both cron loaders reuse the one lazily
+    built `DashboardClient` so opening the Inbox still costs a single client,
+    and returning from Cron refreshes **both** banners — the user most likely
+    went there to run the overdue job.
+
 Phase 0 is **complete**. Step 7 (real Gateway smoke test on a device) passed on
 2026-08-29 against the live Miniserver gateway from a physical SM-S948B over
 wireless debugging, and the migration *write* path it gated is implemented and
@@ -1363,9 +1416,11 @@ covered (`ProjectsRepository.migrateSpaces`,
 (Home, Projects, Activity, More) is implemented, covered, and now validated on
 hardware, so *screen* slices may begin.
 
-Next slice: extend the action Inbox with authoritative Cron due tasks (the
-pending-approval source landed in point 32). Keep each source capability-gated
-and never fabricate actionable rows when its server contract is unavailable.
+Next slice: the third and last Inbox source deferred in point 30 — approvals
+and cron are covered, so what remains is an authoritative aggregation contract
+for work that belongs to no open chat and no scheduled job. Keep each source
+capability-gated and never fabricate actionable rows when its server contract
+is unavailable.
 
 ---
 

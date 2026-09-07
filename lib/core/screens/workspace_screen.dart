@@ -35,6 +35,7 @@ import '../utils/home_turn_signals.dart';
 import '../utils/new_chat_options.dart';
 import '../utils/pending_approval_probe.dart';
 import '../widgets/activity_pane.dart';
+import '../widgets/cron_due_banner.dart';
 import '../widgets/cron_failures_banner.dart';
 import '../widgets/hermes_components.dart';
 import '../widgets/hermes_shell.dart';
@@ -183,6 +184,13 @@ class WorkspaceScreen extends StatefulWidget {
   /// connection actually configures a dashboard.
   final CronFailuresLoader? inboxCronFailuresLoader;
 
+  /// Overrides how the Inbox reads scheduled cron jobs whose run is overdue.
+  /// When null, the screen derives a loader from the connection and only asks
+  /// when a dashboard is actually configured — without one there is no
+  /// authoritative source, so the Inbox shows no due row rather than claiming
+  /// nothing is due.
+  final CronDueLoader? inboxCronDueLoader;
+
   /// Overrides how the Inbox reads approvals that outlived their chat screen.
   /// When null, the screen derives a loader from the connection and only asks
   /// when a Desktop Gateway is actually configured — `approval.pending` is a
@@ -208,6 +216,7 @@ class WorkspaceScreen extends StatefulWidget {
     this.sharedAttachmentPreparer,
     this.onOpenDashboard,
     this.inboxCronFailuresLoader,
+    this.inboxCronDueLoader,
     this.inboxPendingApprovalsLoader,
     super.key,
   });
@@ -244,6 +253,10 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
   /// Reaches the cron-failure banner on the Inbox, so returning from Cron can
   /// refresh the count of jobs that still need attention.
   final _inboxCronKey = GlobalKey<CronFailuresBannerState>();
+
+  /// Reaches the overdue-jobs banner on the Inbox, so returning from Cron can
+  /// drop a job the user has now run or repaused.
+  final _inboxCronDueKey = GlobalKey<CronDueBannerState>();
 
   /// Reaches the pending-approvals banner on the Inbox, so returning from the
   /// chat that replayed the dialog can drop a row the user has now answered.
@@ -924,6 +937,8 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
   void _openInbox() {
     final cronLoader =
         widget.inboxCronFailuresLoader ?? _defaultInboxCronLoader();
+    final cronDueLoader =
+        widget.inboxCronDueLoader ?? _defaultInboxCronDueLoader();
     final approvalsLoader =
         widget.inboxPendingApprovalsLoader ?? _defaultInboxApprovalsLoader();
     _push(
@@ -937,6 +952,11 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
                 loadFailures: cronLoader,
                 onOpenCron: () => unawaited(_openCronFromInbox()),
               ),
+            CronDueBanner(
+              key: _inboxCronDueKey,
+              loadDueJobs: cronDueLoader,
+              onOpenCron: () => unawaited(_openCronFromInbox()),
+            ),
             PendingApprovalsBanner(
               key: _inboxApprovalsKey,
               loadApprovals: approvalsLoader,
@@ -1070,8 +1090,51 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
     };
   }
 
-  /// Opens the Cron screen from the Inbox banner, then refreshes the banner:
-  /// the user most likely went there to fix the failing job.
+  /// Default Inbox due-jobs loader, or `null` when this connection has no
+  /// dashboard to ask.
+  ///
+  /// The gate is the same as the failures loader — a connection without
+  /// dashboard credentials has no authoritative cron source, so the banner
+  /// draws nothing rather than claiming nothing is due on a question it never
+  /// asked. Both loaders reuse the one lazily built [DashboardClient], so
+  /// opening the Inbox still costs a single client.
+  CronDueLoader? _defaultInboxCronDueLoader() {
+    final connection = widget.connection;
+    final hasDashboard =
+        connection.dashboardProxied ||
+        (connection.dashboardUsername?.isNotEmpty ?? false) ||
+        (connection.dashboardPassword?.isNotEmpty ?? false);
+    if (!hasDashboard) return null;
+    return () async {
+      try {
+        final client =
+            _inboxCronClient ??
+            DashboardClient(
+              host: connection.host,
+              port: connection.dashboardPort,
+              pathPrefix: connection.dashboardPrefix ?? '',
+              proxied: connection.dashboardProxied,
+              useHttps: connection.useHttps,
+              username: connection.dashboardUsername,
+              password: connection.dashboardPassword,
+            );
+        _inboxCronClient = client;
+        final data = await client.apiGetList('cron/jobs');
+        final jobs = <Map<String, dynamic>>[
+          for (final item in data)
+            if (item is Map<String, dynamic>) item,
+        ];
+        return selectOverdueCronJobs(jobs: jobs, now: DateTime.now());
+      } catch (_) {
+        // Same rule as the failures loader: an unreachable dashboard reports
+        // nothing rather than turning the Inbox into an error screen.
+        return const <OverdueCronJob>[];
+      }
+    };
+  }
+
+  /// Opens the Cron screen from either Inbox banner, then refreshes both: the
+  /// user most likely went there to fix the failing job or run the overdue one.
   Future<void> _openCronFromInbox() async {
     await Navigator.of(context).push(
       MaterialPageRoute<void>(
@@ -1080,6 +1143,7 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
     );
     if (!mounted) return;
     unawaited(_inboxCronKey.currentState?.refresh() ?? Future<void>.value());
+    unawaited(_inboxCronDueKey.currentState?.refresh() ?? Future<void>.value());
   }
 
   /// Opens the chat an Activity row belongs to.

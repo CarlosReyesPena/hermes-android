@@ -845,13 +845,13 @@
     "semantic_hash": ""
   },
   "lib/core/screens/workspace_screen.dart": {
-    "mtime": 1788756097.340902,
-    "ast_hash": "667830a697259bcbadf44f4f5b41044a",
+    "mtime": 1788778391.5494645,
+    "ast_hash": "e12010ee812567c6d69aa111dcd5f2ea",
     "semantic_hash": ""
   },
   "test/workspace_screen_test.dart": {
-    "mtime": 1788756007.2157593,
-    "ast_hash": "9cbeafc8cc6c3aec37928673e4aa010d",
+    "mtime": 1788778408.6036847,
+    "ast_hash": "37b06bd51108b6af1bc1e1557965e5c6",
     "semantic_hash": ""
   },
   "lib/core/widgets/space_migration_preview.dart": {
@@ -1285,13 +1285,13 @@
     "semantic_hash": ""
   },
   "lib/core/utils/cron_health.dart": {
-    "mtime": 1788718796.5729613,
-    "ast_hash": "8ced2a84b028dd11eea7a809634e4dc2",
+    "mtime": 1788778220.9722626,
+    "ast_hash": "dba2029235ca1fd8c203fd9db4c58e99",
     "semantic_hash": ""
   },
   "test/cron_health_test.dart": {
-    "mtime": 1788718382.0821261,
-    "ast_hash": "31902ea3797b5e0844e5a773fbfa7434",
+    "mtime": 1788778191.32488,
+    "ast_hash": "c0232f2ec455b413a3f08254474c2faf",
     "semantic_hash": ""
   },
   "test/cron_screen_attention_test.dart": {
@@ -1392,6 +1392,16 @@
   "test/session_organizer_settings_card_test.dart": {
     "mtime": 1788759524.0364325,
     "ast_hash": "50fa95116efe76b6803384be07f98a52",
+    "semantic_hash": ""
+  },
+  "lib/core/widgets/cron_due_banner.dart": {
+    "mtime": 1788778283.4050684,
+    "ast_hash": "f6c721c91acd9c4ba285c95d2301b191",
+    "semantic_hash": ""
+  },
+  "test/cron_due_banner_test.dart": {
+    "mtime": 1788778251.919662,
+    "ast_hash": "5c79a9cae56bcfa56b9dd8afb1a6d171",
     "semantic_hash": ""
   }
 }

@@ -18,9 +18,11 @@ import 'package:hermes_android/core/theme/hermes_theme.dart';
 import 'package:hermes_android/core/utils/activity_feed.dart';
 import 'package:hermes_android/core/utils/home_digest.dart';
 import 'package:hermes_android/core/utils/home_turn_signals.dart';
+import 'package:hermes_android/core/utils/cron_health.dart';
 import 'package:hermes_android/core/utils/new_chat_options.dart';
 import 'package:hermes_android/core/utils/pending_approval_probe.dart';
 import 'package:hermes_android/core/widgets/activity_pane.dart';
+import 'package:hermes_android/core/widgets/cron_due_banner.dart';
 import 'package:hermes_android/core/widgets/cron_failures_banner.dart';
 import 'package:hermes_android/core/widgets/hermes_components.dart';
 import 'package:hermes_android/core/widgets/hermes_shell.dart';
@@ -177,6 +179,7 @@ Future<void> _pump(
   bool initialQuickChat = false,
   SharedAttachmentPreparer? sharedAttachmentPreparer,
   CronFailuresLoader? inboxCronFailuresLoader,
+  CronDueLoader? inboxCronDueLoader,
   PendingApprovalsLoader? inboxPendingApprovalsLoader,
   Size size = const Size(400, 800),
 }) async {
@@ -212,6 +215,7 @@ Future<void> _pump(
         initialQuickChat: initialQuickChat,
         sharedAttachmentPreparer: sharedAttachmentPreparer,
         inboxCronFailuresLoader: inboxCronFailuresLoader,
+        inboxCronDueLoader: inboxCronDueLoader,
         inboxPendingApprovalsLoader: inboxPendingApprovalsLoader,
         onOpenDashboard: openedDashboards == null
             ? null
@@ -757,6 +761,141 @@ void main() {
     expect(find.textContaining('cron job'), findsNothing);
     expect(find.text('Approve deployment'), findsOneWidget);
   });
+
+  testWidgets('the Inbox surfaces a scheduled job that has not run', (
+    tester,
+  ) async {
+    final now = DateTime.now();
+    await _pump(
+      tester,
+      connection: _connection(desktopGatewayUrl: 'https://host:8642'),
+      repository: await _repository([]),
+      sessions: [_session(id: 'blocked', title: 'Approve deployment')],
+      activityFeedLoader: (_, _) async => ActivityFeed(
+        groups: [
+          ActivityGroup(
+            kind: ActivityGroupKind.needsYou,
+            items: [
+              ActivityItem(
+                sessionId: 'blocked',
+                title: 'Approve deployment',
+                clientTurnId: 'turn-blocked',
+                label: 'Waiting for your input',
+                status: HermesStatus.blocked,
+                updatedAt: now,
+              ),
+            ],
+            totalCount: 1,
+          ),
+        ],
+        blockedCount: 1,
+        runningCount: 0,
+      ),
+      inboxCronFailuresLoader: () async => 0,
+      inboxCronDueLoader: () async => [
+        OverdueCronJob(
+          id: 'nightly',
+          name: 'Nightly backup',
+          dueAt: now.subtract(const Duration(hours: 4)),
+          overdueBy: const Duration(hours: 4),
+        ),
+      ],
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Open inbox (1)'));
+    await tester.pumpAndSettle();
+
+    // The due-task row names the job, and the actionable feed behind it still
+    // works: the two Inbox sources coexist rather than replacing each other.
+    expect(find.textContaining('Nightly backup'), findsOneWidget);
+    expect(find.textContaining('1 scheduled job'), findsOneWidget);
+    expect(find.text('Approve deployment'), findsOneWidget);
+  });
+
+  testWidgets('the Inbox omits the due-jobs banner when nothing is overdue', (
+    tester,
+  ) async {
+    final now = DateTime.now();
+    await _pump(
+      tester,
+      connection: _connection(desktopGatewayUrl: 'https://host:8642'),
+      repository: await _repository([]),
+      sessions: [_session(id: 'blocked', title: 'Approve deployment')],
+      activityFeedLoader: (_, _) async => ActivityFeed(
+        groups: [
+          ActivityGroup(
+            kind: ActivityGroupKind.needsYou,
+            items: [
+              ActivityItem(
+                sessionId: 'blocked',
+                title: 'Approve deployment',
+                clientTurnId: 'turn-blocked',
+                label: 'Waiting for your input',
+                status: HermesStatus.blocked,
+                updatedAt: now,
+              ),
+            ],
+            totalCount: 1,
+          ),
+        ],
+        blockedCount: 1,
+        runningCount: 0,
+      ),
+      inboxCronFailuresLoader: () async => 0,
+      inboxCronDueLoader: () async => const <OverdueCronJob>[],
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Open inbox (1)'));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('scheduled job'), findsNothing);
+    expect(find.text('Approve deployment'), findsOneWidget);
+  });
+
+  testWidgets(
+    'a connection with no dashboard mounts the due banner but shows nothing',
+    (tester) async {
+      final now = DateTime.now();
+      // No dashboard credentials and not proxied: there is no authoritative
+      // source for cron, so the Inbox must not claim nothing is due.
+      await _pump(
+        tester,
+        connection: _connection(desktopGatewayUrl: 'https://host:8642'),
+        repository: await _repository([]),
+        sessions: [_session(id: 'blocked', title: 'Approve deployment')],
+        activityFeedLoader: (_, _) async => ActivityFeed(
+          groups: [
+            ActivityGroup(
+              kind: ActivityGroupKind.needsYou,
+              items: [
+                ActivityItem(
+                  sessionId: 'blocked',
+                  title: 'Approve deployment',
+                  clientTurnId: 'turn-blocked',
+                  label: 'Waiting for your input',
+                  status: HermesStatus.blocked,
+                  updatedAt: now,
+                ),
+              ],
+              totalCount: 1,
+            ),
+          ],
+          blockedCount: 1,
+          runningCount: 0,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byTooltip('Open inbox (1)'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(CronDueBanner), findsOneWidget);
+      expect(find.textContaining('scheduled job'), findsNothing);
+      expect(find.text('Approve deployment'), findsOneWidget);
+    },
+  );
 
   testWidgets('the Inbox surfaces an approval that outlived its chat screen', (
     tester,
