@@ -87,4 +87,52 @@ void main() {
     );
     expect(workspace.turnApplicationController, same(controller));
   });
+
+  testWidgets('deleting a connection asks for confirmation first', (
+    tester,
+  ) async {
+    final prefs = await SharedPreferences.getInstance();
+    final manager = await ConnectionManager.create(
+      prefs,
+      credentialStore: _MemoryCredentialStore(),
+    );
+    await manager.saveConnection('Miniserver', 'host', 8642, 'key');
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: HomeScreen(
+          connManager: manager,
+          turnApplicationController: GatewayTurnApplicationController(
+            sessionFactory: (_) => InertTurnApplicationSession(),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(manager.getConnections(), hasLength(1));
+
+    await tester.tap(find.byType(PopupMenuButton<String>));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Delete'));
+    await tester.pumpAndSettle();
+
+    // The confirmation dialog is up; nothing has been removed yet.
+    expect(find.text('Delete this connection?'), findsOneWidget);
+    expect(manager.getConnections(), hasLength(1));
+
+    // Cancelling leaves the connection intact.
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+    expect(manager.getConnections(), hasLength(1));
+
+    // Confirming removes it.
+    await tester.tap(find.byType(PopupMenuButton<String>));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Delete'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(TextButton, 'Delete'));
+    await tester.pumpAndSettle();
+    expect(manager.getConnections(), isEmpty);
+  });
 }

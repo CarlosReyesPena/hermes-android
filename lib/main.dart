@@ -836,6 +836,30 @@ class HomeScreenState extends State<HomeScreen> {
         trailing: PopupMenuButton<String>(
           onSelected: (v) async {
             if (v == 'delete') {
+              final confirmed = await showDialog<bool>(
+                context: context,
+                builder: (dialogContext) => AlertDialog(
+                  title: const Text('Delete this connection?'),
+                  content: const Text(
+                    'This removes the connection and its saved API key. '
+                    'Conversations on the Hermes host are not deleted.',
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(dialogContext, false),
+                      child: const Text('Cancel'),
+                    ),
+                    TextButton(
+                      style: TextButton.styleFrom(
+                        foregroundColor: Colors.red,
+                      ),
+                      onPressed: () => Navigator.pop(dialogContext, true),
+                      child: const Text('Delete'),
+                    ),
+                  ],
+                ),
+              );
+              if (confirmed != true || !mounted) return;
               try {
                 await widget.connManager.deleteConnection(conn.id);
                 if (mounted) _refresh();

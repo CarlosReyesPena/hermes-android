@@ -40,6 +40,10 @@ class ConfigBackupIo {
 
   /// Writes the encrypted backup to a temp file and offers it to the share
   /// sheet. Returns the file name, or null when the user dismisses the sheet.
+  ///
+  /// The temp file is deleted as soon as the share sheet is done with it:
+  /// although the payload is AES-256-GCM encrypted, a ciphertext left in the
+  /// app cache is an avoidable copy of user secrets.
   Future<String?> deliverExport(String contents) async {
     final stamp = DateTime.now()
         .toIso8601String()
@@ -50,14 +54,21 @@ class ConfigBackupIo {
     final file = File('${directory.path}/hermes-config-$stamp.json');
     await file.writeAsString(contents, flush: true);
 
-    final result = await SharePlus.instance.share(
-      ShareParams(
-        subject: 'Hermes configuration backup',
-        files: <XFile>[XFile(file.path, mimeType: 'application/json')],
-      ),
-    );
-    if (result.status == ShareResultStatus.dismissed) return null;
-    return file.uri.pathSegments.last;
+    try {
+      final result = await SharePlus.instance.share(
+        ShareParams(
+          subject: 'Hermes configuration backup',
+          files: <XFile>[XFile(file.path, mimeType: 'application/json')],
+        ),
+      );
+      if (result.status == ShareResultStatus.dismissed) return null;
+      return file.uri.pathSegments.last;
+    } finally {
+      // Best-effort: a failed delete must not surface as an export failure.
+      try {
+        if (await file.exists()) await file.delete();
+      } catch (_) {}
+    }
   }
 
   Future<String?> pickBackupFile() async {
