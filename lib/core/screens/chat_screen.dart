@@ -16,6 +16,7 @@ import '../controllers/voice_composer_controller.dart';
 import '../services/connection_manager.dart';
 import '../services/attachment_draft_service.dart';
 import '../services/chat_model_override_store.dart';
+import '../services/composer_draft_store.dart';
 import '../services/desktop_gateway_client.dart';
 import '../services/gateway_turn_application_controller.dart';
 import '../services/gateway_turn_coordinator.dart';
@@ -184,6 +185,11 @@ class ChatScreen extends StatefulWidget {
   @visibleForTesting
   final TestPendingApprovalLoader? testPendingApprovalLoader;
 
+  /// Overrides the composer draft store so tests can seed and assert the
+  /// persisted half-typed prompt without touching real app storage.
+  @visibleForTesting
+  final ComposerDraftStore? testComposerDraftStore;
+
   const ChatScreen({
     required this.connection,
     required this.session,
@@ -203,6 +209,7 @@ class ChatScreen extends StatefulWidget {
     this.testVoiceComposerAdapter,
     this.testTurnNotifications,
     this.testPendingApprovalLoader,
+    this.testComposerDraftStore,
     super.key,
   });
 
@@ -284,6 +291,11 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
 
   late final TurnNotificationService _turnNotifications;
 
+  // Composer draft persistence
+  late final Future<ComposerDraftStore> _composerDraftStore;
+  Timer? _composerSaveTimer;
+  static const _composerSaveDebounce = Duration(milliseconds: 350);
+
   @override
   void initState() {
     super.initState();
@@ -292,6 +304,17 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     _textController.selection = TextSelection.collapsed(
       offset: _textController.text.length,
     );
+    _composerDraftStore = widget.testComposerDraftStore != null
+        ? Future.value(widget.testComposerDraftStore)
+        : ComposerDraftStore.open();
+    _textController.addListener(_onComposerChanged);
+    if (widget.initialComposerText != null) {
+      // Explicit share text wins over any stored draft and clears it, so the
+      // stale prompt can never resurface on a later reopen.
+      unawaited(_clearComposerDraft());
+    } else {
+      unawaited(_restoreComposerDraft());
+    }
     _turnNotifications =
         widget.testTurnNotifications ?? TurnNotificationService();
     unawaited(_turnNotifications.ensureInitialized());
@@ -383,6 +406,43 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     setState(() => _verboseMode = prefs.getBool('verbose_mode') ?? false);
   }
 
+  /// Debounces composer edits so a burst of keystrokes (or dictation partials)
+  /// produces a single write instead of one per frame.
+  void _onComposerChanged() {
+    _composerSaveTimer?.cancel();
+    _composerSaveTimer = Timer(_composerSaveDebounce, () {
+      if (mounted) unawaited(_persistComposerDraft(_textController.text));
+    });
+  }
+
+  Future<void> _restoreComposerDraft() async {
+    final store = await _composerDraftStore;
+    final draft = store.read(
+      connectionId: widget.connection.id,
+      sessionId: widget.session.id,
+    );
+    if (!mounted || draft == null) return;
+    _textController.text = draft;
+    _textController.selection = TextSelection.collapsed(offset: draft.length);
+  }
+
+  Future<void> _persistComposerDraft(String text) async {
+    final store = await _composerDraftStore;
+    await store.write(
+      connectionId: widget.connection.id,
+      sessionId: widget.session.id,
+      text: text,
+    );
+  }
+
+  Future<void> _clearComposerDraft() async {
+    final store = await _composerDraftStore;
+    await store.clear(
+      connectionId: widget.connection.id,
+      sessionId: widget.session.id,
+    );
+  }
+
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
@@ -406,7 +466,13 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     );
     _desktopGateway?.setAsyncEventListener(null);
     _desktopGateway?.close();
-    _textController.dispose();
+    _composerSaveTimer?.cancel();
+    // Best-effort last save: process death or a fast back-navigation must not
+    // lose the half-typed prompt.
+    unawaited(_persistComposerDraft(_textController.text));
+    _textController
+      ..removeListener(_onComposerChanged)
+      ..dispose();
     _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
     super.dispose();
@@ -1676,6 +1742,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
           ];
 
     _textController.text = '';
+    unawaited(_clearComposerDraft());
     _awaitingVoiceReply = speakResponse && _voiceReplyEnabled;
     final responseGeneration = ++_responseGeneration;
     _activeResponseTransport = _ResponseTransport.rest;
@@ -1868,6 +1935,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
             attachmentLabels,
           ].where((part) => part.trim().isNotEmpty).join('\n\n');
           _textController.clear();
+          unawaited(_clearComposerDraft());
           _scrollCoordinator.beginStreaming(isNearEnd: _isNearEnd());
           setState(() {
             _streaming = true;
@@ -2041,6 +2109,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
       attachmentLabels,
     ].where((part) => part.trim().isNotEmpty).join('\n\n');
     _textController.clear();
+    unawaited(_clearComposerDraft());
     _scrollCoordinator.beginStreaming(isNearEnd: _isNearEnd());
     setState(() {
       _streaming = true;
