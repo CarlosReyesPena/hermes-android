@@ -15,6 +15,7 @@ class GatewayTurnUiProjection {
   final int lastSeq;
   final int? finalMessageRef;
   final String? attachmentManifestDigest;
+  final GatewayTurnPendingInput? pendingInput;
 
   const GatewayTurnUiProjection({
     required this.clientTurnId,
@@ -26,6 +27,7 @@ class GatewayTurnUiProjection {
     required this.lastSeq,
     required this.finalMessageRef,
     required this.attachmentManifestDigest,
+    required this.pendingInput,
   });
 
   bool get isTerminal => status?.isTerminal == true;
@@ -49,6 +51,7 @@ class GatewayTurnUiProjection {
         lastSeq: snapshot.lastSeq,
         finalMessageRef: snapshot.finalMessageRef,
         attachmentManifestDigest: snapshot.attachmentManifestDigest,
+        pendingInput: snapshot.pendingInput,
       );
     }
 
@@ -64,6 +67,7 @@ class GatewayTurnUiProjection {
         lastSeq: state.lastSeq,
         finalMessageRef: null,
         attachmentManifestDigest: null,
+        pendingInput: null,
       );
     }
 
@@ -100,6 +104,7 @@ class GatewayTurnUiProjection {
       lastSeq: state.lastSeq,
       finalMessageRef: null,
       attachmentManifestDigest: null,
+      pendingInput: null,
     );
   }
 }

@@ -77,6 +77,20 @@ enum HermesDestination {
 typedef HermesPaneBuilder =
     Widget Function(BuildContext context, HermesDestination destination);
 
+/// Lets a parent switch the adaptive shell from an action outside the
+/// navigation bar (for example a shortcut in More).
+class HermesShellController extends ChangeNotifier {
+  HermesDestination? _requested;
+
+  HermesDestination? get requested => _requested;
+
+  void select(HermesDestination destination) {
+    if (_requested == destination) return;
+    _requested = destination;
+    notifyListeners();
+  }
+}
+
 /// The adaptive navigation shell.
 ///
 /// [badges] drives attention counts (for example pending approvals on
@@ -91,6 +105,7 @@ class HermesShell extends StatefulWidget {
   final HermesPaneBuilder builder;
   final HermesDestination initialDestination;
   final Map<HermesDestination, int> badges;
+  final HermesShellController? controller;
   final ValueChanged<HermesDestination>? onDestinationChanged;
 
   /// The shell's floating action button.
@@ -104,6 +119,7 @@ class HermesShell extends StatefulWidget {
     required this.builder,
     this.initialDestination = HermesDestination.home,
     this.badges = const {},
+    this.controller,
     this.onDestinationChanged,
     this.floatingActionButton,
     super.key,
@@ -115,6 +131,31 @@ class HermesShell extends StatefulWidget {
 
 class _HermesShellState extends State<HermesShell> {
   late HermesDestination _current = widget.initialDestination;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.controller?.addListener(_onControllerChanged);
+  }
+
+  @override
+  void didUpdateWidget(covariant HermesShell oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.controller == widget.controller) return;
+    oldWidget.controller?.removeListener(_onControllerChanged);
+    widget.controller?.addListener(_onControllerChanged);
+  }
+
+  @override
+  void dispose() {
+    widget.controller?.removeListener(_onControllerChanged);
+    super.dispose();
+  }
+
+  void _onControllerChanged() {
+    final requested = widget.controller?.requested;
+    if (requested != null) _select(requested);
+  }
 
   void _select(HermesDestination destination) {
     // Re-tapping the active destination is a no-op rather than a rebuild or a

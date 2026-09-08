@@ -8,6 +8,7 @@ Future<void> _pumpShell(
   HermesDestination initial = HermesDestination.home,
   ValueChanged<HermesDestination>? onDestinationChanged,
   Map<HermesDestination, int> badges = const {},
+  HermesShellController? controller,
   Widget? floatingActionButton,
   Size size = const Size(360, 720),
   double textScale = 1.0,
@@ -30,6 +31,7 @@ Future<void> _pumpShell(
           child: HermesShell(
             initialDestination: initial,
             badges: badges,
+            controller: controller,
             onDestinationChanged: onDestinationChanged,
             floatingActionButton: floatingActionButton,
             builder: (context, destination) =>
@@ -89,6 +91,20 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('pane:projects'), findsOneWidget);
+      expect(find.text('pane:home'), findsNothing);
+    });
+
+    testWidgets('a controller switches destinations programmatically', (
+      tester,
+    ) async {
+      final controller = HermesShellController();
+      addTearDown(controller.dispose);
+      await _pumpShell(tester, controller: controller);
+
+      controller.select(HermesDestination.chats);
+      await tester.pumpAndSettle();
+
+      expect(find.text('pane:chats'), findsOneWidget);
       expect(find.text('pane:home'), findsNothing);
     });
 

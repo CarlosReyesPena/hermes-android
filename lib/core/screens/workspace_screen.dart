@@ -268,6 +268,7 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
   /// The destination currently on screen. The New button is a Home
   /// affordance: over Projects or More it would be ambiguous what it creates.
   HermesDestination _destination = HermesDestination.home;
+  final _shellController = HermesShellController();
 
   /// The last known attention/running signals. Home ranks with these; an
   /// empty value simply means everything falls back to `Continue working`.
@@ -656,6 +657,7 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
     }
     _renameGateway?.close();
     _inboxCronClient?.close();
+    _shellController.dispose();
     super.dispose();
   }
 
@@ -1639,7 +1641,7 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
       case 'files':
         unawaited(_openFiles());
       case 'pin-batch-undo':
-        setState(() => _destination = HermesDestination.chats);
+        _shellController.select(HermesDestination.chats);
       case 'ai-filing':
         _push(SettingsScreen(connection: connection));
       case 'cron':
@@ -1688,6 +1690,7 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
         ],
       ),
       body: HermesShell(
+        controller: _shellController,
         initialDestination: HermesDestination.home,
         // The badge is the only attention signal visible from another
         // destination, so blocked work has to raise it even while the user is

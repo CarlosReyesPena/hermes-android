@@ -367,6 +367,31 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('More shortcut opens the shipped Chats organization tools', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      connection: _connection(desktopGatewayUrl: 'https://host:8642'),
+      repository: await _repository([]),
+      sessions: [_session(id: 's1', title: 'Organize me')],
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text(HermesDestination.more.label).last);
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('Pin, batch and undo'),
+      250,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(find.text('Pin, batch and undo'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(WorkspaceSessionsScreen), findsOneWidget);
+    expect(find.text('Organize me'), findsOneWidget);
+  });
+
   testWidgets('names the connection so multi-gateway users stay oriented', (
     tester,
   ) async {
