@@ -273,10 +273,10 @@ class WorkspaceSessionsScreen extends StatefulWidget {
 
   @override
   State<WorkspaceSessionsScreen> createState() =>
-      _WorkspaceSessionsScreenState();
+      WorkspaceSessionsScreenState();
 }
 
-class _WorkspaceSessionsScreenState extends State<WorkspaceSessionsScreen> {
+class WorkspaceSessionsScreenState extends State<WorkspaceSessionsScreen> {
   /// Debounce window before a typed query hits the network. Local search
   /// filters on every keystroke; the server modes must not.
   static const _searchDebounce = Duration(milliseconds: 350);
@@ -311,6 +311,12 @@ class _WorkspaceSessionsScreenState extends State<WorkspaceSessionsScreen> {
   /// when this screen lazily built one from [WorkspaceSessionsScreen.searchControllerFactory]
   /// (embedded Chats browser).
   bool get _hasSearchController => _effectiveSearchController != null;
+
+  /// Re-reads the conversation list from the loader.
+  ///
+  /// Public so a host (the Workspace shell) can drop a stale unread dot the
+  /// moment the read receipt lands, instead of waiting for a manual refresh.
+  Future<void> refresh() => _load();
 
   /// The controller to use: a caller-supplied one wins over a lazily built one.
   SessionSearchController? get _effectiveSearchController =>

@@ -244,6 +244,10 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
   /// Reaches the live Home pane so it can be refreshed after a chat closes.
   final _homeKey = GlobalKey<HomePaneState>();
 
+  /// Reaches the embedded Chats browser so a read receipt can drop its unread
+  /// dot without waiting for the user to pull-to-refresh.
+  final _chatsKey = GlobalKey<WorkspaceSessionsScreenState>();
+
   /// Reaches the live Activity pane for the same reason.
   final _activityKey = GlobalKey<ActivityPaneState>();
 
@@ -261,6 +265,10 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
   /// Reaches the pending-approvals banner on the Inbox, so returning from the
   /// chat that replayed the dialog can drop a row the user has now answered.
   final _inboxApprovalsKey = GlobalKey<PendingApprovalsBannerState>();
+
+  /// How many conversations the gateway still reports unread. Drives the
+  /// Chats badge on the shell so unread work is visible from any destination.
+  int _unreadCount = 0;
 
   /// Lazy dashboard client used to count failing cron jobs for the Inbox.
   DashboardClient? _inboxCronClient;
@@ -372,6 +380,9 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
       // request: the journal knows what ran, the session list knows what it
       // was called, and only one of the two costs a round trip.
       _cacheSessionTitles(sessions);
+      // The Chats badge counts unread conversations. Held here so the shell
+      // can show it even while the user is on another destination.
+      _cacheUnreadCount(sessions);
       // Which quick chats have aged out. Recomputed from the session list
       // rather than on a timer, so the retention rule is applied whenever
       // Home is read and never fires while the app is closed.
@@ -447,6 +458,15 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
       titles[session.id] = title;
     }
     _sessionTitles = Map.unmodifiable(titles);
+  }
+
+  /// Records how many conversations the gateway reports unread, so the shell
+  /// can badge the Chats destination even while the user is elsewhere.
+  void _cacheUnreadCount(List<Session> sessions) {
+    final count = sessions.where((session) => session.unread).length;
+    if (count == _unreadCount) return;
+    if (!mounted) return;
+    setState(() => _unreadCount = count);
   }
 
   /// Reads the Activity timeline from the durable turn journal.
@@ -736,6 +756,7 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
       case HermesDestination.chats:
         final repository = _repository;
         return WorkspaceSessionsScreen(
+          key: _chatsKey,
           title: 'Chats',
           view: WorkspaceSessionView.all,
           embedded: true,
@@ -867,6 +888,25 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
     }
   }
 
+  /// Re-reads the conversation list and recomputes the unread badge after a
+  /// chat closes.
+  ///
+  /// The read receipt ([_markSessionRead]) flips the server-side flag, but the
+  /// embedded Chats browser holds immutable [Session] rows: without an explicit
+  /// refresh the unread dot would linger until the user leaves the tab or
+  /// pull-to-refreshes. The badge cache lives here too, so both clear together.
+  Future<void> _refreshChatsUnread() async {
+    if (!mounted) return;
+    unawaited(_chatsKey.currentState?.refresh() ?? Future<void>.value());
+    try {
+      final sessions = await _loadSessions();
+      if (!mounted) return;
+      _cacheUnreadCount(sessions);
+    } catch (_) {
+      // Best-effort: keep the last-known badge rather than fail a refresh.
+    }
+  }
+
   /// Opens a chat from the Home digest.
   ///
   /// A host that supplied [WorkspaceScreen.onOpenSession] owns navigation, so
@@ -882,6 +922,10 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
     final report = widget.onOpenSession;
     if (report != null) {
       report(session);
+      // The host owns navigation, but this screen still owns the unread
+      // badge and the embedded Chats browser it renders: drop the dot and
+      // recount now that the session has been opened.
+      unawaited(_refreshChatsUnread());
       return;
     }
 
@@ -902,6 +946,7 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
     );
     if (!mounted) return;
     unawaited(_homeKey.currentState?.refresh() ?? Future<void>.value());
+    unawaited(_refreshChatsUnread());
   }
 
   /// Opens one project's detail screen.
@@ -1698,6 +1743,7 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
         badges: {
           HermesDestination.home: _turnSignals.attention.length,
           HermesDestination.activity: _activityBlockedCount,
+          HermesDestination.chats: _unreadCount,
         },
         onDestinationChanged: (destination) =>
             setState(() => _destination = destination),

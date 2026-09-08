@@ -35,7 +35,11 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'support/inert_turn_application_session.dart';
 
-Session _session({required String id, required String title}) {
+Session _session({
+  required String id,
+  required String title,
+  bool unread = false,
+}) {
   return Session(
     id: id,
     title: title,
@@ -45,6 +49,7 @@ Session _session({required String id, required String title}) {
     isActive: true,
     preview: 'preview',
     startedAt: DateTime.now().millisecondsSinceEpoch / 1000.0,
+    unread: unread,
   );
 }
 
@@ -167,6 +172,7 @@ Future<void> _pump(
   List<String>? openedSessions,
   List<Session>? sessions,
   Object? sessionsError,
+  HomeSessionsLoader? sessionsLoaderOverride,
   WorkspaceSessionScreenBuilder? sessionScreenBuilder,
   WorkspaceFilesScreenBuilder? filesScreenBuilder,
   WorkspaceTurnSignalsLoader? turnSignalsLoader,
@@ -197,12 +203,14 @@ Future<void> _pump(
         onOpenSession: openedSessions == null
             ? null
             : (session) => openedSessions.add(session.id),
-        sessionsLoader: sessions == null && sessionsError == null
-            ? null
-            : () async {
-                if (sessionsError != null) throw sessionsError;
-                return sessions ?? const <Session>[];
-              },
+        sessionsLoader:
+            sessionsLoaderOverride ??
+            (sessions == null && sessionsError == null
+                ? null
+                : () async {
+                    if (sessionsError != null) throw sessionsError;
+                    return sessions ?? const <Session>[];
+                  }),
         sessionScreenBuilder: sessionScreenBuilder,
         filesScreenBuilder: filesScreenBuilder,
         turnSignalsLoader: turnSignalsLoader,
@@ -2148,6 +2156,58 @@ void main() {
 
       final shell = tester.widget<HermesShell>(find.byType(HermesShell));
       expect(shell.badges[HermesDestination.activity], 2);
+    });
+
+    testWidgets('unread conversations raise the Chats badge', (tester) async {
+      await _pump(
+        tester,
+        connection: _connection(desktopGatewayUrl: 'https://host:8642'),
+        repository: await _repository([]),
+        sessions: [
+          _session(id: 's1', title: 'Fresh', unread: true),
+          _session(id: 's2', title: 'Also fresh', unread: true),
+          _session(id: 's3', title: 'Read'),
+        ],
+      );
+      await tester.pumpAndSettle();
+
+      final shell = tester.widget<HermesShell>(find.byType(HermesShell));
+      expect(shell.badges[HermesDestination.chats], 2);
+    });
+
+    testWidgets('opening an unread chat clears its badge and row dot', (
+      tester,
+    ) async {
+      final opened = <String>[];
+      await _pump(
+        tester,
+        connection: _connection(desktopGatewayUrl: 'https://host:8642'),
+        repository: await _repository([]),
+        openedSessions: opened,
+        // A real gateway flips the session to read once the PATCH lands; the
+        // loader mirrors that by deriving unread from what has been opened.
+        sessionsLoaderOverride: () async => [
+          _session(id: 's1', title: 'Fresh', unread: !opened.contains('s1')),
+        ],
+      );
+      await tester.pumpAndSettle();
+
+      final shell = tester.widget<HermesShell>(find.byType(HermesShell));
+      expect(shell.badges[HermesDestination.chats], 1);
+
+      // Open the chat from the embedded Chats browser.
+      await tester.tap(find.text(HermesDestination.chats.label).last);
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('unread-session-s1')), findsOneWidget);
+
+      await tester.tap(find.text('Fresh').first);
+      await tester.pumpAndSettle();
+      expect(opened, ['s1']);
+
+      // The read receipt reflected locally: no badge, no dot.
+      final refreshed = tester.widget<HermesShell>(find.byType(HermesShell));
+      expect(refreshed.badges[HermesDestination.chats], 0);
+      expect(find.byKey(const Key('unread-session-s1')), findsNothing);
     });
 
     testWidgets('a feed that cannot be read never breaks the shell', (
