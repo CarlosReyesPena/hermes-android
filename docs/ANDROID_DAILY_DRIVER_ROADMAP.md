@@ -1519,6 +1519,47 @@ Projects.
     directions are pinned: available with a reachable dashboard, and *still*
     available without one.
 
+38. **One honest announcement per More row** — `test/more_pane_test.dart`.
+    Backlog item 9 of the functional audit, whose `Idle · Idle` / `Done · Done`
+    half was already resolved on Home and Activity; this closes the half the
+    audit names explicitly for this pane: "More rows expose repeated labels
+    (`Files · Files`, `Cron · Cron`) in the accessibility tree because title
+    and semantic label overlap."
+
+    The defect was measured before it was fixed, by walking the rendered
+    semantics tree rather than by reading the source: `_MoreEntryCard` wrapped
+    its visible `Text` widgets in a `Semantics(label: entry.title)` **without**
+    excluding them, so the wrapper's label and the children's own labels were
+    concatenated and every row announced its title twice before its subtitle —
+    `Files ⏎ Files ⏎ Browse the miniserver folders…`. A screen-reader user hears
+    the name of every capability in the pane repeated back at them.
+
+    Split the same way the rest of Phase 1 is: the pure
+    `moreEntrySemanticsLabel` helper owns the wording and `_MoreEntryCard`
+    keeps only layout, now wrapping its content in `ExcludeSemantics` *inside*
+    `HermesCard` so the row keeps its tap action while its text is announced
+    once. **No new contract, no new dependency, and no visual change** — the
+    pane draws exactly what it drew before.
+
+    The rule that shapes it: the announcement must state everything the row
+    *draws*, and nothing it does not. Pinned by test: the title is followed by
+    the subtitle as one sentence, a disabled row also announces the reason it
+    cannot be opened (dropping it would leave a screen-reader user with a dead
+    row and no explanation), a `Coming next` row announces the badge it
+    renders, a part that already ends in a period does not gain a second one,
+    and an entry with nothing but a title degrades to the title alone rather
+    than trailing a bare separator. Two assertions were deliberately corrected
+    rather than forced onto the code: `Assets` legitimately recurs *inside* its
+    own reason prose, so the test pins the exact composed sentence and the
+    absence of the historical `Title. Title` shape instead of banning the word
+    outright, and no shipped entry is `comingSoon` today so that case is
+    driven by a constructed section rather than by pretending one exists.
+
+    On the widget side the assertions read the real semantics tree — rooted at
+    the pane through `tester.getSemantics` — and scroll each row into view
+    first, because a row below the fold is never built and would otherwise
+    pass by being absent rather than by being correct.
+
 Phase 0 is **complete**. Step 7 (real Gateway smoke test on a device) passed on
 2026-08-29 against the live Miniserver gateway from a physical SM-S948B over
 wireless debugging, and the migration *write* path it gated is implemented and
@@ -1532,8 +1573,11 @@ and cron are covered, so what remains is an authoritative aggregation contract
 for work that belongs to no open chat and no scheduled job. Keep each source
 capability-gated and never fabricate actionable rows when its server contract
 is unavailable. Batch select, reversible pin/move/archive, and the global
-search entry point are complete; the next Android-only candidate is AI filing
-review/accept/reject UI once the organizer exposes its suggestion feed.
+search entry point are complete; the semantics/density cleanup (audit backlog
+item 9) is closed for the More pane, so the remaining accessibility work is the
+full a11y pass over Home, Projects, and Chat rather than a single duplicated
+label. The next Android-only candidate is AI filing review/accept/reject UI
+once the organizer exposes its suggestion feed.
 
 ---
 

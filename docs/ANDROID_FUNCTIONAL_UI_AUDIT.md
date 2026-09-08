@@ -47,11 +47,21 @@ re-verifying against current code:
   the Home app-bar magnifier: the More pane lists it as a native Workspace
   Smart View routing to the same view, and it stays available without a
   dashboard because on-device search still works (roadmap point 37).
+- **More pane duplicated labels (backlog item 9, resolved)** — every More row
+  wrapped its visible text in a `Semantics(label: title)` without excluding it,
+  so a screen reader announced `Files ⏎ Files ⏎ subtitle` on every capability in
+  the pane. The row now composes one sentence through the pure
+  `moreEntrySemanticsLabel` helper and excludes its own text, announcing the
+  title, the `Coming next` badge, the subtitle, and the reason a disabled entry
+  cannot be opened — exactly what it draws, once (roadmap point 38). The
+  `Idle · Idle` / `Done · Done` half of this item was already resolved on Home
+  and Activity.
 
 Remaining open items from the list below: Settings offline resilience was
 fixed 2026-09-06 (local sections survive a dashboard outage); the audit body
 below is otherwise kept as the historical record and the ordered backlog
-(still valid: AI-assisted filing, tablet/foldable, full a11y pass).
+(still valid: AI-assisted filing, tablet/foldable, and the full a11y pass over
+Home, Projects, and Chat — item 9 is closed for the More pane only).
 
 
 ## Product-level verdict

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hermes_android/core/theme/hermes_theme.dart';
 import 'package:hermes_android/core/widgets/more_pane.dart';
@@ -347,6 +348,188 @@ void main() {
           );
         }
       }
+    });
+  });
+
+  // Backlog item 9 of docs/ANDROID_FUNCTIONAL_UI_AUDIT.md: "More rows expose
+  // repeated labels (`Files · Files`, `Cron · Cron`) in the accessibility tree
+  // because title and semantic label overlap."
+  group('moreEntrySemanticsLabel', () {
+    test('states the title once and then the subtitle', () {
+      const entry = MoreEntry(
+        id: 'files',
+        title: 'Files',
+        subtitle: 'Browse the miniserver folders behind your projects',
+        icon: Icons.folder_outlined,
+      );
+
+      expect(
+        moreEntrySemanticsLabel(entry),
+        'Files. Browse the miniserver folders behind your projects',
+      );
+    });
+
+    test('announces the Coming next badge the card draws', () {
+      const entry = MoreEntry(
+        id: 'assets',
+        title: 'Assets',
+        subtitle: 'Artifacts, attachments, and generated media',
+        icon: Icons.auto_awesome_mosaic_outlined,
+        availability: MoreEntryAvailability.comingSoon,
+      );
+
+      final label = moreEntrySemanticsLabel(entry);
+
+      expect(label, startsWith('Assets. Coming next.'));
+      expect(label, endsWith('Artifacts, attachments, and generated media'));
+    });
+
+    test('announces the reason a disabled entry cannot be opened', () {
+      const entry = MoreEntry(
+        id: 'cron',
+        title: 'Cron',
+        subtitle: 'Scheduled jobs and their last runs',
+        icon: Icons.schedule,
+        availability: MoreEntryAvailability.unavailable,
+        unavailableReason: 'Needs a reachable Hermes dashboard.',
+      );
+
+      expect(
+        moreEntrySemanticsLabel(entry),
+        'Cron. Scheduled jobs and their last runs. '
+        'Needs a reachable Hermes dashboard.',
+      );
+    });
+
+    test('never doubles a separator after a part that ends in a period', () {
+      const entry = MoreEntry(
+        id: 'assets',
+        title: 'Assets',
+        subtitle: 'Artifacts and media.',
+        icon: Icons.auto_awesome_mosaic_outlined,
+      );
+
+      expect(moreEntrySemanticsLabel(entry), 'Assets. Artifacts and media.');
+    });
+
+    test('degrades to the title alone when there is nothing else to say', () {
+      const entry = MoreEntry(
+        id: 'settings',
+        title: 'Settings',
+        subtitle: '',
+        icon: Icons.settings_outlined,
+      );
+
+      expect(moreEntrySemanticsLabel(entry), 'Settings');
+    });
+  });
+
+  group('MorePane accessibility', () {
+    List<MoreSection> sections({bool dashboardReachable = true}) =>
+        buildMoreSections(dashboardReachable: dashboardReachable);
+
+    /// Every label in the rendered semantics tree, flattened.
+    List<String> semanticsLabels(WidgetTester tester) {
+      final labels = <String>[];
+      void walk(SemanticsNode node) {
+        final label = node.getSemanticsData().label;
+        if (label.isNotEmpty) labels.add(label);
+        node.visitChildren((child) {
+          walk(child);
+          return true;
+        });
+      }
+
+      // `find.byType(MorePane)` roots the walk at the pane's own render
+      // object, which avoids reaching for a binding-level pipeline owner.
+      walk(tester.getSemantics(find.byType(MorePane)));
+      return labels;
+    }
+
+    testWidgets('announces each row title exactly once', (tester) async {
+      final handle = tester.ensureSemantics();
+      final built = sections(dashboardReachable: false);
+      await _pumpPane(tester, sections: built);
+
+      for (final section in built) {
+        for (final entry in section.entries) {
+          // Rows below the fold are not built, so scroll each one in before
+          // reading the semantics tree.
+          await tester.scrollUntilVisible(
+            find.text(entry.title),
+            120,
+            scrollable: find.byType(Scrollable).first,
+          );
+          final row = semanticsLabels(
+            tester,
+          ).where((label) => label.startsWith('${entry.title}.'));
+          expect(
+            row,
+            hasLength(1),
+            reason: '${entry.title} must produce exactly one row announcement',
+          );
+          // The row announces exactly the composed sentence, so the visible
+          // text is never read a second time. The historical regression was
+          // `Files ⏎ Files ⏎ subtitle`; a title immediately repeating itself
+          // is the specific shape that must never come back.
+          expect(row.single, moreEntrySemanticsLabel(entry));
+          expect(
+            row.single.startsWith('${entry.title}. ${entry.title}'),
+            isFalse,
+            reason:
+                '${entry.title} must not be repeated straight after itself '
+                '(got "${row.single}")',
+          );
+        }
+      }
+      handle.dispose();
+    });
+
+    testWidgets('a disabled row still announces its reason', (tester) async {
+      final handle = tester.ensureSemantics();
+      await _pumpPane(tester, sections: sections(dashboardReachable: false));
+
+      final cron = semanticsLabels(
+        tester,
+      ).firstWhere((label) => label.startsWith('Cron.'));
+
+      expect(cron, contains('Scheduled jobs and their last runs'));
+      expect(cron, contains('Needs a reachable Hermes dashboard'));
+      handle.dispose();
+    });
+
+    testWidgets('an unbuilt row announces the Coming next badge it draws', (
+      tester,
+    ) async {
+      final handle = tester.ensureSemantics();
+      // No shipped entry is `comingSoon` today, but the card still renders the
+      // badge for one, so the announcement must carry it whenever a future
+      // surface is listed that way.
+      await _pumpPane(
+        tester,
+        sections: const [
+          MoreSection(
+            title: 'Workspace',
+            entries: [
+              MoreEntry(
+                id: 'assets',
+                title: 'Assets',
+                subtitle: 'Artifacts, attachments, and generated media',
+                icon: Icons.image_outlined,
+                availability: MoreEntryAvailability.comingSoon,
+              ),
+            ],
+          ),
+        ],
+      );
+
+      final assets = semanticsLabels(
+        tester,
+      ).firstWhere((label) => label.startsWith('Assets.'));
+
+      expect(assets, contains('Coming next'));
+      expect(find.text('Coming next'), findsOneWidget);
+      handle.dispose();
     });
   });
 }

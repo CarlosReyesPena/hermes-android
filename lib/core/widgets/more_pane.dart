@@ -64,6 +64,36 @@ class MoreEntry {
   bool get isSelectable => availability == MoreEntryAvailability.available;
 }
 
+/// The single string a screen reader should announce for [entry].
+///
+/// Backlog item 9 of `docs/ANDROID_FUNCTIONAL_UI_AUDIT.md`: the card used to
+/// wrap its own visible `Text` widgets in a `Semantics(label: entry.title)`
+/// without excluding them, so the row announced its title twice before the
+/// subtitle (`Files ⏎ Files ⏎ Browse the miniserver folders…`). The row now
+/// composes one honest sentence here and the card excludes its children, so
+/// what is announced is exactly what is drawn — including the `Coming next`
+/// badge and the reason a disabled entry cannot be opened, both of which are
+/// visible on screen and must not be dropped from the announcement.
+String moreEntrySemanticsLabel(MoreEntry entry) {
+  final parts = <String>[
+    entry.title,
+    if (entry.availability == MoreEntryAvailability.comingSoon) 'Coming next',
+    entry.subtitle,
+    if (entry.availability == MoreEntryAvailability.unavailable)
+      entry.unavailableReason!,
+  ].map((part) => part.trim()).where((part) => part.isNotEmpty).toList();
+
+  final buffer = StringBuffer();
+  for (var index = 0; index < parts.length; index++) {
+    buffer.write(parts[index]);
+    if (index == parts.length - 1) break;
+    // A part that already punctuates itself must not gain a second period.
+    if (!parts[index].endsWith('.')) buffer.write('.');
+    buffer.write(' ');
+  }
+  return buffer.toString();
+}
+
 /// A titled group of [MoreEntry] rows.
 @immutable
 class MoreSection {
@@ -257,72 +287,80 @@ class _MoreEntryCard extends StatelessWidget {
     return Semantics(
       button: entry.isSelectable,
       enabled: entry.isSelectable,
-      label: entry.title,
+      label: moreEntrySemanticsLabel(entry),
       child: HermesCard(
         onTap: entry.isSelectable ? () => onSelect(entry) : null,
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: (dimmed ? tokens.muted : tokens.accent).withValues(
-                  alpha: 0.14,
+        // The composed label above already states the title, the badge, the
+        // subtitle, and any reason, so the visible text must not be announced
+        // a second time. The exclusion wraps the content only — it is inside
+        // HermesCard's InkWell, so the row keeps its tap action.
+        child: ExcludeSemantics(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: (dimmed ? tokens.muted : tokens.accent).withValues(
+                    alpha: 0.14,
+                  ),
+                  borderRadius: BorderRadius.circular(HermesRadius.sm),
                 ),
-                borderRadius: BorderRadius.circular(HermesRadius.sm),
+                child: Icon(
+                  entry.icon,
+                  size: 20,
+                  color: dimmed ? tokens.muted : tokens.accent,
+                ),
               ),
-              child: Icon(
-                entry.icon,
-                size: 20,
-                color: dimmed ? tokens.muted : tokens.accent,
-              ),
-            ),
-            const SizedBox(width: HermesSpacing.md),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // A Wrap rather than a Row: at a large text scale the badge
-                  // moves to its own line instead of overflowing the card.
-                  Wrap(
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    spacing: HermesSpacing.sm,
-                    runSpacing: HermesSpacing.xs,
-                    children: [
-                      Text(
-                        entry.title,
-                        style: tokens.typography.section.copyWith(
-                          color: titleColor,
+              const SizedBox(width: HermesSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // A Wrap rather than a Row: at a large text scale the badge
+                    // moves to its own line instead of overflowing the card.
+                    Wrap(
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      spacing: HermesSpacing.sm,
+                      runSpacing: HermesSpacing.xs,
+                      children: [
+                        Text(
+                          entry.title,
+                          style: tokens.typography.section.copyWith(
+                            color: titleColor,
+                          ),
                         ),
-                      ),
-                      if (entry.availability ==
-                          MoreEntryAvailability.comingSoon)
-                        const StatusChip(
-                          status: HermesStatus.idle,
-                          label: 'Coming next',
-                        ),
-                    ],
-                  ),
-                  const SizedBox(height: HermesSpacing.xs),
-                  Text(
-                    entry.subtitle,
-                    style: tokens.typography.body.copyWith(color: tokens.muted),
-                  ),
-                  if (entry.availability ==
-                      MoreEntryAvailability.unavailable) ...[
+                        if (entry.availability ==
+                            MoreEntryAvailability.comingSoon)
+                          const StatusChip(
+                            status: HermesStatus.idle,
+                            label: 'Coming next',
+                          ),
+                      ],
+                    ),
                     const SizedBox(height: HermesSpacing.xs),
                     Text(
-                      entry.unavailableReason!,
-                      style: tokens.typography.label.copyWith(
+                      entry.subtitle,
+                      style: tokens.typography.body.copyWith(
                         color: tokens.muted,
                       ),
                     ),
+                    if (entry.availability ==
+                        MoreEntryAvailability.unavailable) ...[
+                      const SizedBox(height: HermesSpacing.xs),
+                      Text(
+                        entry.unavailableReason!,
+                        style: tokens.typography.label.copyWith(
+                          color: tokens.muted,
+                        ),
+                      ),
+                    ],
                   ],
-                ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
