@@ -27,10 +27,7 @@ class ComposerDraftStore {
   }
 
   /// The stored draft for a chat, or null when none was saved.
-  String? read({
-    required String connectionId,
-    required String sessionId,
-  }) {
+  String? read({required String connectionId, required String sessionId}) {
     final raw = _preferences.getString(_key(connectionId, sessionId));
     if (raw == null || raw.isEmpty) return null;
     return raw;
