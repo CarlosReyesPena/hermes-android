@@ -1498,6 +1498,11 @@ class _WorkspaceSessionsScreenState extends State<WorkspaceSessionsScreen> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          if (session.unread)
+            Semantics(
+              label: 'Unread conversation',
+              child: const SizedBox.shrink(),
+            ),
           if (selectionActive) ...[
             Checkbox(
               key: Key('select-session-${session.id}'),

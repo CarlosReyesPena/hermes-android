@@ -135,8 +135,8 @@
     "semantic_hash": ""
   },
   "lib/core/models/session.dart": {
-    "mtime": 1788083866.0936885,
-    "ast_hash": "690fb65b6e509868b8c98a297a808279",
+    "mtime": 1788905981.536017,
+    "ast_hash": "02ca14b095231dae928b1c6b368a26ea",
     "semantic_hash": ""
   },
   "lib/core/models/session_search_hit.dart": {
@@ -190,7 +190,7 @@
     "semantic_hash": ""
   },
   "lib/core/services/connection_manager.dart": {
-    "mtime": 1788663325.7013512,
+    "mtime": 1788906883.015123,
     "ast_hash": "8e1dfd7c135cec9a7c034b1f65a14d9b",
     "semantic_hash": ""
   },
@@ -775,8 +775,8 @@
     "semantic_hash": ""
   },
   "docs/ANDROID_DAILY_DRIVER_ROADMAP.md": {
-    "mtime": 1788866604.30678,
-    "ast_hash": "211fad9ade04f206e7a941067ff31c1a",
+    "mtime": 1788888803.5461264,
+    "ast_hash": "23d5abb0edb656208bbfde9be471c1aa",
     "semantic_hash": ""
   },
   "lib/core/models/hermes_project.dart": {
@@ -845,8 +845,8 @@
     "semantic_hash": ""
   },
   "lib/core/screens/workspace_screen.dart": {
-    "mtime": 1788866471.8707454,
-    "ast_hash": "e35af9ea802357d0cc1c66a315d518a9",
+    "mtime": 1788906952.4090579,
+    "ast_hash": "c69a1ad6c520fa0891b3452ed025f305",
     "semantic_hash": ""
   },
   "test/workspace_screen_test.dart": {
@@ -875,13 +875,13 @@
     "semantic_hash": ""
   },
   "lib/core/widgets/more_pane.dart": {
-    "mtime": 1788888505.0752757,
-    "ast_hash": "7dd4aea787c3c602c043d88ed0be73b6",
+    "mtime": 1788906233.0693643,
+    "ast_hash": "7accf55bc1eeb5d0784c6466116e9058",
     "semantic_hash": ""
   },
   "test/more_pane_test.dart": {
-    "mtime": 1788888660.0992782,
-    "ast_hash": "612ca46852f46a8d073261832d65aa42",
+    "mtime": 1788906265.9578075,
+    "ast_hash": "a599436d410ae287d4630b6b6b576b7d",
     "semantic_hash": ""
   },
   "test/support/recording_turn_notification_sink.dart": {
@@ -1130,18 +1130,18 @@
     "semantic_hash": ""
   },
   "docs/ANDROID_FUNCTIONAL_UI_AUDIT.md": {
-    "mtime": 1788866617.2009583,
-    "ast_hash": "cebe8f90a1de8bfc7de4db42ce878353",
+    "mtime": 1788888814.0452616,
+    "ast_hash": "640b0fda2ddcae26464b88e70f028838",
     "semantic_hash": ""
   },
   "lib/core/screens/workspace_sessions_screen.dart": {
-    "mtime": 1788803665.7598405,
-    "ast_hash": "89b054c3eab3ee969399f574d6d894e2",
+    "mtime": 1788906913.884539,
+    "ast_hash": "81ce03d244ef6b0840802e5d43393dba",
     "semantic_hash": ""
   },
   "test/workspace_sessions_screen_test.dart": {
-    "mtime": 1788800538.1886387,
-    "ast_hash": "0b959f6a6798529132e5932b70dbac26",
+    "mtime": 1788906068.7661707,
+    "ast_hash": "96f71c565eb997ccfd8c2c885d5a07b5",
     "semantic_hash": ""
   },
   "docs/ANDROID_PHASE1_COHERENCE_GOAL.md": {
@@ -1170,8 +1170,8 @@
     "semantic_hash": ""
   },
   "test/session_model_test.dart": {
-    "mtime": 1788084479.9191303,
-    "ast_hash": "36ebbf4a5072aeacb31dfbe433b8e414",
+    "mtime": 1788905928.6843178,
+    "ast_hash": "860f8f61cabd88d04be21fb485e023e8",
     "semantic_hash": ""
   },
   "docs/plans/2026-08-30-chats-enrichi.md": {
@@ -1310,8 +1310,8 @@
     "semantic_hash": ""
   },
   "lib/core/widgets/biometric_lock_gate.dart": {
-    "mtime": 1788723694.4945517,
-    "ast_hash": "f883ac5dccc85de243eeb72987e5804a",
+    "mtime": 1788905705.4703653,
+    "ast_hash": "7a535e81f7b32a254f8863025d93b516",
     "semantic_hash": ""
   },
   "lib/core/widgets/biometric_settings_card.dart": {
@@ -1325,8 +1325,8 @@
     "semantic_hash": ""
   },
   "test/biometric_lock_gate_test.dart": {
-    "mtime": 1788723694.7215548,
-    "ast_hash": "14c7dcd8452e0374d100f6bcc2ab3efa",
+    "mtime": 1788905677.3399932,
+    "ast_hash": "80e30f4c5d76bfc7fe6a6bc70792e0b9",
     "semantic_hash": ""
   },
   "test/biometric_lock_store_test.dart": {
@@ -1385,13 +1385,13 @@
     "semantic_hash": ""
   },
   "lib/core/widgets/session_organizer_settings_card.dart": {
-    "mtime": 1788759962.9930112,
-    "ast_hash": "9f2bd0603bd1f76ccbc9bcd715402a45",
+    "mtime": 1788905546.910268,
+    "ast_hash": "45512d19434da9b6bfaa081d0e561f54",
     "semantic_hash": ""
   },
   "test/session_organizer_settings_card_test.dart": {
-    "mtime": 1788759524.0364325,
-    "ast_hash": "50fa95116efe76b6803384be07f98a52",
+    "mtime": 1788905575.0706406,
+    "ast_hash": "24183169a55409c0c028fd7bf5e63abd",
     "semantic_hash": ""
   },
   "lib/core/widgets/cron_due_banner.dart": {
@@ -1417,6 +1417,11 @@
   "test/project_card_summary_test.dart": {
     "mtime": 1788822605.4581327,
     "ast_hash": "05c7e419470f93cde1ceda899bf4b457",
+    "semantic_hash": ""
+  },
+  "docs/ANDROID_AUDIT_UX_GAPS_20260909.json": {
+    "mtime": 1788905361.5928168,
+    "ast_hash": "312c80abd4b8ec8c24d3542d6741d694",
     "semantic_hash": ""
   }
 }

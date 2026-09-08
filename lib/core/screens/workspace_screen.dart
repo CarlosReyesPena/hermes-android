@@ -744,9 +744,13 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
           searchControllerFactory: _supportsNetworkSearch
               ? _ensureSearchController
               : null,
-          onOpenSession: (session) => unawaited(
-            _openSession(session, projectName: _chatProjectLabels[session.id]),
-          ),
+          onOpenSession: (session) => unawaited(() async {
+            await _markSessionRead(session);
+            await _openSession(
+              session,
+              projectName: _chatProjectLabels[session.id],
+            );
+          }()),
           onMoveSession: repository == null
               ? null
               : (session, targetProjectId) =>
@@ -846,6 +850,19 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
 
   void _push(Widget screen) {
     Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => screen));
+  }
+
+  Future<void> _markSessionRead(Session session) async {
+    if (!session.unread) return;
+    try {
+      await (_sessionsApi ??= ApiClient(
+        baseUrl: widget.connection.baseUrl,
+        apiKey: widget.connection.apiKey,
+        pathPrefix: widget.connection.gatewayPrefix ?? '',
+      )).updateSessionFlags(session.id, unread: false);
+    } catch (_) {
+      // Opening a chat must never be blocked by a best-effort read receipt.
+    }
   }
 
   /// Opens a chat from the Home digest.
@@ -1478,7 +1495,10 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
         title: title,
         view: view,
         load: _loadWorkspaceSessionsData,
-        onOpenSession: (session) => unawaited(_openSession(session)),
+        onOpenSession: (session) => unawaited(() async {
+          await _markSessionRead(session);
+          await _openSession(session);
+        }()),
         onPromote: view == WorkspaceSessionView.archivedQuick
             ? _promoteQuickChat
             : null,
