@@ -52,6 +52,7 @@ void main() {
           'assets',
           'unassigned',
           'archived-quick',
+          'search',
           'cron',
           'skills',
           'memory',
@@ -152,6 +153,28 @@ void main() {
         }
       },
     );
+
+    test('Search is a native Smart View, not a placeholder', () {
+      final entry = buildMoreSections(dashboardReachable: true)
+          .expand((section) => section.entries)
+          .firstWhere((candidate) => candidate.id == 'search');
+
+      expect(entry.title, 'Search');
+      expect(entry.availability, MoreEntryAvailability.available);
+      expect(entry.unavailableReason, isNull);
+    });
+
+    test('Search survives a dashboard outage because on-device search does', () {
+      final entry = buildMoreSections(dashboardReachable: false)
+          .expand((section) => section.entries)
+          .firstWhere((candidate) => candidate.id == 'search');
+
+      // The browser always filters the sessions it already holds; only the
+      // full-text and AI modes need the dashboard, and the screen degrades to
+      // on-device search by itself. Disabling the whole entry here would hide
+      // a capability that still works.
+      expect(entry.availability, MoreEntryAvailability.available);
+    });
 
     test('Files follows the dashboard it depends on', () {
       final entries = {

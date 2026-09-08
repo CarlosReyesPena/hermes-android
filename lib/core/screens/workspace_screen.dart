@@ -1614,6 +1614,8 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
         unawaited(
           _openWorkspaceSessionView(WorkspaceSessionView.archivedQuick),
         );
+      case 'search':
+        unawaited(_openWorkspaceSessionView(WorkspaceSessionView.search));
       case 'files':
         unawaited(_openFiles());
       case 'cron':

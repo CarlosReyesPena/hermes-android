@@ -1490,6 +1490,35 @@ Projects.
     meta line because two rows of grey micro-text read as noise and the pair
     only makes sense together. A 200 % text-scale test guards the card layout.
 
+37. **Global Workspace search reachable from More** —
+    `test/more_pane_test.dart`, `test/workspace_screen_test.dart`. Backlog item
+    8 of the functional audit. The Search route already existed and was already
+    complete — on-device, server full-text, and AI+full-text modes, all
+    persisted per connection — but it had exactly **one** entry point: the
+    magnifier in the Home app-bar. Leave Home for Projects, Activity, or More
+    and the app's global search was gone, while the More pane that is supposed
+    to list *every* capability did not mention it at all. A capability
+    reachable from one screen out of four is not discoverable; the audit's own
+    rule for this pane is "never hide a capability".
+
+    The slice is deliberately tiny: one `MoreEntry` in the Workspace section
+    and one `case 'search'` routing to the **same**
+    `_openWorkspaceSessionView(WorkspaceSessionView.search)` the Home
+    magnifier already calls. **No new screen, no new controller, no new server
+    contract, and no second search implementation** — a duplicate route would
+    be the competing-authority mistake this phase exists to avoid.
+
+    The rule that shapes it, and the one pinned in its own test: Search is
+    **not** dashboard-gated. Files, Cron, Skills, Memory and the Dashboard
+    fallback all disable themselves with a reason when no dashboard is
+    reachable, and copying that gate here would have been the obvious move —
+    but it would be wrong. The Chats browser always filters the sessions it
+    already holds, and the screen already degrades to on-device search by
+    itself when the full-text and AI modes cannot reach the dashboard. Marking
+    the entry unavailable would hide a capability that still works, so both
+    directions are pinned: available with a reachable dashboard, and *still*
+    available without one.
+
 Phase 0 is **complete**. Step 7 (real Gateway smoke test on a device) passed on
 2026-08-29 against the live Miniserver gateway from a physical SM-S948B over
 wireless debugging, and the migration *write* path it gated is implemented and
@@ -1502,9 +1531,9 @@ Next slice: the third and last Inbox source deferred in point 30 — approvals
 and cron are covered, so what remains is an authoritative aggregation contract
 for work that belongs to no open chat and no scheduled job. Keep each source
 capability-gated and never fabricate actionable rows when its server contract
-is unavailable. Batch select and reversible pin/move/archive are complete; the
-next Android-only candidate is AI filing review/accept/reject UI once the
-organizer exposes its suggestion feed.
+is unavailable. Batch select, reversible pin/move/archive, and the global
+search entry point are complete; the next Android-only candidate is AI filing
+review/accept/reject UI once the organizer exposes its suggestion feed.
 
 ---
 

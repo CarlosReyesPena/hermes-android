@@ -1232,6 +1232,28 @@ void main() {
     expect(find.text('Find me'), findsOneWidget);
   });
 
+  testWidgets('More opens the focused global Chats search', (tester) async {
+    await _pump(
+      tester,
+      connection: _connection(desktopGatewayUrl: 'https://host:8642'),
+      repository: await _repository([]),
+      sessions: [_session(id: 's1', title: 'Searchable chat')],
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text(HermesDestination.more.label).last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Search'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(WorkspaceSessionsScreen), findsOneWidget);
+    expect(
+      find.descendant(of: find.byType(AppBar), matching: find.text('Search')),
+      findsOneWidget,
+    );
+    expect(find.byKey(kWorkspaceSessionSearchKey), findsOneWidget);
+  });
+
   testWidgets('More opens the native Files screen', (tester) async {
     await _pump(
       tester,

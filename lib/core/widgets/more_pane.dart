@@ -111,6 +111,16 @@ List<MoreSection> buildMoreSections({required bool dashboardReachable}) {
           subtitle: 'Review or promote quick chats past their retention period',
           icon: Icons.archive_outlined,
         ),
+        // Deliberately not dashboard-gated: the Chats browser always filters
+        // the sessions it already holds, and it degrades to on-device search
+        // by itself when the full-text/AI modes cannot reach the dashboard.
+        // Disabling the whole entry would hide a capability that still works.
+        const MoreEntry(
+          id: 'search',
+          title: 'Search',
+          subtitle: 'Find a conversation across every Project',
+          icon: Icons.search,
+        ),
         MoreEntry(
           id: 'files',
           title: 'Files',
