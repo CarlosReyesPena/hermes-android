@@ -1,0 +1,168 @@
+{
+  "repo": "/home/carlos/dev/hermes-android",
+  "branch": "feat/server-side-session-search",
+  "head": "a2f39fa",
+  "auditScope": "Home, Chats, Projects, Files, Activity, More/Settings",
+  "summary": "The app is feature-dense: 5-destination shell, Home attention digest, server-owned Projects CRUD, Chats browser with pin/batch/move/archive/undo + search modes, durable turn recovery, approvals/clarifications/sensitive prompts, model/effort selectors, attachments, STT/TTS, markdown with code copy/wrap, Cron CRUD, encrypted backup. The highest-value gaps are Discord-parity signals Carlos needs daily: (1) no unread/new indication even though the gateway already exposes the `unread`/`hidden` flags, (2) no per-message timestamps, (3) chat app-bar actions are only Refresh/Export (no rename/delete in-chat), (4) Memory and Files are read-only/text-only, (5) two More-pane entries under-report capabilities that are already shipped (Pin/batch/undo, AI-assisted filing settings).",
+  "findings": [
+    {
+      "id": "unread-indicators",
+      "area": "Chats + Shell + Chat",
+      "priority": "P0",
+      "title": "Unread / new-activity indication is entirely missing despite server support",
+      "gap": "`ApiClient.updateSessionFlags` (lib/core/services/connection_manager.dart:665-687) already accepts `unread` and `hidden`, but `Session.fromJson` (lib/core/models/session.dart) never parses `unread`, no widget reads it, and opening a chat never clears it. Carlos cannot tell which conversations have new activity — the single most valuable Discord-replacement signal.",
+      "value": "Very high — this is the core 'instead of Discord tomorrow' feature; the server contract already exists, so it is UI-only.",
+      "effort": "Small-medium",
+      "files": [
+        "lib/core/models/session.dart (parse `unread` from JSON)",
+        "lib/core/services/connection_manager.dart (already supports; no change)",
+        "lib/core/screens/workspace_sessions_screen.dart (bold title + unread dot/count per row)",
+        "lib/core/screens/workspace_screen.dart (thread onUpdateFlags.unread:false on open; sum unread into shell Chats badge)",
+        "lib/core/widgets/hermes_shell.dart (badge the Chats destination with total unread)"
+      ],
+      "proposedTest": "1) session_model_test: Session.fromJson maps `unread:true`. 2) workspace_sessions_screen_test: an unread session renders a dot and bold title; a read session does not. 3) workspace_screen_test: opening a session fires updateSessionFlags(session.id, unread:false) and the shell Chats badge equals the sum of unread sessions. 4) Empty/unread flag from an older gateway degrades to no indicator (no crash).",
+      "serverDependency": "None (REST PATCH already supported)"
+    },
+    {
+      "id": "message-timestamps",
+      "area": "Chat",
+      "priority": "P0",
+      "title": "Messages render no timestamp",
+      "gap": "`MessageBubble` (lib/core/screens/chat_screen.dart:3360-3453) draws only a role header and the markdown body; the raw message map is passed as `metadata` and only surfaced in verbose mode. Discord's per-message time is absent.",
+      "value": "High — grounds the transcript and makes 'how long did this take' answerable at a glance.",
+      "effort": "Small",
+      "files": [
+        "lib/core/screens/chat_screen.dart (render created_at/timestamp from `metadata` in the bubble, reusing formatRelativeAge)",
+        "lib/core/utils/relative_time.dart (reuse)"
+      ],
+      "proposedTest": "chat_display_items_test / a new widget test: a message with a timestamp field shows a relative-time label; a message without one shows no label; the label updates under an injected clock.",
+      "serverDependency": "Depends on the gateway including created_at/timestamp in message JSON (verify via getMessages; verbose dump already exposes all fields)"
+    },
+    {
+      "id": "chat-appbar-actions",
+      "area": "Chat",
+      "priority": "P0",
+      "title": "Chat app-bar menu offers only Refresh + Export — no rename or delete in-chat",
+      "gap": "The app-bar `PopupMenuButton` (lib/core/screens/chat_screen.dart:2655-2677) has only refresh/export. Rename and delete exist but are reachable only from the Chats browser long-press. Thread `onRename`/`onDelete` callbacks from WorkspaceScreen (which already implement `_renameSession` and `_deleteSession`) into ChatScreen.",
+      "value": "High — a chat you're inside is where you want to rename or discard it.",
+      "effort": "Medium (thread two callbacks; rename is Desktop-Gateway-gated, delete is REST)",
+      "files": [
+        "lib/core/screens/chat_screen.dart (add menu items)",
+        "lib/core/screens/workspace_screen.dart (pass onRename/onDelete through buildWorkspaceChatScreen)"
+      ],
+      "proposedTest": "chat_screen widget test: app-bar menu shows Rename when a rename callback is provided and Delete always; invoking them calls the injected callbacks; rename hidden when the connection lacks a Desktop Gateway URL.",
+      "serverDependency": "Rename: Desktop Gateway JSON-RPC (session.title). Delete: REST DELETE /api/sessions/{id} (exists)"
+    },
+    {
+      "id": "more-pane-stale-gates",
+      "area": "More",
+      "priority": "P1",
+      "title": "More pane under-reports two capabilities that are already shipped",
+      "gap": "`buildMoreSections` (lib/core/widgets/more_pane.dart:172-191) still lists 'Pin, batch and undo' as `unavailable` (`_gatewayOrganizationRequired`) and 'AI-assisted filing' as `unavailable` (`_gatewayAiFilingRequired`). But the Chats browser already implements pin/batch/move/archive with undo (lib/core/screens/workspace_sessions_screen.dart), and Settings already exposes a full AI curator (`SessionOrganizerSettingsCard`, lib/core/screens/settings_screen.dart:352-379). The capability-discovery rule ('never hide a capability') is being violated in reverse — real features look absent.",
+      "value": "Medium-high — discoverability; contradicts the audit doc's own honesty rule.",
+      "effort": "Small",
+      "files": [
+        "lib/core/widgets/more_pane.dart (mark pin-batch-undo available and route it to the Pinned filter; repoint ai-filing to the organizer settings or reflect its real enabled/dry-run state)"
+      ],
+      "proposedTest": "more_pane_test: pin-batch-undo is selectable and its subtitle no longer claims a missing contract; ai-filing reflects the organizer's real availability instead of a hard unavailable gate.",
+      "serverDependency": "None (both capabilities already wired)"
+    },
+    {
+      "id": "memory-write",
+      "area": "More / Settings (Memory)",
+      "priority": "P1",
+      "title": "Memory screen is read-only — cannot add/edit/delete an entry",
+      "gap": "`MemoryScreen` (lib/core/screens/memory_screen.dart) only GETs `/api/memory` then falls back to `/api/config`. The product spec (Pilier 4/12) calls for 'save to memory'; there is no write path in the app.",
+      "value": "High for capturing facts on the go; blocked by server write support.",
+      "effort": "Medium (UI simple; needs a write endpoint)",
+      "files": [
+        "lib/core/screens/memory_screen.dart (add entry editor + delete; add DashboardClient write methods)",
+        "lib/core/services/connection_manager.dart (DashboardClient: memory PUT/POST/DELETE)"
+      ],
+      "proposedTest": "memory screen widget test with a mock DashboardClient asserting add/edit/delete round-trip and honest error on write failure.",
+      "serverDependency": "Requires the dashboard to expose a memory write endpoint (verify; GET /api/memory exists, write path uncertain)"
+    },
+    {
+      "id": "files-media-preview",
+      "area": "Files",
+      "priority": "P1",
+      "title": "Files screen previews text only — no image/PDF preview",
+      "gap": "`FilesScreen._openFile` (lib/core/screens/files_screen.dart:98-119) reads text via `readText`; `_previewBody` renders 'Binary preview is unavailable. Download the file to open it.' for anything non-text. For browsing miniserver folders this forces a download for every image/PDF.",
+      "value": "High for Carlos's folder-browsing workflow (screenshots, PDFs, APKs).",
+      "effort": "Medium",
+      "files": [
+        "lib/core/screens/files_screen.dart (branch on extension/mime: inline Image.network or a PDF viewer, fall back to Download)"
+      ],
+      "proposedTest": "files_screen_test: selecting an image entry renders an inline image; selecting a PDF renders a viewer; a binary/unknown type keeps the download affordance.",
+      "serverDependency": "Needs authenticated media fetch (RemoteFilesClient.download already returns bytes; may need a URL/token approach for streaming images)"
+    },
+    {
+      "id": "in-chat-message-search",
+      "area": "Chat",
+      "priority": "P2",
+      "title": "No message-content search inside a chat",
+      "gap": "Search (local/full-text/AI) operates on session titles/previews only (SessionSearchController, workspace search). There is no way to find a phrase inside the open conversation's messages.",
+      "value": "Medium — Discord parity, but larger than the P0/P1 items.",
+      "effort": "Medium-large",
+      "files": [
+        "lib/core/screens/chat_screen.dart (client-side filter over already-loaded messages, jump-to-match)"
+      ],
+      "proposedTest": "widget test: entering a query filters the loaded message list and tapping a result scrolls to it.",
+      "serverDependency": "None (client-side over fetched messages)"
+    },
+    {
+      "id": "actionable-notifications",
+      "area": "Home / Activity / System",
+      "priority": "P2",
+      "title": "Notifications are informational only — no approve/reject/deep-link actions",
+      "gap": "`TurnNotificationService` notifies on turn completion, but Pilier 2 (typed channels, deep links, safe Approve/Reject/Retry from the notification) is not implemented. Approvals are only reachable by opening the chat or the Inbox.",
+      "value": "High long-term, but server-dependent.",
+      "effort": "Large",
+      "files": [
+        "lib/core/services/turn_notification_service.dart",
+        "lib/core/widgets/pending_approvals_banner.dart",
+        "lib/core/services/gateway_turn_application_controller.dart"
+      ],
+      "proposedTest": "Integration: a pending approval raises a notification with Approve/Reject actions; tapping opens the exact chat and replays the dialog; actions are idempotent.",
+      "serverDependency": "Needs typed gateway events / stable ids / idempotent resolve RPCs (not yet exposed)"
+    },
+    {
+      "id": "offline-transcript-cache",
+      "area": "Chat",
+      "priority": "P2",
+      "title": "No offline chat transcript cache",
+      "gap": "Pilier 8 requires offline reading clearly marked; currently a chat with no connectivity shows an error, not the last-known transcript.",
+      "value": "Medium (resilience).",
+      "effort": "Large",
+      "files": [
+        "lib/core/screens/chat_screen.dart",
+        "lib/core/services/gateway_turn_journal.dart (or a new transcript cache)"
+      ],
+      "proposedTest": "widget test: with a cached transcript and no network, the chat renders the cached messages behind an offline banner.",
+      "serverDependency": "None (local cache)"
+    },
+    {
+      "id": "connection-switcher",
+      "area": "Home / Shell",
+      "priority": "P2",
+      "title": "No quick connection/gateway switcher in the workspace",
+      "gap": "The app auto-opens the last connection; switching requires backing out to the connection list (lib/main.dart). The workspace app-bar shows the label but offers no way to change it.",
+      "value": "Low for Carlos's single-miniserver setup; higher if multiple gateways are used.",
+      "effort": "Small-medium",
+      "files": [
+        "lib/core/screens/workspace_screen.dart (app-bar overflow to list/switch connections)",
+        "lib/main.dart (expose the connection list route)"
+      ],
+      "proposedTest": "widget test: tapping the connection switcher shows the saved connections and selecting one navigates to its workspace.",
+      "serverDependency": "None"
+    }
+  ],
+  "alreadyWellCovered": [
+    "Projects CRUD (create/rename/archive/restore/delete) with consistent overflow menus and destructive confirmations",
+    "Chats browser pin/batch-move/archive/undo, Unassigned/Archived/Pinned/Recent filters, global search (on-device/full-text/AI)",
+    "Chat markdown (code blocks with copy/wrap), model/effort selectors, attachments (gallery/camera/server files), STT/TTS, stop response, edit-and-resend, regenerate, export/share",
+    "Cron CRUD (add/edit/delete/trigger/pause) with failing-first ranking and attention banner",
+    "Inbox with cron-failure/due/approvals banners, biometric lock, encrypted backup/restore, session-source filter",
+    "Honest capability gates (Assets tab, AI-filing, Pin/batch in More) — though two of these gates are stale per finding 'more-pane-stale-gates'"
+  ]
+}

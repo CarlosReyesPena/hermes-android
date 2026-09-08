@@ -27,6 +27,7 @@ Session _session(
   bool archived = false,
   bool isActive = false,
   bool pinned = false,
+  bool unread = false,
 }) => Session(
   id: id,
   title: title,
@@ -39,6 +40,7 @@ Session _session(
   lastActive: lastActive ?? 1750000000,
   archived: archived,
   pinned: pinned,
+  unread: unread,
 );
 
 void main() {
@@ -285,9 +287,7 @@ void main() {
       await tester.pumpAndSettle();
     }
 
-    testWidgets('offers every validated chip in embedded mode', (
-      tester,
-    ) async {
+    testWidgets('offers every validated chip in embedded mode', (tester) async {
       await pumpChats(tester);
 
       for (final filter in WorkspaceChatsFilter.values) {
@@ -443,6 +443,25 @@ void main() {
       );
 
       expect(find.byIcon(Icons.push_pin_outlined), findsOneWidget);
+    });
+
+    testWidgets('emphasizes unread conversations without marking read rows', (
+      tester,
+    ) async {
+      await pumpRows(
+        tester,
+        sessions: [
+          _session('s1', 'Needs attention', unread: true),
+          _session('s2', 'Already read'),
+        ],
+      );
+
+      expect(find.byKey(const Key('unread-session-s1')), findsOneWidget);
+      expect(find.byKey(const Key('unread-session-s2')), findsNothing);
+      final unreadTitle = tester.widget<Text>(find.text('Needs attention'));
+      final readTitle = tester.widget<Text>(find.text('Already read'));
+      expect(unreadTitle.style?.fontWeight, FontWeight.w700);
+      expect(readTitle.style?.fontWeight, isNot(FontWeight.w700));
     });
 
     testWidgets('moves a conversation into a Project from the Chats browser', (
@@ -872,6 +891,34 @@ void main() {
 
       expect(find.byTooltip('Search mode'), findsOneWidget);
       expect(find.byIcon(Icons.phone_android), findsOneWidget);
+    });
+
+    testWidgets('server mode keeps local conversations for an empty query', (
+      tester,
+    ) async {
+      SharedPreferences.setMockInitialValues({
+        'session_search.conn.mode': 'server',
+      });
+
+      await pumpSearch(tester, await buildController());
+
+      expect(find.text('Local chat'), findsOneWidget);
+      expect(find.text('Nothing here'), findsNothing);
+    });
+
+    testWidgets('AI mode keeps local conversations for an empty query', (
+      tester,
+    ) async {
+      SharedPreferences.setMockInitialValues({
+        'session_search.conn.mode': 'ai',
+        'session_search.conn.ai_provider': 'openrouter',
+        'session_search.conn.ai_model': 'gpt-oss-20b',
+      });
+
+      await pumpSearch(tester, await buildController());
+
+      expect(find.text('Local chat'), findsOneWidget);
+      expect(find.text('Nothing here'), findsNothing);
     });
 
     testWidgets('full-text mode replaces local filtering with server hits', (

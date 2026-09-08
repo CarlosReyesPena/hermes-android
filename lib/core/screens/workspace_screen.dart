@@ -1618,6 +1618,10 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
         unawaited(_openWorkspaceSessionView(WorkspaceSessionView.search));
       case 'files':
         unawaited(_openFiles());
+      case 'pin-batch-undo':
+        setState(() => _destination = HermesDestination.chats);
+      case 'ai-filing':
+        _push(SettingsScreen(connection: connection));
       case 'cron':
         _push(CronScreen(connection: connection));
       case 'skills':

@@ -207,13 +207,13 @@ class _BiometricLockGateState extends State<BiometricLockGate>
                         : const Icon(Icons.fingerprint),
                     label: Text(_authenticating ? 'Checking…' : 'Unlock'),
                   ),
-                const SizedBox(height: HermesSpacing.md),
-                TextButton(
-                  onPressed: _authenticating ? null : _disableLock,
-                  child: Text(
-                    _canPrompt ? 'Disable lock' : 'Disable lock and continue',
+                if (!_canPrompt) ...[
+                  const SizedBox(height: HermesSpacing.md),
+                  TextButton(
+                    onPressed: _authenticating ? null : _disableLock,
+                    child: const Text('Disable lock and continue'),
                   ),
-                ),
+                ],
               ],
             ),
           ),

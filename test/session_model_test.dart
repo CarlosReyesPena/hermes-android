@@ -16,6 +16,7 @@ void main() {
         'last_active': 1750000090.25,
         'pinned': true,
         'archived': false,
+        'unread': true,
       });
 
       expect(session.id, 's1');
@@ -24,6 +25,7 @@ void main() {
       expect(session.lastActive, 1750000090.25);
       expect(session.pinned, isTrue);
       expect(session.archived, isFalse);
+      expect(session.unread, isTrue);
     });
 
     test(
@@ -41,6 +43,7 @@ void main() {
         expect(session.lastActive, 1750000030.0);
         expect(session.pinned, isFalse);
         expect(session.archived, isFalse);
+        expect(session.unread, isFalse);
       },
     );
 

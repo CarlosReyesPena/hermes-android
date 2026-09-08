@@ -86,6 +86,16 @@ void main() {
       expect(find.text('SECRET HOME').hitTestable(), findsNothing);
     });
 
+    testWidgets('does not offer unauthenticated disable when biometrics work', (
+      tester,
+    ) async {
+      await _pump(tester, enabled: true, supported: true, enrolled: true);
+
+      expect(find.text('Unlock'), findsOneWidget);
+      expect(find.textContaining('Disable lock'), findsNothing);
+      expect(find.text('SECRET HOME').hitTestable(), findsNothing);
+    });
+
     testWidgets('reveals the child after a successful unlock', (tester) async {
       final auth = await _pump(tester, enabled: true, result: true);
 

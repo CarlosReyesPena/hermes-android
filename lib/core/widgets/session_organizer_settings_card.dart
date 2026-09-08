@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 
 class SessionOrganizerSettings {
+  final String assignmentMode;
   final bool aiEnabled;
   final String provider;
   final String model;
 
   const SessionOrganizerSettings({
+    required this.assignmentMode,
     required this.aiEnabled,
     required this.provider,
     required this.model,
@@ -13,6 +15,7 @@ class SessionOrganizerSettings {
 
   factory SessionOrganizerSettings.fromJson(Map<String, dynamic> json) {
     return SessionOrganizerSettings(
+      assignmentMode: json['assignment_mode'] == 'auto' ? 'auto' : 'dry-run',
       aiEnabled: json['ai_enabled'] == true,
       provider: json['provider'] as String? ?? '',
       model: json['model'] as String? ?? '',
@@ -20,6 +23,7 @@ class SessionOrganizerSettings {
   }
 
   Map<String, dynamic> toJson() => {
+    'assignment_mode': assignmentMode,
     'ai_enabled': aiEnabled,
     'provider': provider,
     'model': model,
@@ -45,6 +49,7 @@ class SessionOrganizerSettingsCard extends StatefulWidget {
 
 class _SessionOrganizerSettingsCardState
     extends State<SessionOrganizerSettingsCard> {
+  late bool _automaticAssignment;
   late bool _enabled;
   late String _provider;
   late String _model;
@@ -54,6 +59,7 @@ class _SessionOrganizerSettingsCardState
   @override
   void initState() {
     super.initState();
+    _automaticAssignment = widget.initialSettings.assignmentMode == 'auto';
     _enabled = widget.initialSettings.aiEnabled;
     _provider = _effectiveProvider(widget.initialSettings.provider);
     _model = _effectiveModel(_provider, widget.initialSettings.model);
@@ -80,6 +86,7 @@ class _SessionOrganizerSettingsCardState
     try {
       await widget.onSave(
         SessionOrganizerSettings(
+          assignmentMode: _automaticAssignment ? 'auto' : 'dry-run',
           aiEnabled: _enabled,
           provider: _provider,
           model: _model,
@@ -87,12 +94,12 @@ class _SessionOrganizerSettingsCardState
       );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('AI curator settings saved')),
+          const SnackBar(content: Text('Organization settings saved')),
         );
       }
     } catch (_) {
       if (mounted) {
-        setState(() => _error = 'Could not save AI curator settings');
+        setState(() => _error = 'Could not save organization settings');
       }
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -109,8 +116,22 @@ class _SessionOrganizerSettingsCardState
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             SwitchListTile.adaptive(
+              key: const Key('automatic-assignment-switch'),
               contentPadding: EdgeInsets.zero,
-              title: const Text('AI project curator'),
+              title: const Text('Automatic project assignment'),
+              subtitle: Text(
+                _automaticAssignment
+                    ? 'On — finished conversations can be moved into Projects.'
+                    : 'Off — recommendations are previewed without changing Projects.',
+              ),
+              value: _automaticAssignment,
+              onChanged: (value) =>
+                  setState(() => _automaticAssignment = value),
+            ),
+            SwitchListTile.adaptive(
+              key: const Key('ai-classification-switch'),
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Use AI classification'),
               subtitle: Text(
                 _enabled
                     ? 'On — the selected AI classifies finished conversations.'
@@ -184,7 +205,7 @@ class _SessionOrganizerSettingsCardState
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
                     : const Icon(Icons.save),
-                label: const Text('Save AI curator settings'),
+                label: const Text('Save organization settings'),
               ),
             ),
           ],

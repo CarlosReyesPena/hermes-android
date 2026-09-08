@@ -23,6 +23,9 @@ class Session {
   /// Whether the Gateway archived the session.
   final bool archived;
 
+  /// Whether the Gateway reports activity the user has not opened yet.
+  final bool unread;
+
   const Session({
     required this.id,
     required this.title,
@@ -36,6 +39,7 @@ class Session {
     this.lastActive = 0,
     this.pinned = false,
     this.archived = false,
+    this.unread = false,
   });
 
   factory Session.fromJson(Map<String, dynamic> json) {
@@ -55,6 +59,7 @@ class Session {
       lastActive: lastActive,
       pinned: json['pinned'] == true,
       archived: json['archived'] == true,
+      unread: json['unread'] == true,
     );
   }
 }

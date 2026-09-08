@@ -128,15 +128,20 @@ void main() {
       );
     });
 
-    test('contract-gated organization stays visible with exact reasons', () {
+    test('shipped organization features are available without stale gates', () {
       final entries = {
         for (final section in buildMoreSections(dashboardReachable: true))
           for (final entry in section.entries) entry.id: entry,
       };
 
-      for (final id in ['assets', 'pin-batch-undo', 'ai-filing']) {
-        expect(entries[id]!.availability, MoreEntryAvailability.unavailable);
-        expect(entries[id]!.unavailableReason, contains('Gateway'));
+      expect(
+        entries['assets']!.availability,
+        MoreEntryAvailability.unavailable,
+      );
+      expect(entries['assets']!.unavailableReason, contains('Gateway'));
+      for (final id in ['pin-batch-undo', 'ai-filing']) {
+        expect(entries[id]!.availability, MoreEntryAvailability.available);
+        expect(entries[id]!.unavailableReason, isNull);
       }
     });
 
@@ -165,17 +170,20 @@ void main() {
       expect(entry.unavailableReason, isNull);
     });
 
-    test('Search survives a dashboard outage because on-device search does', () {
-      final entry = buildMoreSections(dashboardReachable: false)
-          .expand((section) => section.entries)
-          .firstWhere((candidate) => candidate.id == 'search');
+    test(
+      'Search survives a dashboard outage because on-device search does',
+      () {
+        final entry = buildMoreSections(dashboardReachable: false)
+            .expand((section) => section.entries)
+            .firstWhere((candidate) => candidate.id == 'search');
 
-      // The browser always filters the sessions it already holds; only the
-      // full-text and AI modes need the dashboard, and the screen degrades to
-      // on-device search by itself. Disabling the whole entry here would hide
-      // a capability that still works.
-      expect(entry.availability, MoreEntryAvailability.available);
-    });
+        // The browser always filters the sessions it already holds; only the
+        // full-text and AI modes need the dashboard, and the screen degrades to
+        // on-device search by itself. Disabling the whole entry here would hide
+        // a capability that still works.
+        expect(entry.availability, MoreEntryAvailability.available);
+      },
+    );
 
     test('Files follows the dashboard it depends on', () {
       final entries = {

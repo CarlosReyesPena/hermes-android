@@ -1114,7 +1114,8 @@ class _WorkspaceSessionsScreenState extends State<WorkspaceSessionsScreen> {
         ? _serverResults
         : null;
 
-    final sessions = serverMode
+    final hasServerQuery = serverMode && _query.trim().isNotEmpty;
+    final sessions = hasServerQuery
         ? (serverHitsCurrent?.map((hit) => hit.session).toList() ??
               const <Session>[])
         : widget.embedded
@@ -1507,12 +1508,31 @@ class _WorkspaceSessionsScreenState extends State<WorkspaceSessionsScreen> {
             ),
             const SizedBox(width: HermesSpacing.xs),
           ],
-          Icon(
-            session.pinned
-                ? Icons.push_pin_outlined
-                : Icons.chat_bubble_outline,
-            size: 20,
-            color: session.pinned ? tokens.accent : tokens.muted,
+          Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Icon(
+                session.pinned
+                    ? Icons.push_pin_outlined
+                    : Icons.chat_bubble_outline,
+                size: 20,
+                color: session.pinned ? tokens.accent : tokens.muted,
+              ),
+              if (session.unread)
+                Positioned(
+                  key: Key('unread-session-${session.id}'),
+                  right: -3,
+                  top: -3,
+                  child: Container(
+                    width: 8,
+                    height: 8,
+                    decoration: BoxDecoration(
+                      color: tokens.accent,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                ),
+            ],
           ),
           const SizedBox(width: HermesSpacing.md),
           Expanded(
@@ -1523,6 +1543,11 @@ class _WorkspaceSessionsScreenState extends State<WorkspaceSessionsScreen> {
                   session.title.isEmpty ? 'Untitled chat' : session.title,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
+                  style: session.unread
+                      ? tokens.typography.body.copyWith(
+                          fontWeight: FontWeight.w700,
+                        )
+                      : null,
                 ),
                 if (snippet != null && snippet.isNotEmpty)
                   Text(

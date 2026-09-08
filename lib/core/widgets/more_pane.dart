@@ -108,11 +108,6 @@ const _dashboardRequired =
     'credentials of this connection.';
 const _gatewayAssetsRequired =
     'Needs a server-authoritative Assets index in the Hermes Gateway.';
-const _gatewayOrganizationRequired =
-    'Needs durable pin ordering, batch mutation, and undo contracts in the '
-    'Hermes Gateway.';
-const _gatewayAiFilingRequired =
-    'Needs a correction-aware filing contract in the Hermes Gateway.';
 
 /// Builds the More menu for the current connection.
 ///
@@ -175,18 +170,14 @@ List<MoreSection> buildMoreSections({required bool dashboardReachable}) {
         MoreEntry(
           id: 'pin-batch-undo',
           title: 'Pin, batch and undo',
-          subtitle: 'Cross-device ordering and reversible bulk organization',
+          subtitle: 'Long-press chats for reversible bulk organization',
           icon: Icons.push_pin_outlined,
-          availability: MoreEntryAvailability.unavailable,
-          unavailableReason: _gatewayOrganizationRequired,
         ),
         MoreEntry(
           id: 'ai-filing',
           title: 'AI-assisted filing',
-          subtitle: 'Suggest Projects and learn from your corrections',
+          subtitle: 'Configure automatic Project assignment and its AI model',
           icon: Icons.auto_fix_high_outlined,
-          availability: MoreEntryAvailability.unavailable,
-          unavailableReason: _gatewayAiFilingRequired,
         ),
       ],
     ),
