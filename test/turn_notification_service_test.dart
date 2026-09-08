@@ -227,4 +227,61 @@ void main() {
       expect(sink.cancelAllCount, 1);
     });
   });
+
+  group('notification taps', () {
+    test(
+      'a warm-start tap is surfaced on the notificationTaps stream',
+      () async {
+        await service.ensureInitialized();
+
+        final expectation = expectLater(
+          service.notificationTaps,
+          emits('turn-42'),
+        );
+
+        sink.fireTap('turn-42');
+
+        await expectation;
+      },
+    );
+
+    test('an empty or null payload is never surfaced', () async {
+      await service.ensureInitialized();
+
+      final received = <String>[];
+      final subscription = service.notificationTaps.listen(received.add);
+      addTearDown(subscription.cancel);
+
+      sink.fireTap(null);
+      sink.fireTap('');
+      await Future<void>.delayed(Duration.zero);
+
+      expect(received, isEmpty);
+    });
+
+    test('cold-start launch details expose the launch payload', () async {
+      sink.launchPayload = 'turn-cold';
+
+      await service.ensureInitialized();
+
+      expect(service.launchPayload, 'turn-cold');
+    });
+
+    test('no cold-start launch details means no launch payload', () async {
+      await service.ensureInitialized();
+
+      expect(service.launchPayload, isNull);
+    });
+
+    test(
+      'a failing launch-details read degrades to no launch payload',
+      () async {
+        sink.launchPayloadError = StateError('no platform channel');
+
+        await service.ensureInitialized();
+
+        expect(service.launchPayload, isNull);
+      },
+    );
+  });
 }

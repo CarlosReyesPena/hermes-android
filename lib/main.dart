@@ -14,6 +14,8 @@ import 'core/services/connection_config_string.dart';
 import 'core/services/connection_manager.dart';
 import 'core/services/gateway_turn_application_controller.dart';
 import 'core/services/text_size_preference.dart';
+import 'core/services/turn_notification_router.dart';
+import 'core/services/turn_notification_service.dart';
 import 'core/screens/workspace_screen.dart';
 import 'core/theme/hermes_theme.dart';
 import 'core/utils/responsive.dart';
@@ -26,12 +28,19 @@ void main() async {
   final connManager = await ConnectionManager.create(prefs);
   final shareIntents = AndroidShareIntentService();
   final launchIntents = AndroidLaunchIntentService();
+  // Initialise notifications before the first frame so a cold-start launch
+  // (the user tapped a notification to open the app) has its launch payload
+  // available to HomeScreen before it builds, and so the tap callback is
+  // registered before any warm-start tap can arrive.
+  final turnNotifications = TurnNotificationService();
+  await turnNotifications.ensureInitialized();
   await Future.wait([shareIntents.initialize(), launchIntents.initialize()]);
   runApp(
     HermesApp(
       connManager: connManager,
       shareIntents: shareIntents,
       launchIntents: launchIntents,
+      turnNotifications: turnNotifications,
     ),
   );
 }
@@ -41,6 +50,11 @@ class HermesApp extends StatefulWidget {
   final AndroidShareIntentService? shareIntents;
   final AndroidLaunchIntentService? launchIntents;
 
+  /// The app-level notification service, created and initialised in `main()`
+  /// so cold-start launch details are available before the first frame. When
+  /// `null` (direct construction in tests), the app creates its own.
+  final TurnNotificationService? turnNotifications;
+
   /// Overrides the OS biometric prompt for tests.
   final BiometricAuthenticator? biometricAuthenticator;
 
@@ -48,6 +62,7 @@ class HermesApp extends StatefulWidget {
     required this.connManager,
     this.shareIntents,
     this.launchIntents,
+    this.turnNotifications,
     this.biometricAuthenticator,
     super.key,
   });
@@ -87,6 +102,8 @@ class HermesApp extends StatefulWidget {
 class HermesAppState extends State<HermesApp> {
   late final GatewayTurnApplicationController _turnApplicationController;
   late final BiometricAuthenticator _biometricAuthenticator;
+  late final TurnNotificationService _turnNotifications;
+  late final TurnNotificationRouter _turnNotificationRouter;
 
   @override
   void initState() {
@@ -94,6 +111,8 @@ class HermesAppState extends State<HermesApp> {
     _turnApplicationController = GatewayTurnApplicationController();
     _biometricAuthenticator =
         widget.biometricAuthenticator ?? LocalAuthBiometricAuthenticator();
+    _turnNotifications = widget.turnNotifications ?? TurnNotificationService();
+    _turnNotificationRouter = TurnNotificationRouter();
   }
 
   Future<void> setTextSizePreference(TextSizePreference preference) async {
@@ -129,6 +148,8 @@ class HermesAppState extends State<HermesApp> {
       home: HomeScreen(
         connManager: widget.connManager,
         turnApplicationController: _turnApplicationController,
+        turnNotifications: _turnNotifications,
+        turnNotificationRouter: _turnNotificationRouter,
         shareIntents: widget.shareIntents,
         launchIntents: widget.launchIntents,
       ),
@@ -138,6 +159,7 @@ class HermesAppState extends State<HermesApp> {
   @override
   void dispose() {
     unawaited(_turnApplicationController.close());
+    unawaited(_turnNotifications.dispose());
     super.dispose();
   }
 }
@@ -192,6 +214,16 @@ class HermesHeader extends StatelessWidget {
 class HomeScreen extends StatefulWidget {
   final ConnectionManager connManager;
   final GatewayTurnApplicationController turnApplicationController;
+
+  /// The single app-level notification service. Owned by [HermesAppState]; a
+  /// chat opened from here reuses it so the platform tap callback is
+  /// registered exactly once. When `null` (direct construction in tests), the
+  /// screen creates its own.
+  final TurnNotificationService? turnNotifications;
+
+  /// Resolves a tapped turn-notification payload into the chat to open.
+  final TurnNotificationRouter? turnNotificationRouter;
+
   final AndroidShareIntentService? shareIntents;
   final AndroidLaunchIntentService? launchIntents;
   final Future<String?> Function()? pickBackupFile;
@@ -205,6 +237,8 @@ class HomeScreen extends StatefulWidget {
   const HomeScreen({
     required this.connManager,
     required this.turnApplicationController,
+    this.turnNotifications,
+    this.turnNotificationRouter,
     this.shareIntents,
     this.launchIntents,
     this.pickBackupFile,
@@ -220,6 +254,10 @@ class HomeScreenState extends State<HomeScreen> {
   List<SavedConnection> _connections = [];
   bool _autoNavigated = false;
   static const String _lastConnectionKey = 'last_connection_id';
+
+  late final TurnNotificationService _turnNotifications;
+  late final TurnNotificationRouter _turnNotificationRouter;
+  StreamSubscription<String>? _notificationTapSub;
 
   void _refresh() {
     setState(() => _connections = widget.connManager.getConnections());
@@ -291,6 +329,13 @@ class HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _refresh();
+    _turnNotifications = widget.turnNotifications ?? TurnNotificationService();
+    _turnNotificationRouter =
+        widget.turnNotificationRouter ?? TurnNotificationRouter();
+    unawaited(_turnNotifications.ensureInitialized());
+    _notificationTapSub = _turnNotifications.notificationTaps.listen(
+      _onNotificationTap,
+    );
     widget.shareIntents?.pendingShare.addListener(_onSharedText);
     widget.launchIntents?.pendingQuickChat.addListener(_onQuickChat);
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -325,10 +370,31 @@ class HomeScreenState extends State<HomeScreen> {
     _navigateToWorkspace(connection);
   }
 
+  /// A warm-start tap: the user selected a Hermes turn notification while the
+  /// app was already running (backgrounded). Route to the exact chat.
+  void _onNotificationTap(String turnId) {
+    if (!mounted) return;
+    _autoNavigated = true;
+    unawaited(_routeNotificationTap(turnId));
+  }
+
+  /// Resolves [turnId] to a connection + session and navigates, or does
+  /// nothing when there is no connection to open.
+  Future<void> _routeNotificationTap(String turnId) async {
+    final route = await _turnNotificationRouter.resolve(
+      turnId: turnId,
+      connections: _connections,
+      lastConnectionId: widget.connManager.prefs.getString(_lastConnectionKey),
+    );
+    if (!mounted || route == null) return;
+    _navigateToWorkspace(route.connection, initialSessionId: route.sessionId);
+  }
+
   @override
   void dispose() {
     widget.shareIntents?.pendingShare.removeListener(_onSharedText);
     widget.launchIntents?.pendingQuickChat.removeListener(_onQuickChat);
+    unawaited(_notificationTapSub?.cancel());
     super.dispose();
   }
 
@@ -337,7 +403,14 @@ class HomeScreenState extends State<HomeScreen> {
     super.didChangeDependencies();
     if (!_autoNavigated && _connections.isNotEmpty) {
       _autoNavigated = true;
-      _maybeAutoNavigate();
+      final launchTap = _turnNotifications.launchPayload;
+      if (launchTap != null && launchTap.isNotEmpty) {
+        // A cold start launched by a notification opens the exact chat that
+        // completed, replacing the regular last-connection auto-navigation.
+        unawaited(_routeNotificationTap(launchTap));
+      } else {
+        _maybeAutoNavigate();
+      }
     }
   }
 
@@ -357,7 +430,7 @@ class HomeScreenState extends State<HomeScreen> {
     });
   }
 
-  void _navigateToWorkspace(SavedConnection conn) {
+  void _navigateToWorkspace(SavedConnection conn, {String? initialSessionId}) {
     widget.connManager.prefs.setString(_lastConnectionKey, conn.id);
     final sharedPayload = widget.shareIntents?.takePendingShare();
     final initialQuickChat =
@@ -369,8 +442,10 @@ class HomeScreenState extends State<HomeScreen> {
         builder: (_) => WorkspaceScreen(
           connection: conn,
           turnApplicationController: widget.turnApplicationController,
+          turnNotifications: widget.turnNotifications,
           initialSharedPayload: sharedPayload,
           initialQuickChat: initialQuickChat,
+          initialSessionId: initialSessionId,
         ),
       ),
     );
@@ -850,9 +925,7 @@ class HomeScreenState extends State<HomeScreen> {
                       child: const Text('Cancel'),
                     ),
                     TextButton(
-                      style: TextButton.styleFrom(
-                        foregroundColor: Colors.red,
-                      ),
+                      style: TextButton.styleFrom(foregroundColor: Colors.red),
                       onPressed: () => Navigator.pop(dialogContext, true),
                       child: const Text('Delete'),
                     ),

@@ -28,6 +28,7 @@ import '../services/quick_chat_store.dart';
 import '../services/remote_files_client.dart';
 import '../services/session_search_controller.dart';
 import '../services/shared_attachment_preparer.dart';
+import '../services/turn_notification_service.dart';
 import '../theme/hermes_theme.dart';
 import '../utils/activity_feed.dart';
 import '../utils/cron_health.dart';
@@ -110,6 +111,7 @@ Widget buildWorkspaceChatScreen({
   String? initialComposerText,
   List<AttachmentDraft> initialAttachmentDrafts = const [],
   GatewayTurnApplicationController? turnApplicationController,
+  TurnNotificationService? turnNotifications,
   Future<void> Function(Session session, String title)? onRenameSession,
   Future<void> Function(Session session)? onDeleteSession,
 }) {
@@ -120,6 +122,7 @@ Widget buildWorkspaceChatScreen({
     initialComposerText: initialComposerText,
     initialAttachmentDrafts: initialAttachmentDrafts,
     turnApplicationController: turnApplicationController,
+    turnNotifications: turnNotifications,
     onRenameSession: onRenameSession,
     onDeleteSession: onDeleteSession,
   );
@@ -142,6 +145,10 @@ class WorkspaceScreen extends StatefulWidget {
   /// Owns durable turn recovery above this screen's lifetime. Passed to every
   /// chat opened from Home so a turn survives leaving the chat.
   final GatewayTurnApplicationController? turnApplicationController;
+
+  /// The single app-level notification service, threaded to every chat this
+  /// workspace opens so the platform tap callback is registered exactly once.
+  final TurnNotificationService? turnNotifications;
 
   /// Overrides how Home reads the sessions it ranks. Injectable for tests so
   /// the digest can be asserted without a live gateway.
@@ -177,6 +184,11 @@ class WorkspaceScreen extends StatefulWidget {
   /// shortcut. The value is consumed by the caller before this screen opens.
   final bool initialQuickChat;
 
+  /// A server-owned session to open as soon as the workspace initialises, as
+  /// requested by a tapped turn notification. Opened exactly like a Home row,
+  /// so durable recovery and approval/clarify replay behave identically.
+  final String? initialSessionId;
+
   /// Converts native-cached shared files into validated composer drafts.
   final SharedAttachmentPreparer? sharedAttachmentPreparer;
 
@@ -207,6 +219,7 @@ class WorkspaceScreen extends StatefulWidget {
     this.onOpenProject,
     this.onOpenSession,
     this.turnApplicationController,
+    this.turnNotifications,
     this.sessionsLoader,
     this.sessionScreenBuilder,
     this.filesScreenBuilder,
@@ -217,6 +230,7 @@ class WorkspaceScreen extends StatefulWidget {
     this.initialSharedText,
     this.initialSharedPayload,
     this.initialQuickChat = false,
+    this.initialSessionId,
     this.sharedAttachmentPreparer,
     this.onOpenDashboard,
     this.inboxCronFailuresLoader,
@@ -560,6 +574,11 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) unawaited(_startQuickChat());
       });
+    } else if (widget.initialSessionId != null &&
+        widget.initialSessionId!.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) unawaited(_openInitialSession());
+      });
     }
   }
 
@@ -585,6 +604,39 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
     }
     if (!mounted) return;
     await _finishNewChat(draft);
+  }
+
+  /// Opens the session a tapped turn notification named.
+  ///
+  /// The recovery journal records only the session id, never its title, so the
+  /// real session is looked up from the gateway when possible and only degrades
+  /// to a placeholder title when the list cannot be read. The chat still opens
+  /// either way: messages load by id regardless of the title, and the chat
+  /// screen re-resolves the real title once the conversation loads.
+  Future<void> _openInitialSession() async {
+    await _initialization;
+    if (!mounted) return;
+    final id = widget.initialSessionId!;
+    var session = Session(
+      id: id,
+      title: '',
+      model: '',
+      source: '',
+      messageCount: 0,
+      isActive: true,
+      preview: '',
+      startedAt: DateTime.now().millisecondsSinceEpoch / 1000.0,
+    );
+    try {
+      final sessions = await _loadSessions();
+      session =
+          sessions.where((candidate) => candidate.id == id).firstOrNull ??
+          session;
+    } catch (_) {
+      // A session list we cannot read degrades to the placeholder title.
+    }
+    if (!mounted) return;
+    await _openSession(session);
   }
 
   Future<void> _startSharedChat(AndroidSharePayload payload) async {
@@ -945,6 +997,7 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
               initialComposerText: initialComposerText,
               initialAttachmentDrafts: initialAttachmentDrafts,
               turnApplicationController: widget.turnApplicationController,
+              turnNotifications: widget.turnNotifications,
               // Rename/delete live in the chat's own app bar too — leaving a
               // conversation to long-press its row in the Chats browser is
               // friction Discord does not have. Rename needs the Desktop

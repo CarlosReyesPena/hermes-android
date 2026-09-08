@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 /// The Android/iOS notification channel a [TurnNotification] belongs to.
@@ -40,7 +42,22 @@ class TurnNotification {
 /// a recording double so notification behaviour can be verified without a
 /// platform channel.
 abstract class TurnNotificationSink {
-  Future<void> initialize();
+  /// Initialises the platform channel.
+  ///
+  /// [onDidReceiveNotificationResponse] is invoked with the tapped
+  /// notification's payload whenever the user selects a Hermes turn
+  /// notification while the app is running (warm start). Pass `null` when the
+  /// caller has no tap routing to install.
+  Future<void> initialize({
+    void Function(String? payload)? onDidReceiveNotificationResponse,
+  });
+
+  /// The payload of the notification that launched the app, if any (cold
+  /// start).
+  ///
+  /// Returns `null` when the app was not launched by a notification or when
+  /// the platform cannot report launch details.
+  Future<String?> getLaunchPayload();
 
   /// Asks the platform for permission to post notifications.
   ///
@@ -64,7 +81,9 @@ class PluginTurnNotificationSink implements TurnNotificationSink {
     : _plugin = plugin ?? FlutterLocalNotificationsPlugin();
 
   @override
-  Future<void> initialize() async {
+  Future<void> initialize({
+    void Function(String? payload)? onDidReceiveNotificationResponse,
+  }) async {
     const androidSettings = AndroidInitializationSettings(
       '@mipmap/ic_launcher',
     );
@@ -78,7 +97,25 @@ class PluginTurnNotificationSink implements TurnNotificationSink {
       iOS: iosSettings,
     );
 
-    await _plugin.initialize(settings);
+    await _plugin.initialize(
+      settings,
+      onDidReceiveNotificationResponse: onDidReceiveNotificationResponse == null
+          ? null
+          : (response) => onDidReceiveNotificationResponse(response.payload),
+    );
+  }
+
+  @override
+  Future<String?> getLaunchPayload() async {
+    try {
+      final details = await _plugin.getNotificationAppLaunchDetails();
+      if (details?.didNotificationLaunchApp != true) return null;
+      return details?.notificationResponse?.payload;
+    } catch (_) {
+      // A platform that cannot report launch details simply has no cold-start
+      // tap to route.
+      return null;
+    }
   }
 
   @override
@@ -153,9 +190,12 @@ class TurnNotificationService {
   );
 
   final TurnNotificationSink _sink;
+  final StreamController<String> _notificationTaps =
+      StreamController<String>.broadcast();
 
   bool _initialized = false;
   bool _permissionGranted = true;
+  String? _launchPayload;
 
   TurnNotificationService({
     TurnNotificationSink? sink,
@@ -169,6 +209,22 @@ class TurnNotificationService {
   /// leaving the user wondering why nothing arrives.
   bool get permissionGranted => _permissionGranted;
 
+  /// The turn ids the user selected in the notification tray, in tap order.
+  ///
+  /// Fed by the platform `onDidReceiveNotificationResponse` callback the sink
+  /// registers during [ensureInitialized]. A warm-start tap (the app was
+  /// already running in the background) arrives here; a cold start is surfaced
+  /// separately through [launchPayload].
+  Stream<String> get notificationTaps => _notificationTaps.stream;
+
+  /// The turn id whose notification launched the app (cold start), or `null`
+  /// when the app was not launched by a Hermes turn notification.
+  ///
+  /// Populated once during [ensureInitialized] from the platform's launch
+  /// details, so the app-level router can open the exact chat even when the
+  /// process was started by the tap.
+  String? get launchPayload => _launchPayload;
+
   /// One-shot initialisation of the Hermes notification channel.
   ///
   /// Safe to call repeatedly — once it has succeeded, subsequent calls are
@@ -178,7 +234,9 @@ class TurnNotificationService {
     if (_initialized) return;
 
     try {
-      await _sink.initialize();
+      await _sink.initialize(
+        onDidReceiveNotificationResponse: _onNotificationTap,
+      );
       _initialized = true;
     } catch (_) {
       // Platform not available (e.g. test environment) — notifications
@@ -197,7 +255,24 @@ class TurnNotificationService {
       // platform imposes no runtime gate rather than blocking notifications.
       _permissionGranted = true;
     }
+
+    // Read the cold-start launch payload exactly once, after the channel is
+    // up. `getNotificationAppLaunchDetails` must run after `initialize`.
+    try {
+      _launchPayload = await _sink.getLaunchPayload();
+    } catch (_) {
+      // Same degradation rule as the permission channel: a platform that
+      // cannot report launch details simply has no cold-start tap to route.
+    }
   }
+
+  void _onNotificationTap(String? payload) {
+    if (payload == null || payload.isEmpty) return;
+    _notificationTaps.add(payload);
+  }
+
+  /// Releases the tap stream. Safe to call once at application teardown.
+  Future<void> dispose() => _notificationTaps.close();
 
   /// Posts a notification when a gateway turn completes while the app is
   /// backgrounded.

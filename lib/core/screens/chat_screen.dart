@@ -180,6 +180,11 @@ class ChatScreen extends StatefulWidget {
   @visibleForTesting
   final TurnNotificationService? testTurnNotifications;
 
+  /// The app-level notification service shared across chats, so the platform
+  /// tap callback is registered exactly once. When both this and
+  /// [testTurnNotifications] are null, the chat creates its own.
+  final TurnNotificationService? turnNotifications;
+
   /// Overrides how the chat reads approvals that are still pending on the
   /// gateway (see [TestPendingApprovalLoader]).
   @visibleForTesting
@@ -208,6 +213,7 @@ class ChatScreen extends StatefulWidget {
     this.testInitialAttachmentDrafts = const [],
     this.testVoiceComposerAdapter,
     this.testTurnNotifications,
+    this.turnNotifications,
     this.testPendingApprovalLoader,
     this.testComposerDraftStore,
     super.key,
@@ -316,7 +322,9 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
       unawaited(_restoreComposerDraft());
     }
     _turnNotifications =
-        widget.testTurnNotifications ?? TurnNotificationService();
+        widget.testTurnNotifications ??
+        widget.turnNotifications ??
+        TurnNotificationService();
     unawaited(_turnNotifications.ensureInitialized());
     _client =
         widget.testApiClient ??

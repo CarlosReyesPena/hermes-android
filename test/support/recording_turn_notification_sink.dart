@@ -10,6 +10,18 @@ class RecordingTurnNotificationSink implements TurnNotificationSink {
   int cancelAllCount = 0;
   int permissionRequestCount = 0;
 
+  /// The tap callback the service handed [initialize], so a test can fire it
+  /// the way the platform would when the user selects a notification.
+  void Function(String? payload)? onDidReceiveNotificationResponse;
+
+  /// The payload [getLaunchPayload] returns, standing in for the platform's
+  /// cold-start launch details.
+  String? launchPayload;
+
+  /// When set, [getLaunchPayload] throws it — mirroring a platform channel
+  /// that cannot report launch details.
+  Object? launchPayloadError;
+
   /// Result [requestPermission] returns: true granted, false denied, null when
   /// the platform has no runtime notification gate (iOS, Android < 13).
   bool? permissionResult;
@@ -22,11 +34,25 @@ class RecordingTurnNotificationSink implements TurnNotificationSink {
   Object? initializeError;
 
   @override
-  Future<void> initialize() async {
+  Future<void> initialize({
+    void Function(String? payload)? onDidReceiveNotificationResponse,
+  }) async {
     initializeCount++;
+    this.onDidReceiveNotificationResponse = onDidReceiveNotificationResponse;
     final error = initializeError;
     if (error != null) throw error;
   }
+
+  @override
+  Future<String?> getLaunchPayload() async {
+    final error = launchPayloadError;
+    if (error != null) throw error;
+    return launchPayload;
+  }
+
+  /// Simulates the user tapping a notification carrying [payload].
+  void fireTap(String? payload) =>
+      onDidReceiveNotificationResponse?.call(payload);
 
   @override
   Future<bool?> requestPermission() async {
