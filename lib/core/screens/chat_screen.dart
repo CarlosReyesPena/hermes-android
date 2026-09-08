@@ -27,6 +27,7 @@ import '../services/voice_composer_adapter.dart';
 import '../services/ws_client.dart';
 import '../models/attachment_draft.dart';
 import '../models/gateway_activity.dart';
+import '../utils/relative_time.dart';
 import '../models/gateway_approval.dart';
 import '../models/gateway_clarify.dart';
 import '../models/gateway_insight.dart';
@@ -47,6 +48,7 @@ import '../widgets/gateway_approval_dialog.dart';
 import '../widgets/gateway_clarify_dialog.dart';
 import '../widgets/gateway_insight_card.dart';
 import '../widgets/gateway_sensitive_prompt_dialog.dart';
+import '../widgets/session_name_dialog.dart';
 import '../widgets/voice_composer_controls.dart';
 
 /// These colors remain identical in light and dark themes. Their 8.15:1
@@ -140,6 +142,14 @@ class ChatScreen extends StatefulWidget {
 
   final GatewayTurnApplicationController? turnApplicationController;
 
+  /// Renames the open conversation from the app bar. Offered only when the
+  /// connection supports the Desktop Gateway `session.title` RPC; null hides
+  /// the action so a bare REST connection never shows a dead menu item.
+  final Future<void> Function(Session session, String title)? onRenameSession;
+
+  /// Deletes the open conversation irreversibly. Null hides the action.
+  final Future<void> Function(Session session)? onDeleteSession;
+
   @visibleForTesting
   final GatewayTurnApplicationSession? testTurnApplicationSession;
 
@@ -181,6 +191,8 @@ class ChatScreen extends StatefulWidget {
     this.initialComposerText,
     this.initialAttachmentDrafts = const [],
     this.turnApplicationController,
+    this.onRenameSession,
+    this.onDeleteSession,
     this.testTurnApplicationSession,
     this.testApiClient,
     this.testAttachmentDraftService,
@@ -498,6 +510,74 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
         text: buffer.toString().trim(),
       ),
     );
+  }
+
+  /// Renames the open conversation via the Desktop Gateway RPC.
+  Future<void> _renameChatSession() async {
+    final rename = widget.onRenameSession;
+    if (rename == null) return;
+    final title = await showSessionNameDialog(
+      context: context,
+      title: 'Rename conversation',
+      initialValue: widget.session.title,
+      actionLabel: 'Save',
+    );
+    if (title == null || !mounted) return;
+    try {
+      await rename(widget.session, title);
+      if (!mounted) return;
+      setState(() {});
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Conversation renamed')));
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not rename the conversation')),
+      );
+    }
+  }
+
+  /// Confirms and performs the irreversible deletion of the open conversation,
+  /// then leaves the chat: a deleted session has nothing left to show.
+  Future<void> _deleteChatSession() async {
+    final deleter = widget.onDeleteSession;
+    if (deleter == null) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Delete this conversation?'),
+        content: Text(
+          '“${widget.session.title}” and its full history will be permanently '
+          'removed. Archiving keeps it; deleting cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            style: TextButton.styleFrom(
+              foregroundColor: Theme.of(dialogContext).colorScheme.error,
+            ),
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    try {
+      await deleter(widget.session);
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not delete the conversation')),
+      );
+      return;
+    }
+    if (!mounted) return;
+    Navigator.of(context).pop();
   }
 
   Future<void> _initVoice({bool requestSpeechPermission = false}) async {
@@ -2657,22 +2737,40 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
               onSelected: (action) {
                 if (action == 'refresh') _fetchMessages();
                 if (action == 'export') _exportConversation();
+                if (action == 'rename') unawaited(_renameChatSession());
+                if (action == 'delete') unawaited(_deleteChatSession());
               },
-              itemBuilder: (_) => const [
-                PopupMenuItem(
+              itemBuilder: (_) => [
+                const PopupMenuItem(
                   value: 'refresh',
                   child: ListTile(
                     leading: Icon(Icons.refresh),
                     title: Text('Refresh'),
                   ),
                 ),
-                PopupMenuItem(
+                if (widget.onRenameSession != null)
+                  PopupMenuItem(
+                    value: 'rename',
+                    child: ListTile(
+                      leading: Icon(Icons.edit_outlined),
+                      title: Text('Rename'),
+                    ),
+                  ),
+                const PopupMenuItem(
                   value: 'export',
                   child: ListTile(
                     leading: Icon(Icons.ios_share_outlined),
                     title: Text('Export / share'),
                   ),
                 ),
+                if (widget.onDeleteSession != null)
+                  PopupMenuItem(
+                    value: 'delete',
+                    child: const ListTile(
+                      leading: Icon(Icons.delete_outline),
+                      title: Text('Delete'),
+                    ),
+                  ),
               ],
             ),
         ],
@@ -3143,6 +3241,10 @@ class MessageBubble extends StatelessWidget {
   final VoidCallback? onEdit;
   final Future<void> Function()? onRetry;
 
+  /// Injectable clock so widget tests can assert relative-time labels
+  /// deterministically. When null the bubble uses [DateTime.now].
+  final DateTime? now;
+
   const MessageBubble({
     super.key,
     required this.content,
@@ -3152,6 +3254,7 @@ class MessageBubble extends StatelessWidget {
     this.onReadAloud,
     this.onEdit,
     this.onRetry,
+    this.now,
   });
 
   Future<void> _copyMessage(BuildContext context) async {
@@ -3375,18 +3478,45 @@ class MessageBubble extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Role header keeps user and assistant prose clearly separated.
+            // Role header keeps user and assistant prose clearly separated;
+            // a relative timestamp grounds the transcript like Discord does.
             Padding(
               padding: const EdgeInsets.only(bottom: 6),
-              child: Text(
-                isUser ? 'You' : 'Hermes',
-                style: theme.textTheme.labelSmall?.copyWith(
-                  color: isUser
-                      ? hermesUserMessageForeground.withValues(alpha: 0.75)
-                      : theme.colorScheme.onSurfaceVariant,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 0.4,
-                ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.baseline,
+                textBaseline: TextBaseline.alphabetic,
+                children: [
+                  Text(
+                    isUser ? 'You' : 'Hermes',
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: isUser
+                          ? hermesUserMessageForeground.withValues(alpha: 0.75)
+                          : theme.colorScheme.onSurfaceVariant,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.4,
+                    ),
+                  ),
+                  if (messageTimestampSeconds(metadata)
+                      case final seconds?) ...[
+                    const SizedBox(width: 8),
+                    Text(
+                      formatRelativeAge(
+                        DateTime.fromMillisecondsSinceEpoch(
+                          (seconds * 1000).round(),
+                        ),
+                        now ?? DateTime.now(),
+                      ),
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: isUser
+                            ? hermesUserMessageForeground.withValues(alpha: 0.6)
+                            : theme.colorScheme.onSurfaceVariant.withValues(
+                                alpha: 0.6,
+                              ),
+                      ),
+                    ),
+                  ],
+                ],
               ),
             ),
             // Verbose metadata header

@@ -221,6 +221,53 @@ void main() {
     await tester.pump();
     expect(find.byTooltip('Scroll horizontally'), findsOneWidget);
   });
+
+  testWidgets('message bubble shows the timestamp when metadata has one', (
+    tester,
+  ) async {
+    final now = DateTime.fromMillisecondsSinceEpoch(1750000000 * 1000);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: MessageBubble(
+            content: 'Timed answer',
+            isUser: false,
+            now: now,
+            metadata: const {
+              'role': 'assistant',
+              'content': 'Timed answer',
+              // Gateway messages carry an epoch-seconds timestamp column.
+              'timestamp': 1750000000 - 5 * 60,
+            },
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('5m ago'), findsOneWidget);
+    // The role header is still present and separated from the time.
+    expect(find.text('Hermes'), findsOneWidget);
+  });
+
+  testWidgets('message bubble without a timestamp stays clean', (tester) async {
+    final now = DateTime.fromMillisecondsSinceEpoch(1750000000 * 1000);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: MessageBubble(
+            content: 'No clock',
+            isUser: true,
+            now: now,
+            metadata: const {'role': 'user', 'content': 'No clock'},
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('Hermes'), findsNothing);
+    expect(find.text('now'), findsNothing);
+    expect(find.text('5m ago'), findsNothing);
+  });
 }
 
 double _contrastRatio(Color first, Color second) {

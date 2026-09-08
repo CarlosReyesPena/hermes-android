@@ -30,3 +30,21 @@ String formatRelativeTime(DateTime now, double lastActiveSeconds) {
   );
   return formatRelativeAge(activity, now);
 }
+
+/// Message timestamp from the raw Gateway message map.
+///
+/// The API server stores a `timestamp` epoch-seconds column on every message
+/// row; the message maps the Android app renders carry it through. Older or
+/// third-party gateways may omit it, so the bubble falls back to no label
+/// rather than guessing.
+double? messageTimestampSeconds(Map<String, dynamic> metadata) {
+  final raw = metadata['timestamp'];
+  if (raw is num) return raw.toDouble();
+  if (raw is String) {
+    final parsed = double.tryParse(raw);
+    if (parsed != null) return parsed;
+    final asDate = DateTime.tryParse(raw);
+    if (asDate != null) return asDate.millisecondsSinceEpoch / 1000.0;
+  }
+  return null;
+}

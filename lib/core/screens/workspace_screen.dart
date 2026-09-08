@@ -110,6 +110,8 @@ Widget buildWorkspaceChatScreen({
   String? initialComposerText,
   List<AttachmentDraft> initialAttachmentDrafts = const [],
   GatewayTurnApplicationController? turnApplicationController,
+  Future<void> Function(Session session, String title)? onRenameSession,
+  Future<void> Function(Session session)? onDeleteSession,
 }) {
   return ChatScreen(
     connection: connection,
@@ -118,6 +120,8 @@ Widget buildWorkspaceChatScreen({
     initialComposerText: initialComposerText,
     initialAttachmentDrafts: initialAttachmentDrafts,
     turnApplicationController: turnApplicationController,
+    onRenameSession: onRenameSession,
+    onDeleteSession: onDeleteSession,
   );
 }
 
@@ -941,6 +945,12 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
               initialComposerText: initialComposerText,
               initialAttachmentDrafts: initialAttachmentDrafts,
               turnApplicationController: widget.turnApplicationController,
+              // Rename/delete live in the chat's own app bar too — leaving a
+              // conversation to long-press its row in the Chats browser is
+              // friction Discord does not have. Rename needs the Desktop
+              // Gateway RPC; delete is plain REST, so it is always offered.
+              onRenameSession: _canRenameSessions ? _renameSession : null,
+              onDeleteSession: _deleteSession,
             ),
       ),
     );
