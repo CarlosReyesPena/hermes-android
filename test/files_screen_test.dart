@@ -156,4 +156,81 @@ void main() {
     expect(find.text('Could not load files'), findsOneWidget);
     expect(find.text('Retry'), findsOneWidget);
   });
+
+  testWidgets('renders an inline image preview for image files', (
+    tester,
+  ) async {
+    final source = _ImageFilesDataSource();
+    await _pump(tester, source);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('screenshot.png'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(Image), findsOneWidget);
+    // The binary "download to open" fallback must not appear for images.
+    expect(find.textContaining('Binary preview is unavailable'), findsNothing);
+    expect(find.text('Download'), findsOneWidget);
+  });
+
+  testWidgets('keeps the download affordance for non-image binaries', (
+    tester,
+  ) async {
+    final source = _BinaryFilesDataSource();
+    await _pump(tester, source);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('archive.bin'));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.textContaining('Binary preview is unavailable'),
+      findsOneWidget,
+    );
+    expect(find.text('Download'), findsOneWidget);
+  });
+}
+
+class _ImageFilesDataSource extends _FakeFilesDataSource {
+  @override
+  Future<List<RemoteFileEntry>> listDirectory(String path) async => const [
+    RemoteFileEntry(
+      name: 'screenshot.png',
+      path: '/srv/project/screenshot.png',
+      isDirectory: false,
+    ),
+  ];
+
+  @override
+  Future<RemoteTextPreview> readText(String path) async => RemoteTextPreview(
+    path: path,
+    text: '',
+    language: 'image',
+    mimeType: 'image/png',
+    byteSize: 68,
+    binary: true,
+    truncated: false,
+  );
+}
+
+class _BinaryFilesDataSource extends _FakeFilesDataSource {
+  @override
+  Future<List<RemoteFileEntry>> listDirectory(String path) async => const [
+    RemoteFileEntry(
+      name: 'archive.bin',
+      path: '/srv/project/archive.bin',
+      isDirectory: false,
+    ),
+  ];
+
+  @override
+  Future<RemoteTextPreview> readText(String path) async => RemoteTextPreview(
+    path: path,
+    text: '',
+    language: 'binary',
+    mimeType: 'application/octet-stream',
+    byteSize: 12,
+    binary: true,
+    truncated: false,
+  );
 }

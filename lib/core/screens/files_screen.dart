@@ -35,6 +35,7 @@ class _FilesScreenState extends State<FilesScreen> {
   List<RemoteFileEntry> _entries = const [];
   RemoteFileEntry? _selected;
   RemoteTextPreview? _preview;
+  RemoteFileDownload? _imageDownload;
   Object? _error;
   bool _loading = true;
   bool _downloading = false;
@@ -99,6 +100,7 @@ class _FilesScreenState extends State<FilesScreen> {
     setState(() {
       _selected = entry;
       _preview = null;
+      _imageDownload = null;
       _loading = true;
       _error = null;
     });
@@ -109,6 +111,11 @@ class _FilesScreenState extends State<FilesScreen> {
         _preview = preview;
         _loading = false;
       });
+      if (_isImageMime(preview.mimeType)) {
+        final download = await widget.files.download(entry.path);
+        if (!mounted) return;
+        setState(() => _imageDownload = download);
+      }
     } catch (error) {
       if (!mounted) return;
       setState(() {
@@ -117,6 +124,8 @@ class _FilesScreenState extends State<FilesScreen> {
       });
     }
   }
+
+  bool _isImageMime(String mimeType) => mimeType.startsWith('image/');
 
   String? get _parentPath {
     final path = _path;
@@ -246,17 +255,29 @@ class _FilesScreenState extends State<FilesScreen> {
           const SizedBox(height: HermesSpacing.lg),
           Expanded(
             child: HermesCard(
-              child: SingleChildScrollView(
-                child: SelectableText(
-                  preview?.binary == true
-                      ? 'Binary preview is unavailable. Download the file to open it.'
-                      : preview?.text ?? 'Preview unavailable',
-                  style: tokens.typography.body.copyWith(
-                    fontFamily: 'monospace',
-                    color: tokens.onSurface,
-                  ),
-                ),
-              ),
+              child: _imageDownload != null
+                  ? InteractiveViewer(
+                      child: Center(
+                        child: Image.memory(
+                          _imageDownload!.bytes,
+                          errorBuilder: (context, error, stack) =>
+                              const SelectableText(
+                                'Image preview failed. Download the file to open it.',
+                              ),
+                        ),
+                      ),
+                    )
+                  : SingleChildScrollView(
+                      child: SelectableText(
+                        preview?.binary == true
+                            ? 'Binary preview is unavailable. Download the file to open it.'
+                            : preview?.text ?? 'Preview unavailable',
+                        style: tokens.typography.body.copyWith(
+                          fontFamily: 'monospace',
+                          color: tokens.onSurface,
+                        ),
+                      ),
+                    ),
             ),
           ),
           const SizedBox(height: HermesSpacing.lg),
