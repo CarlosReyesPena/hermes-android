@@ -1,7 +1,7 @@
-# Graph Report - hermes-android  (2026-09-07)
+# Graph Report - hermes-android  (2026-09-08)
 
 ## Corpus Check
-- 237 files · ~248,234 words
+- 237 files · ~249,183 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
@@ -10,7 +10,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `5d21050a`
+- Built from commit: `c5d19a9f`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
