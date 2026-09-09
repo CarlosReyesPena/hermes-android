@@ -892,7 +892,10 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
         );
       case HermesDestination.more:
         return MorePane(
-          sections: buildMoreSections(dashboardReachable: _dashboardReachable),
+          sections: buildMoreSections(
+            dashboardReachable: _dashboardReachable,
+            gatewayReachable: _gatewayReachable,
+          ),
           onSelect: _openMoreEntry,
         );
     }
@@ -902,6 +905,11 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
   /// on. Without one, every dashboard-backed entry is disabled *with a reason*
   /// rather than hidden, per the roadmap's capability-discovery rule.
   bool get _dashboardReachable => widget.connection.host.trim().isNotEmpty;
+
+  /// The Assets index is served by the Desktop Gateway JSON-RPC transport, so
+  /// it is only reachable when this connection actually has a gateway URL.
+  bool get _gatewayReachable =>
+      (widget.connection.desktopGatewayUrl?.trim() ?? '').isNotEmpty;
 
   /// The dashboard origin, which is not the gateway chat origin: it has its
   /// own port and optional path prefix.

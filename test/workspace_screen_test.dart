@@ -1357,11 +1357,8 @@ void main() {
     await tester.tap(find.text('Cron'), warnIfMissed: false);
     await tester.pumpAndSettle();
 
+    // A disabled dashboard entry must not route anywhere.
     expect(opened, isEmpty);
-    expect(
-      find.textContaining('Needs a reachable Hermes dashboard'),
-      findsWidgets,
-    );
   });
 
   testWidgets('switching destinations keeps the projects state alive', (

@@ -845,13 +845,13 @@
     "semantic_hash": ""
   },
   "lib/core/screens/workspace_screen.dart": {
-    "mtime": 1788936472.6006727,
-    "ast_hash": "ade0080df262adbd6fe4bb0ec57ae466",
+    "mtime": 1788937016.667148,
+    "ast_hash": "b4e3cef8db588db5605698f055e0144f",
     "semantic_hash": ""
   },
   "test/workspace_screen_test.dart": {
-    "mtime": 1788909486.7829783,
-    "ast_hash": "4c9ead630116d7feaa094bde2ed01be6",
+    "mtime": 1788937469.1073866,
+    "ast_hash": "0ac5ddc75ec0c1e303ad187175ae29d0",
     "semantic_hash": ""
   },
   "lib/core/widgets/space_migration_preview.dart": {
@@ -875,13 +875,13 @@
     "semantic_hash": ""
   },
   "lib/core/widgets/more_pane.dart": {
-    "mtime": 1788906233.0693643,
-    "ast_hash": "7accf55bc1eeb5d0784c6466116e9058",
+    "mtime": 1788936985.654722,
+    "ast_hash": "67eee64fe7fa6b9490bc1cdbe9db0d5f",
     "semantic_hash": ""
   },
   "test/more_pane_test.dart": {
-    "mtime": 1788906265.9578075,
-    "ast_hash": "a599436d410ae287d4630b6b6b576b7d",
+    "mtime": 1788937100.8423047,
+    "ast_hash": "5b6562da4a6b1cd815aa1d1c4cf7c486",
     "semantic_hash": ""
   },
   "test/support/recording_turn_notification_sink.dart": {
@@ -1130,8 +1130,8 @@
     "semantic_hash": ""
   },
   "docs/ANDROID_FUNCTIONAL_UI_AUDIT.md": {
-    "mtime": 1788888814.0452616,
-    "ast_hash": "640b0fda2ddcae26464b88e70f028838",
+    "mtime": 1788936702.4058301,
+    "ast_hash": "666e8c851712fa7068800fdfe9d43e96",
     "semantic_hash": ""
   },
   "lib/core/screens/workspace_sessions_screen.dart": {

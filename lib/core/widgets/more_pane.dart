@@ -107,18 +107,28 @@ const _dashboardRequired =
     'Needs a reachable Hermes dashboard. Check the host, port, and '
     'credentials of this connection.';
 const _gatewayAssetsRequired =
-    'Needs a server-authoritative Assets index in the Hermes Gateway.';
+    'Needs a Desktop Gateway connection. Add the Desktop Gateway details to '
+    'this connection to browse server-generated assets.';
 
 /// Builds the More menu for the current connection.
 ///
 /// [dashboardReachable] gates the surfaces served by the Hermes Dashboard.
-/// Local device settings stay reachable regardless, so the user can always
-/// repair a broken connection from inside the app.
-List<MoreSection> buildMoreSections({required bool dashboardReachable}) {
+/// [gatewayReachable] gates the surfaces served by the Desktop Gateway JSON-RPC
+/// transport (Assets, which depends on `assets.list`). Local device settings
+/// stay reachable regardless, so the user can always repair a broken
+/// connection from inside the app.
+List<MoreSection> buildMoreSections({
+  required bool dashboardReachable,
+  bool gatewayReachable = true,
+}) {
   MoreEntryAvailability dashboardBacked() => dashboardReachable
       ? MoreEntryAvailability.available
       : MoreEntryAvailability.unavailable;
   String? dashboardReason() => dashboardReachable ? null : _dashboardRequired;
+  MoreEntryAvailability gatewayBacked() => gatewayReachable
+      ? MoreEntryAvailability.available
+      : MoreEntryAvailability.unavailable;
+  String? gatewayReason() => gatewayReachable ? null : _gatewayAssetsRequired;
 
   return [
     MoreSection(
@@ -154,13 +164,13 @@ List<MoreSection> buildMoreSections({required bool dashboardReachable}) {
           availability: dashboardBacked(),
           unavailableReason: dashboardReason(),
         ),
-        const MoreEntry(
+        MoreEntry(
           id: 'assets',
           title: 'Assets',
           subtitle: 'Artifacts, attachments, and generated media',
           icon: Icons.image_outlined,
-          availability: MoreEntryAvailability.unavailable,
-          unavailableReason: _gatewayAssetsRequired,
+          availability: gatewayBacked(),
+          unavailableReason: gatewayReason(),
         ),
       ],
     ),

@@ -130,7 +130,27 @@ void main() {
 
     test('shipped organization features are available without stale gates', () {
       final entries = {
-        for (final section in buildMoreSections(dashboardReachable: true))
+        for (final section in buildMoreSections(
+          dashboardReachable: true,
+          gatewayReachable: true,
+        ))
+          for (final entry in section.entries) entry.id: entry,
+      };
+
+      expect(entries['assets']!.availability, MoreEntryAvailability.available);
+      expect(entries['assets']!.unavailableReason, isNull);
+      for (final id in ['pin-batch-undo', 'ai-filing']) {
+        expect(entries[id]!.availability, MoreEntryAvailability.available);
+        expect(entries[id]!.unavailableReason, isNull);
+      }
+    });
+
+    test('Assets needs a reachable Desktop Gateway', () {
+      final entries = {
+        for (final section in buildMoreSections(
+          dashboardReachable: true,
+          gatewayReachable: false,
+        ))
           for (final entry in section.entries) entry.id: entry,
       };
 
@@ -139,10 +159,6 @@ void main() {
         MoreEntryAvailability.unavailable,
       );
       expect(entries['assets']!.unavailableReason, contains('Gateway'));
-      for (final id in ['pin-batch-undo', 'ai-filing']) {
-        expect(entries[id]!.availability, MoreEntryAvailability.available);
-        expect(entries[id]!.unavailableReason, isNull);
-      }
     });
 
     test(
@@ -197,8 +213,13 @@ void main() {
   });
 
   group('MorePane', () {
-    List<MoreSection> sections({bool dashboardReachable = true}) =>
-        buildMoreSections(dashboardReachable: dashboardReachable);
+    List<MoreSection> sections({
+      bool dashboardReachable = true,
+      bool gatewayReachable = true,
+    }) => buildMoreSections(
+      dashboardReachable: dashboardReachable,
+      gatewayReachable: gatewayReachable,
+    );
 
     testWidgets('renders every section title and entry', (tester) async {
       final built = sections();
@@ -278,7 +299,7 @@ void main() {
         final picked = <String>[];
         await _pumpPane(
           tester,
-          sections: sections(),
+          sections: sections(gatewayReachable: false),
           onSelect: (entry) => picked.add(entry.id),
         );
 
@@ -286,7 +307,7 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(
-          find.textContaining('server-authoritative Assets index'),
+          find.textContaining('Desktop Gateway connection'),
           findsOneWidget,
         );
         expect(picked, isEmpty);
@@ -433,8 +454,13 @@ void main() {
   });
 
   group('MorePane accessibility', () {
-    List<MoreSection> sections({bool dashboardReachable = true}) =>
-        buildMoreSections(dashboardReachable: dashboardReachable);
+    List<MoreSection> sections({
+      bool dashboardReachable = true,
+      bool gatewayReachable = true,
+    }) => buildMoreSections(
+      dashboardReachable: dashboardReachable,
+      gatewayReachable: gatewayReachable,
+    );
 
     /// Every label in the rendered semantics tree, flattened.
     List<String> semanticsLabels(WidgetTester tester) {
