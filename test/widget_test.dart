@@ -268,6 +268,43 @@ void main() {
     expect(find.text('now'), findsNothing);
     expect(find.text('5m ago'), findsNothing);
   });
+
+  testWidgets('fenced diff renders as a coloured DiffBlock', (tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: MessageBubble(
+            content: '```diff\n@@ -1 +1 @@\n-old\n+new\n```',
+            isUser: false,
+          ),
+        ),
+      ),
+    );
+
+    expect(find.byKey(const Key('diff-block')), findsOneWidget);
+    expect(find.byKey(const Key('markdown-code-block')), findsNothing);
+    expect(find.text('-old'), findsOneWidget);
+    expect(find.text('+new'), findsOneWidget);
+    expect(find.byTooltip('Copy diff'), findsOneWidget);
+  });
+
+  testWidgets('non-diff code block stays an ordinary MarkdownCodeBlock', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: MessageBubble(
+            content: '```python\nprint("hi")\n```',
+            isUser: false,
+          ),
+        ),
+      ),
+    );
+
+    expect(find.byKey(const Key('diff-block')), findsNothing);
+    expect(find.byKey(const Key('markdown-code-block')), findsOneWidget);
+  });
 }
 
 double _contrastRatio(Color first, Color second) {

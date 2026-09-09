@@ -3630,9 +3630,10 @@ class MessageBubble extends StatelessWidget {
               ),
             ],
             // Message content: prose renders as markdown; fenced code
-            // blocks render with language, copy, and wrap controls.
+            // blocks render with language, copy, and wrap controls, and
+            // diffs render with coloured line treatment.
             ...splitMarkdownCodeBlocks(content).map(
-              (segment) => segment is MarkdownCodeBlock
+              (segment) => segment is Widget
                   ? segment
                   : MarkdownBody(
                       data: segment as String,

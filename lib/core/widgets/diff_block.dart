@@ -2,67 +2,31 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../utils/diff_block.dart';
-import 'diff_block.dart';
 
-/// Splits raw markdown into text segments and fenced code blocks.
-///
-/// Returns a list of [String] (regular markdown, rendered by MarkdownBody)
-/// and [MarkdownCodeBlock] (rendered with copy/wrap controls). The fenced
-/// blocks are removed from the surrounding markdown so they render once,
-/// with full fidelity, instead of relying on flutter_markdown's `pre`
-/// builder (which leaves its internal inline state unbalanced).
-List<Object> splitMarkdownCodeBlocks(String content) {
-  final result = <Object>[];
-  final regex = RegExp(
-    r'```([\w+-]*)[ \t]*\r?\n([\s\S]*?)```',
-    multiLine: true,
-  );
-  var cursor = 0;
+/// Renders a unified/git diff with coloured line treatment instead of raw
+/// monospace prose. The whole block still scrolls horizontally so long lines
+/// are reachable, and the header offers the same copy affordance as a normal
+/// code block.
+class DiffBlock extends StatefulWidget {
+  final String diff;
 
-  for (final match in regex.allMatches(content)) {
-    if (match.start > cursor) {
-      result.add(content.substring(cursor, match.start));
-    }
-    final code = match.group(2)!;
-    final language = match.group(1)?.isEmpty ?? true ? null : match.group(1);
-    // A diff fenced as ```diff or ```patch gets the coloured treatment; any
-    // other language stays an ordinary code block.
-    if ((language == 'diff' || language == 'patch') && isUnifiedDiff(code)) {
-      result.add(DiffBlock(diff: code));
-    } else {
-      result.add(MarkdownCodeBlock(code: code, language: language));
-    }
-    cursor = match.end;
-  }
-
-  if (cursor < content.length) {
-    result.add(content.substring(cursor));
-  }
-  return result;
-}
-
-/// Renders a fenced code block with a language label, copy, and wrap controls.
-class MarkdownCodeBlock extends StatefulWidget {
-  final String code;
-  final String? language;
-
-  const MarkdownCodeBlock({super.key, required this.code, this.language});
+  const DiffBlock({super.key, required this.diff});
 
   @override
-  State<MarkdownCodeBlock> createState() => _MarkdownCodeBlockState();
+  State<DiffBlock> createState() => _DiffBlockState();
 }
 
-class _MarkdownCodeBlockState extends State<MarkdownCodeBlock> {
+class _DiffBlockState extends State<DiffBlock> {
   bool _wrap = false;
 
   Future<void> _copy() async {
-    await Clipboard.setData(ClipboardData(text: widget.code));
+    await Clipboard.setData(ClipboardData(text: widget.diff));
     if (!mounted) return;
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(
         const SnackBar(
-          content: Text('Code copied'),
+          content: Text('Diff copied'),
           duration: Duration(seconds: 2),
         ),
       );
@@ -72,37 +36,26 @@ class _MarkdownCodeBlockState extends State<MarkdownCodeBlock> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+    final lines = parseDiffLines(widget.diff);
+
     final background = isDark
         ? const Color(0xFF141414)
-        : const Color(0xFFF2F2F2);
-    final header = isDark ? const Color(0xFF232323) : const Color(0xFFE4E4E4);
-    final foreground = isDark ? Colors.white70 : Colors.black87;
+        : const Color(0xFFF7F7F7);
+    final header = isDark ? const Color(0xFF232323) : const Color(0xFFE9E9E9);
 
+    final linesWidget = _Column(lines: lines, isDark: isDark);
+    // In wrap mode each line wraps to the block width. In scroll mode the
+    // column is bounded to its widest line so `stretch` can still fill the
+    // per-line background while the whole block scrolls horizontally.
     final body = _wrap
-        ? SelectableText(
-            widget.code,
-            style: TextStyle(
-              fontFamily: 'monospace',
-              fontSize: 13,
-              height: 1.45,
-              color: foreground,
-            ),
-          )
+        ? linesWidget
         : SingleChildScrollView(
             scrollDirection: Axis.horizontal,
-            child: SelectableText(
-              widget.code,
-              style: TextStyle(
-                fontFamily: 'monospace',
-                fontSize: 13,
-                height: 1.45,
-                color: foreground,
-              ),
-            ),
+            child: IntrinsicWidth(child: linesWidget),
           );
 
     return Container(
-      key: const Key('markdown-code-block'),
+      key: const Key('diff-block'),
       margin: const EdgeInsets.symmetric(vertical: 6),
       decoration: BoxDecoration(
         color: background,
@@ -123,7 +76,7 @@ class _MarkdownCodeBlockState extends State<MarkdownCodeBlock> {
               children: [
                 Expanded(
                   child: Text(
-                    widget.language ?? 'code',
+                    'diff',
                     style: TextStyle(
                       fontFamily: 'monospace',
                       fontSize: 12,
@@ -158,7 +111,7 @@ class _MarkdownCodeBlockState extends State<MarkdownCodeBlock> {
                   ),
                 ),
                 Tooltip(
-                  message: 'Copy code',
+                  message: 'Copy diff',
                   child: IconButton(
                     icon: const Icon(Icons.copy_outlined, size: 18),
                     onPressed: _copy,
@@ -176,6 +129,58 @@ class _MarkdownCodeBlockState extends State<MarkdownCodeBlock> {
             child: body,
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _Column extends StatelessWidget {
+  final List<DiffLine> lines;
+  final bool isDark;
+
+  const _Column({required this.lines, required this.isDark});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
+      children: [for (final line in lines) _row(line)],
+    );
+  }
+
+  Widget _row(DiffLine line) {
+    final Color foreground;
+    final Color? background;
+    switch (line.kind) {
+      case DiffLineKind.addition:
+        foreground = isDark ? const Color(0xFF4ADE80) : const Color(0xFF15803D);
+        background = isDark ? const Color(0xFF0D2818) : const Color(0xFFE6F4EA);
+      case DiffLineKind.deletion:
+        foreground = isDark ? const Color(0xFFF87171) : const Color(0xFFB91C1C);
+        background = isDark ? const Color(0xFF2A1215) : const Color(0xFFFDEBEC);
+      case DiffLineKind.hunk:
+        foreground = isDark ? const Color(0xFF93C5FD) : const Color(0xFF1D4ED8);
+        background = isDark ? const Color(0xFF12233B) : const Color(0xFFE8F0FE);
+      case DiffLineKind.meta:
+        foreground = isDark ? const Color(0xFFA5B4FC) : const Color(0xFF4F46E5);
+        background = null;
+      case DiffLineKind.context:
+        foreground = isDark ? Colors.white70 : Colors.black87;
+        background = null;
+    }
+
+    return Container(
+      color: background,
+      padding: const EdgeInsets.symmetric(vertical: 0.5),
+      child: Text(
+        line.text.isEmpty ? ' ' : line.text,
+        style: TextStyle(
+          fontFamily: 'monospace',
+          fontSize: 12.5,
+          height: 1.45,
+          color: foreground,
+        ),
       ),
     );
   }
