@@ -540,59 +540,67 @@ class _FilesScreenState extends State<FilesScreen> {
                 unawaited(_openFile(entry));
               }
             },
-            child: Row(
-              children: [
-                if (_selectionMode) ...[
-                  Checkbox(
-                    value: selected,
-                    onChanged: (_) => _toggleSelection(entry),
+            child: SizedBox(
+              height: 48,
+              child: Row(
+                children: [
+                  if (_selectionMode) ...[
+                    Checkbox(
+                      value: selected,
+                      onChanged: (_) => _toggleSelection(entry),
+                    ),
+                    const SizedBox(width: HermesSpacing.sm),
+                  ],
+                  SizedBox(
+                    key: Key('file-leading-${entry.path}'),
+                    width: 48,
+                    height: 48,
+                    child: Icon(
+                      entry.isDirectory
+                          ? Icons.folder_outlined
+                          : Icons.description_outlined,
+                      color: HermesTokens.of(context).accent,
+                    ),
                   ),
-                  const SizedBox(width: HermesSpacing.sm),
-                ],
-                Icon(
-                  entry.isDirectory
-                      ? Icons.folder_outlined
-                      : Icons.description_outlined,
-                  color: HermesTokens.of(context).accent,
-                ),
-                const SizedBox(width: HermesSpacing.md),
-                Expanded(child: Text(entry.name)),
-                if (!entry.isDirectory)
-                  PopupMenuButton<String>(
-                    key: Key('file-actions-${entry.path}'),
-                    tooltip: 'File actions',
-                    onSelected: (action) => _handleFileAction(action, entry),
-                    itemBuilder: (_) => [
-                      const PopupMenuItem(
-                        value: 'download',
-                        child: ListTile(
-                          leading: Icon(Icons.download_outlined),
-                          title: Text('Download'),
-                          contentPadding: EdgeInsets.zero,
-                        ),
-                      ),
-                      if (widget.onAddToChat != null)
+                  const SizedBox(width: HermesSpacing.md),
+                  Expanded(child: Text(entry.name)),
+                  if (!entry.isDirectory)
+                    PopupMenuButton<String>(
+                      key: Key('file-actions-${entry.path}'),
+                      tooltip: 'File actions',
+                      onSelected: (action) => _handleFileAction(action, entry),
+                      itemBuilder: (_) => [
                         const PopupMenuItem(
-                          value: 'add',
+                          value: 'download',
                           child: ListTile(
-                            leading: Icon(Icons.add_comment_outlined),
-                            title: Text('Add to chat'),
+                            leading: Icon(Icons.download_outlined),
+                            title: Text('Download'),
                             contentPadding: EdgeInsets.zero,
                           ),
                         ),
-                      const PopupMenuItem(
-                        value: 'share',
-                        child: ListTile(
-                          leading: Icon(Icons.share_outlined),
-                          title: Text('Share'),
-                          contentPadding: EdgeInsets.zero,
+                        if (widget.onAddToChat != null)
+                          const PopupMenuItem(
+                            value: 'add',
+                            child: ListTile(
+                              leading: Icon(Icons.add_comment_outlined),
+                              title: Text('Add to chat'),
+                              contentPadding: EdgeInsets.zero,
+                            ),
+                          ),
+                        const PopupMenuItem(
+                          value: 'share',
+                          child: ListTile(
+                            leading: Icon(Icons.share_outlined),
+                            title: Text('Share'),
+                            contentPadding: EdgeInsets.zero,
+                          ),
                         ),
-                      ),
-                    ],
-                  )
-                else
-                  const Icon(Icons.chevron_right),
-              ],
+                      ],
+                    )
+                  else
+                    const Icon(Icons.chevron_right),
+                ],
+              ),
             ),
           );
         },

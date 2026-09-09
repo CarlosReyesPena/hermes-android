@@ -332,6 +332,29 @@ void main() {
     ]);
   });
 
+  testWidgets('keeps the comfortable selected-row height as the default', (
+    tester,
+  ) async {
+    final source = _FakeFilesDataSource();
+    await _pump(tester, source);
+    await tester.pumpAndSettle();
+
+    final row = find.byKey(const Key('file-entry-/srv/project/README.md'));
+    final defaultHeight = tester.getSize(row).height;
+    final leadingSlot = find.byKey(
+      const Key('file-leading-/srv/project/README.md'),
+    );
+    expect(tester.getSize(leadingSlot), const Size(48, 48));
+
+    await tester.longPress(find.text('README.md'));
+    await tester.pumpAndSettle();
+    final selectedHeight = tester.getSize(row).height;
+
+    expect(defaultHeight, selectedHeight);
+    expect(defaultHeight, greaterThanOrEqualTo(72));
+    expect(tester.getSize(leadingSlot), const Size(48, 48));
+  });
+
   testWidgets('long press enters multi-selection for folders and files', (
     tester,
   ) async {
