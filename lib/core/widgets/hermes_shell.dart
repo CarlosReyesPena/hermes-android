@@ -9,6 +9,7 @@ library;
 import 'package:flutter/material.dart';
 
 import '../theme/hermes_theme.dart';
+import '../utils/responsive.dart';
 
 /// A top-level destination of the Hermes app.
 enum HermesDestination {
@@ -98,7 +99,9 @@ class HermesShellController extends ChangeNotifier {
 /// when there is nothing to report.
 class HermesShell extends StatefulWidget {
   /// Below this width the shell uses a bottom bar; at or above it, a rail.
-  static const double railBreakpoint = 720;
+  /// Delegates to [Responsive.railBreakpoint] so the app has one responsive
+  /// threshold source instead of two magic numbers that can drift.
+  static const double railBreakpoint = Responsive.railBreakpoint;
 
   static const int maxBadgeCount = 99;
 

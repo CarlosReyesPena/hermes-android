@@ -265,8 +265,8 @@
     "semantic_hash": ""
   },
   "lib/core/utils/responsive.dart": {
-    "mtime": 1787513018.510842,
-    "ast_hash": "667654fdb5a6685b850954b78002798a",
+    "mtime": 1788995585.6546478,
+    "ast_hash": "18b9708605f249d72277df9b8b04d1e4",
     "semantic_hash": ""
   },
   "lib/core/widgets/attachment_draft_tile.dart": {
@@ -815,8 +815,8 @@
     "semantic_hash": ""
   },
   "lib/core/widgets/hermes_shell.dart": {
-    "mtime": 1788907947.1231632,
-    "ast_hash": "f0356e8922a6081c90e6c79b6ecd5cce",
+    "mtime": 1788995607.5409267,
+    "ast_hash": "306d18269590068ac51a0a317dde78ed",
     "semantic_hash": ""
   },
   "test/hermes_shell_test.dart": {
@@ -1597,6 +1597,11 @@
   "test/skills_screen_test.dart": {
     "mtime": 1788995145.0221264,
     "ast_hash": "8078f33fa1d70af89aa84f74640a9371",
+    "semantic_hash": ""
+  },
+  "test/responsive_breakpoint_test.dart": {
+    "mtime": 1788995618.1110613,
+    "ast_hash": "a695b597676373fceaf072984ecec216",
     "semantic_hash": ""
   }
 }
