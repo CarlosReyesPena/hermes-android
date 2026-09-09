@@ -9,9 +9,30 @@
 import 'package:flutter/material.dart';
 import '../services/connection_manager.dart';
 
+/// Creates the dashboard client for a connection. Injectable so widget tests
+/// can substitute a mock transport without reaching the network.
+typedef MemoryDashboardClientFactory =
+    DashboardClient Function(SavedConnection connection);
+
+DashboardClient _defaultMemoryDashboardClient(SavedConnection connection) {
+  return DashboardClient(
+    host: connection.host,
+    port: connection.dashboardPort,
+    pathPrefix: connection.dashboardPrefix ?? '',
+    proxied: connection.dashboardProxied,
+    useHttps: connection.useHttps,
+    username: connection.dashboardUsername,
+    password: connection.dashboardPassword,
+  );
+}
+
 class MemoryScreen extends StatefulWidget {
   final SavedConnection connection;
-  const MemoryScreen({required this.connection, super.key});
+
+  /// Overrides client construction for tests.
+  final MemoryDashboardClientFactory? clientFactory;
+
+  const MemoryScreen({required this.connection, this.clientFactory, super.key});
 
   @override
   State<MemoryScreen> createState() => _MemoryScreenState();
@@ -27,15 +48,8 @@ class _MemoryScreenState extends State<MemoryScreen> {
   @override
   void initState() {
     super.initState();
-    _client = DashboardClient(
-      host: widget.connection.host,
-      port: widget.connection.dashboardPort,
-      pathPrefix: widget.connection.dashboardPrefix ?? "",
-      proxied: widget.connection.dashboardProxied,
-      useHttps: widget.connection.useHttps,
-      username: widget.connection.dashboardUsername,
-      password: widget.connection.dashboardPassword,
-    );
+    final factory = widget.clientFactory ?? _defaultMemoryDashboardClient;
+    _client = factory(widget.connection);
     _loadMemory();
   }
 
@@ -125,6 +139,7 @@ class _MemoryScreenState extends State<MemoryScreen> {
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: _loading ? null : _loadMemory,
+            tooltip: 'Refresh',
           ),
         ],
       ),

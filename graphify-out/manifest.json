@@ -150,13 +150,13 @@
     "semantic_hash": ""
   },
   "lib/core/screens/cron_screen.dart": {
-    "mtime": 1788726494.4582503,
-    "ast_hash": "e2c9fcf1614c74bca6515302fb127185",
+    "mtime": 1788995083.043827,
+    "ast_hash": "9a690af81d30e90ba1a4ef815907226c",
     "semantic_hash": ""
   },
   "lib/core/screens/memory_screen.dart": {
-    "mtime": 1787513018.503842,
-    "ast_hash": "d838a7e2a1c36ec8030998bf28b0de11",
+    "mtime": 1788995094.8570747,
+    "ast_hash": "6608fe2d863a43171e0f54740e5663f9",
     "semantic_hash": ""
   },
   "lib/core/screens/settings_screen.dart": {
@@ -165,8 +165,8 @@
     "semantic_hash": ""
   },
   "lib/core/screens/skills_screen.dart": {
-    "mtime": 1787513018.504842,
-    "ast_hash": "268ddc927804b855648f99ae7ca88ef6",
+    "mtime": 1788995094.8460746,
+    "ast_hash": "48a8d666e2c50050b3cfab115a8d4a10",
     "semantic_hash": ""
   },
   "lib/core/services/ai_search_query_rewriter.dart": {
@@ -1587,6 +1587,16 @@
   "test/voice_label_test.dart": {
     "mtime": 1788994678.4689405,
     "ast_hash": "67743e07ebdb07754293b50312ecbe0d",
+    "semantic_hash": ""
+  },
+  "test/memory_screen_test.dart": {
+    "mtime": 1788995094.9470768,
+    "ast_hash": "f596ab9f57abe9ddf7221e9bd3c9871d",
+    "semantic_hash": ""
+  },
+  "test/skills_screen_test.dart": {
+    "mtime": 1788995145.0221264,
+    "ast_hash": "8078f33fa1d70af89aa84f74640a9371",
     "semantic_hash": ""
   }
 }

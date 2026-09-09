@@ -399,6 +399,7 @@ class _CronScreenState extends State<CronScreen> {
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: _loading ? null : _loadJobs,
+            tooltip: 'Refresh',
           ),
         ],
       ),
