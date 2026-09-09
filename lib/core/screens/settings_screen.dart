@@ -15,9 +15,34 @@ import '../widgets/session_organizer_settings_card.dart';
 import '../../main.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
+/// Creates the dashboard client for a connection. Injectable so widget tests
+/// can substitute a mock transport without reaching the network.
+typedef SettingsDashboardClientFactory =
+    DashboardClient Function(SavedConnection connection);
+
+DashboardClient _defaultSettingsDashboardClient(SavedConnection connection) {
+  return DashboardClient(
+    host: connection.host,
+    port: connection.dashboardPort,
+    pathPrefix: connection.dashboardPrefix ?? '',
+    proxied: connection.dashboardProxied,
+    useHttps: connection.useHttps,
+    username: connection.dashboardUsername,
+    password: connection.dashboardPassword,
+  );
+}
+
 class SettingsScreen extends StatefulWidget {
   final SavedConnection connection;
-  const SettingsScreen({required this.connection, super.key});
+
+  /// Overrides client construction for tests.
+  final SettingsDashboardClientFactory? clientFactory;
+
+  const SettingsScreen({
+    required this.connection,
+    this.clientFactory,
+    super.key,
+  });
 
   @override
   State<SettingsScreen> createState() => _SettingsScreenState();
@@ -43,16 +68,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   void initState() {
     super.initState();
-    _client = DashboardClient(
-      host: widget.connection.host,
-      port: widget.connection.dashboardPort,
-      pathPrefix: widget.connection.dashboardPrefix ?? "",
-      proxied: widget.connection.dashboardProxied,
-      useHttps: widget.connection.useHttps,
-      username: widget.connection.dashboardUsername,
-      password: widget.connection.dashboardPassword,
-    );
+    final factory = widget.clientFactory ?? _defaultSettingsDashboardClient;
+    _client = factory(widget.connection);
     _loadData();
+    unawaited(_loadOrganizerSettings());
+  }
+
+  /// Retries every server-backed section. A transient failure of one section
+  /// (e.g. the organizer plugin briefly unavailable) must not require
+  /// leaving and re-entering the screen once the server recovers.
+  void _refreshAll() {
+    _loadData();
+    setState(() {
+      _organizerLoading = true;
+      _organizerUnavailable = false;
+    });
     unawaited(_loadOrganizerSettings());
   }
 
@@ -108,9 +138,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
-  Future<void> _saveOrganizerSettings(
-    SessionOrganizerSettings settings,
-  ) async {
+  Future<void> _saveOrganizerSettings(SessionOrganizerSettings settings) async {
     final data = await _client.apiPut(
       'plugins/session-project-organizer/settings',
       body: settings.toJson(),
@@ -199,7 +227,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
-            onPressed: _loading ? null : _loadData,
+            onPressed: (_loading || _organizerLoading) ? null : _refreshAll,
             tooltip: 'Refresh',
           ),
         ],
@@ -229,122 +257,125 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           const SizedBox(height: 8),
           if (_modelInfo != null)
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.smart_toy,
-                        color: Theme.of(context).colorScheme.primary,
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Current profile default',
-                        style: Theme.of(context).textTheme.titleSmall,
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    '${_modelInfo!['model'] ?? '???'}  \nvia `${_modelInfo!['provider'] ?? '???'}`',
-                    style: Theme.of(context).textTheme.bodyMedium,
-                  ),
-                  if (_modelInfo!['effective_context_length'] != null &&
-                      _modelInfo!['effective_context_length'] != 0)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 4),
-                      child: Text(
-                        'Context: ${_modelInfo!['effective_context_length']} tokens',
-                        style: Theme.of(
-                          context,
-                        ).textTheme.bodySmall?.copyWith(color: Colors.grey),
-                      ),
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.smart_toy,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Current profile default',
+                          style: Theme.of(context).textTheme.titleSmall,
+                        ),
+                      ],
                     ),
-                ],
+                    const SizedBox(height: 8),
+                    Text(
+                      '${_modelInfo!['model'] ?? '???'}  \nvia `${_modelInfo!['provider'] ?? '???'}`',
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                    if (_modelInfo!['effective_context_length'] != null &&
+                        _modelInfo!['effective_context_length'] != 0)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Text(
+                          'Context: ${_modelInfo!['effective_context_length']} tokens',
+                          style: Theme.of(
+                            context,
+                          ).textTheme.bodySmall?.copyWith(color: Colors.grey),
+                        ),
+                      ),
+                  ],
+                ),
               ),
             ),
-          ),
-        const SizedBox(height: 12),
-
-        // Provider picker
-        if (_providers.isNotEmpty) ...[
-          _buildDropdown<String>(
-            label: 'Provider',
-            value:
-                _selectedProvider.isNotEmpty &&
-                    _providers.contains(_selectedProvider)
-                ? _selectedProvider
-                : null,
-            items: _providers
-                .map((p) => DropdownMenuItem(value: p, child: Text(p)))
-                .toList(),
-            onChanged: (val) {
-              setState(() {
-                _selectedProvider = val!;
-                // Reset model when switching providers
-                final models = _providerModels[val];
-                if (models != null && models.isNotEmpty) {
-                  _selectedModel = models.first['id'] as String? ?? '';
-                } else {
-                  _selectedModel = '';
-                }
-              });
-            },
-          ),
           const SizedBox(height: 12),
-        ],
 
-        // Model picker
-        if (_selectedProvider.isNotEmpty &&
-            _providerModels.containsKey(_selectedProvider)) ...[
-          _buildDropdown<String>(
-            label: 'Model',
-            value: _selectedModel,
-            items: _providerModels[_selectedProvider]!.map((m) {
-              final id = m['id'] as String? ?? '';
-              final name = m['name'] as String? ?? id;
-              return DropdownMenuItem(value: id, child: Text(name));
-            }).toList(),
-            onChanged: (val) {
-              setState(() => _selectedModel = val!);
-            },
-          ),
-          const SizedBox(height: 16),
-          SizedBox(
-            width: double.infinity,
-            child: FilledButton.icon(
-              onPressed: _applyModel,
-              icon: const Icon(Icons.check),
-              label: const Text('Set profile default'),
+          // Provider picker
+          if (_providers.isNotEmpty) ...[
+            _buildDropdown<String>(
+              label: 'Provider',
+              value:
+                  _selectedProvider.isNotEmpty &&
+                      _providers.contains(_selectedProvider)
+                  ? _selectedProvider
+                  : null,
+              items: _providers
+                  .map((p) => DropdownMenuItem(value: p, child: Text(p)))
+                  .toList(),
+              onChanged: (val) {
+                setState(() {
+                  _selectedProvider = val!;
+                  // Reset model when switching providers
+                  final models = _providerModels[val];
+                  if (models != null && models.isNotEmpty) {
+                    _selectedModel = models.first['id'] as String? ?? '';
+                  } else {
+                    _selectedModel = '';
+                  }
+                });
+              },
             ),
-          ),
-        ],
-        const SizedBox(height: 16),
+            const SizedBox(height: 12),
+          ],
 
-        // Success/error messages
-        if (_successMsg != null)
-          Card(
-            color: Colors.green.shade900,
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Text(
-                _successMsg!,
-                style: const TextStyle(color: Colors.white),
+          // Model picker
+          if (_selectedProvider.isNotEmpty &&
+              _providerModels.containsKey(_selectedProvider)) ...[
+            _buildDropdown<String>(
+              label: 'Model',
+              value: _selectedModel,
+              items: _providerModels[_selectedProvider]!.map((m) {
+                final id = m['id'] as String? ?? '';
+                final name = m['name'] as String? ?? id;
+                return DropdownMenuItem(value: id, child: Text(name));
+              }).toList(),
+              onChanged: (val) {
+                setState(() => _selectedModel = val!);
+              },
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: _applyModel,
+                icon: const Icon(Icons.check),
+                label: const Text('Set profile default'),
               ),
             ),
-          ),
-        if (_error != null && _modelOptions != null)
-          Card(
-            color: Colors.red.shade900,
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Text(_error!, style: const TextStyle(color: Colors.white)),
+          ],
+          const SizedBox(height: 16),
+
+          // Success/error messages
+          if (_successMsg != null)
+            Card(
+              color: Colors.green.shade900,
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Text(
+                  _successMsg!,
+                  style: const TextStyle(color: Colors.white),
+                ),
+              ),
             ),
-          ),
+          if (_error != null && _modelOptions != null)
+            Card(
+              color: Colors.red.shade900,
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Text(
+                  _error!,
+                  style: const TextStyle(color: Colors.white),
+                ),
+              ),
+            ),
         ],
         const SizedBox(height: 16),
 

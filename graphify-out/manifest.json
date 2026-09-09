@@ -160,8 +160,8 @@
     "semantic_hash": ""
   },
   "lib/core/screens/settings_screen.dart": {
-    "mtime": 1788760091.780648,
-    "ast_hash": "3e7560ec6befa0e1e97d47bb36aecb47",
+    "mtime": 1788994042.912107,
+    "ast_hash": "4a8c993a82d04a537b25cc87b53e3ff0",
     "semantic_hash": ""
   },
   "lib/core/screens/skills_screen.dart": {
@@ -1572,6 +1572,11 @@
   "test/project_appearance_test.dart": {
     "mtime": 1788991622.535938,
     "ast_hash": "b5f11db00ca2ca242a093ae9831f94d3",
+    "semantic_hash": ""
+  },
+  "test/settings_screen_refresh_test.dart": {
+    "mtime": 1788994278.8683865,
+    "ast_hash": "976f2fed425ec08b442bcf6a0b5c6ec3",
     "semantic_hash": ""
   }
 }
