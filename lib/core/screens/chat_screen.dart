@@ -19,6 +19,7 @@ import '../services/chat_model_override_store.dart';
 import '../services/composer_draft_store.dart';
 import '../services/desktop_gateway_client.dart';
 import '../services/gateway_turn_application_controller.dart';
+import '../services/haptics_service.dart';
 import '../services/gateway_turn_coordinator.dart';
 import '../services/gateway_turn_recovery.dart';
 import '../services/gateway_turn_ui_projection.dart';
@@ -185,6 +186,11 @@ class ChatScreen extends StatefulWidget {
   /// [testTurnNotifications] are null, the chat creates its own.
   final TurnNotificationService? turnNotifications;
 
+  /// Lets a test observe the haptic feedback the chat fires without touching
+  /// the platform channel. When null the chat creates its own service.
+  @visibleForTesting
+  final HapticsService? testHaptics;
+
   /// Overrides how the chat reads approvals that are still pending on the
   /// gateway (see [TestPendingApprovalLoader]).
   @visibleForTesting
@@ -214,6 +220,7 @@ class ChatScreen extends StatefulWidget {
     this.testVoiceComposerAdapter,
     this.testTurnNotifications,
     this.turnNotifications,
+    this.testHaptics,
     this.testPendingApprovalLoader,
     this.testComposerDraftStore,
     super.key,
@@ -296,6 +303,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   static final Map<String, List<GatewayNotice>> _savedGatewayNotices = {};
 
   late final TurnNotificationService _turnNotifications;
+  late final HapticsService _haptics;
 
   // Composer draft persistence
   late final Future<ComposerDraftStore> _composerDraftStore;
@@ -325,6 +333,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
         widget.testTurnNotifications ??
         widget.turnNotifications ??
         TurnNotificationService();
+    _haptics = widget.testHaptics ?? HapticsService();
     unawaited(_turnNotifications.ensureInitialized());
     _client =
         widget.testApiClient ??
@@ -641,6 +650,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
       ),
     );
     if (confirmed != true || !mounted) return;
+    _haptics.onDestructiveConfirmation();
     try {
       await deleter(widget.session);
     } catch (_) {
@@ -1048,6 +1058,17 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
       _scheduleStreamingFollow();
     } else {
       _scheduleScrollTarget(_scrollCoordinator.endStreaming());
+      // Tactile confirmation that the turn settled, distinct for a failure
+      // the user must notice. A fail-closed recovery (failure != null) and a
+      // turn that ended in `failed` both read as a failure.
+      final failed =
+          projection.isFailClosed ||
+          projection.status == GatewayRecoveryTurnStatus.failed;
+      if (failed) {
+        _haptics.onTurnFailed();
+      } else {
+        _haptics.onTurnCompleted();
+      }
     }
   }
 
@@ -2375,6 +2396,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     if (_approvalDialogOpen) return;
     final request = GatewayApprovalRequest.fromEventData(eventData);
     _approvalDialogOpen = true;
+    _haptics.onAttentionNeeded();
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted || responseGeneration != _responseGeneration) {
@@ -2441,6 +2463,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
           (pending) => pending.request.requestId == request.requestId,
         );
     if (duplicate) return;
+    _haptics.onAttentionNeeded();
     _sensitivePromptQueue.add(
       _PendingSensitivePrompt(request, responseGeneration),
     );
@@ -2560,6 +2583,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
         );
     if (duplicate) return;
 
+    _haptics.onAttentionNeeded();
     _clarifyPromptQueue.add(_PendingClarifyPrompt(request, responseGeneration));
     _drainClarifyPromptQueue();
   }
@@ -2695,6 +2719,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
 
   void _handleSendError(Object e, {bool removePendingUserMessage = false}) {
     _scrollCoordinator.cancelStreaming();
+    _haptics.onTurnFailed();
     setState(() {
       _sending = false;
       _streaming = false;
