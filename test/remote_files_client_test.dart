@@ -61,6 +61,45 @@ void main() {
     client.close();
   });
 
+  test(
+    'hides dot-prefixed entries by default but shows them on request',
+    () async {
+      final dashboard = dashboardWith((request) async {
+        expect(request.url.path, '/api/fs/list');
+        return http.Response(
+          jsonEncode({
+            'entries': [
+              {
+                'name': '.cache',
+                'path': '/srv/project/.cache',
+                'isDirectory': true,
+              },
+              {
+                'name': 'README.md',
+                'path': '/srv/project/README.md',
+                'isDirectory': false,
+              },
+              {
+                'name': '.hidden',
+                'path': '/srv/project/.hidden',
+                'isDirectory': false,
+              },
+            ],
+          }),
+          200,
+        );
+      });
+      final client = RemoteFilesClient(dashboard: dashboard);
+
+      final visible = await client.listDirectory('/srv/project');
+      expect(visible.map((e) => e.name), ['README.md']);
+
+      final all = await client.listDirectory('/srv/project', showHidden: true);
+      expect(all.map((e) => e.name), ['.cache', '.hidden', 'README.md']);
+      client.close();
+    },
+  );
+
   test('reads a text preview with language and truncation metadata', () async {
     final dashboard = dashboardWith((request) async {
       expect(request.url.path, '/api/fs/read-text');

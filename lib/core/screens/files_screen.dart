@@ -42,6 +42,7 @@ class _FilesScreenState extends State<FilesScreen> {
   Object? _error;
   bool _loading = true;
   bool _downloading = false;
+  bool _showHidden = false;
 
   @override
   void initState() {
@@ -82,7 +83,10 @@ class _FilesScreenState extends State<FilesScreen> {
       _preview = null;
     });
     try {
-      final entries = await widget.files.listDirectory(path);
+      final entries = await widget.files.listDirectory(
+        path,
+        showHidden: _showHidden,
+      );
       if (!mounted) return;
       setState(() {
         _path = path;
@@ -137,6 +141,14 @@ class _FilesScreenState extends State<FilesScreen> {
     final separator = path.lastIndexOf('/');
     if (separator <= 0) return '/';
     return path.substring(0, separator);
+  }
+
+  Future<void> _toggleHidden() async {
+    setState(() => _showHidden = !_showHidden);
+    final path = _path;
+    if (path != null) {
+      await _openDirectory(path);
+    }
   }
 
   void _back() {
@@ -423,6 +435,18 @@ class _FilesScreenState extends State<FilesScreen> {
     appBar: AppBar(
       leading: IconButton(onPressed: _back, icon: const Icon(Icons.arrow_back)),
       title: const Text('Files'),
+      actions: [
+        IconButton(
+          key: const Key('toggle-hidden'),
+          tooltip: _showHidden ? 'Hide hidden files' : 'Show hidden files',
+          icon: Icon(
+            _showHidden
+                ? Icons.visibility_off_outlined
+                : Icons.visibility_outlined,
+          ),
+          onPressed: _selected == null ? _toggleHidden : null,
+        ),
+      ],
       bottom: _selected == null && _path != null
           ? PreferredSize(
               preferredSize: const Size.fromHeight(42),

@@ -13,7 +13,10 @@ class _FakeFilesDataSource implements RemoteFilesDataSource {
       const RemoteDirectory(path: '/srv/project', branch: 'main');
 
   @override
-  Future<List<RemoteFileEntry>> listDirectory(String path) async {
+  Future<List<RemoteFileEntry>> listDirectory(
+    String path, {
+    bool showHidden = false,
+  }) async {
     openedDirectories.add(path);
     if (listError != null) throw listError!;
     if (path == '/srv/project/lib') {
@@ -166,6 +169,24 @@ void main() {
     );
   });
 
+  testWidgets('toggles hidden files with the visibility button', (
+    tester,
+  ) async {
+    final source = _HiddenFilesDataSource();
+    await _pump(tester, source);
+    await tester.pumpAndSettle();
+
+    // Hidden entries are filtered out by default.
+    expect(find.text('.secret'), findsNothing);
+    expect(find.text('README.md'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('toggle-hidden')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('.secret'), findsOneWidget);
+    expect(find.text('README.md'), findsOneWidget);
+  });
+
   testWidgets('downloads the selected file through the platform seam', (
     tester,
   ) async {
@@ -252,7 +273,10 @@ void main() {
 
 class _ImageFilesDataSource extends _FakeFilesDataSource {
   @override
-  Future<List<RemoteFileEntry>> listDirectory(String path) async => const [
+  Future<List<RemoteFileEntry>> listDirectory(
+    String path, {
+    bool showHidden = false,
+  }) async => const [
     RemoteFileEntry(
       name: 'screenshot.png',
       path: '/srv/project/screenshot.png',
@@ -274,7 +298,10 @@ class _ImageFilesDataSource extends _FakeFilesDataSource {
 
 class _BinaryFilesDataSource extends _FakeFilesDataSource {
   @override
-  Future<List<RemoteFileEntry>> listDirectory(String path) async => const [
+  Future<List<RemoteFileEntry>> listDirectory(
+    String path, {
+    bool showHidden = false,
+  }) async => const [
     RemoteFileEntry(
       name: 'archive.bin',
       path: '/srv/project/archive.bin',
@@ -292,4 +319,27 @@ class _BinaryFilesDataSource extends _FakeFilesDataSource {
     binary: true,
     truncated: false,
   );
+}
+
+class _HiddenFilesDataSource extends _FakeFilesDataSource {
+  @override
+  Future<List<RemoteFileEntry>> listDirectory(
+    String path, {
+    bool showHidden = false,
+  }) async {
+    final all = const [
+      RemoteFileEntry(
+        name: '.secret',
+        path: '/srv/project/.secret',
+        isDirectory: false,
+      ),
+      RemoteFileEntry(
+        name: 'README.md',
+        path: '/srv/project/README.md',
+        isDirectory: false,
+      ),
+    ];
+    if (showHidden) return all;
+    return all.where((e) => !e.name.startsWith('.')).toList();
+  }
 }

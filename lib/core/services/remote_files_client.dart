@@ -70,7 +70,10 @@ class RemoteFileDownload {
 
 abstract class RemoteFilesDataSource {
   Future<RemoteDirectory> defaultDirectory();
-  Future<List<RemoteFileEntry>> listDirectory(String path);
+  Future<List<RemoteFileEntry>> listDirectory(
+    String path, {
+    bool showHidden = false,
+  });
   Future<RemoteTextPreview> readText(String path);
   Future<RemoteFileDownload> download(String path);
 }
@@ -106,7 +109,10 @@ class RemoteFilesClient implements RemoteFilesDataSource {
   }
 
   @override
-  Future<List<RemoteFileEntry>> listDirectory(String path) async {
+  Future<List<RemoteFileEntry>> listDirectory(
+    String path, {
+    bool showHidden = false,
+  }) async {
     final data = await dashboard.apiGet(
       'fs/list',
       queryParameters: {'path': path},
@@ -118,6 +124,7 @@ class RemoteFilesClient implements RemoteFilesDataSource {
     final entries = (data['entries'] as List<dynamic>? ?? const [])
         .whereType<Map<String, dynamic>>()
         .map(RemoteFileEntry.fromJson)
+        .where((entry) => showHidden || !entry.name.startsWith('.'))
         .toList();
     entries.sort(
       (left, right) => left.isDirectory == right.isDirectory
