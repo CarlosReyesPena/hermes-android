@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui' show SemanticsAction;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -127,7 +128,11 @@ void main() {
     await _pump(
       tester,
       loadSessions: () async => [
-        _session(id: 'idle', title: 'Resume this', startedAgo: const Duration(hours: 1)),
+        _session(
+          id: 'idle',
+          title: 'Resume this',
+          startedAgo: const Duration(hours: 1),
+        ),
         _session(id: 'live', title: 'Working now'),
         _session(
           id: 'done',
@@ -144,6 +149,36 @@ void main() {
     expect(find.text('Idle'), findsNothing);
     expect(find.text('Running'), findsOneWidget);
     expect(find.text('Done'), findsOneWidget);
+  });
+
+  testWidgets('announces each Home row once with its useful context', (
+    tester,
+  ) async {
+    final semantics = tester.ensureSemantics();
+    await _pump(
+      tester,
+      loadSessions: () async => [
+        _session(id: 'blocked', title: 'Approve deployment'),
+      ],
+      attention: const {'blocked': 'Approval needed'},
+      projectNames: const {'blocked': 'Hermes Android'},
+      onOpenSession: (_) {},
+    );
+    await tester.pumpAndSettle();
+
+    final row = find.bySemanticsLabel(
+      'Approve deployment, Needs you, Approval needed, Hermes Android',
+    );
+    expect(row, findsOneWidget);
+    expect(
+      tester
+          .getSemantics(row)
+          .getSemanticsData()
+          .hasAction(SemanticsAction.tap),
+      isTrue,
+    );
+    expect(find.bySemanticsLabel('Needs you'), findsNothing);
+    semantics.dispose();
   });
 
   testWidgets(

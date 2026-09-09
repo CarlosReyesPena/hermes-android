@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui' show SemanticsAction;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -162,6 +163,38 @@ void main() {
     // Elapsed time is the whole point of a blocked row: "stuck" without
     // "for how long" is not actionable.
     expect(find.text('7m ago'), findsOneWidget);
+  });
+
+  testWidgets('announces each activity row once without repeating its status', (
+    tester,
+  ) async {
+    final semantics = tester.ensureSemantics();
+    await _pump(
+      tester,
+      loadFeed: () async => _feed([
+        _group(ActivityGroupKind.running, [
+          _item(
+            title: 'Deploy ScriptHive',
+            label: 'Running',
+            updatedAgo: const Duration(minutes: 3),
+          ),
+        ]),
+      ]),
+      onOpenItem: (_) {},
+    );
+    await tester.pumpAndSettle();
+
+    final row = find.bySemanticsLabel('Deploy ScriptHive, Running, 3m ago');
+    expect(row, findsOneWidget);
+    expect(
+      tester
+          .getSemantics(row)
+          .getSemanticsData()
+          .hasAction(SemanticsAction.tap),
+      isTrue,
+    );
+    expect(find.bySemanticsLabel('Running'), findsNothing);
+    semantics.dispose();
   });
 
   testWidgets('an untitled turn still draws a row rather than vanishing', (

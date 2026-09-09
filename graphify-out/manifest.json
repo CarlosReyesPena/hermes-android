@@ -930,13 +930,13 @@
     "semantic_hash": ""
   },
   "lib/core/widgets/home_pane.dart": {
-    "mtime": 1788717617.4523945,
-    "ast_hash": "a8e61421c42917a3e37c12d19a1b52c6",
+    "mtime": 1788993217.6083148,
+    "ast_hash": "18ea92d3193de3e1aa7d585082e8239e",
     "semantic_hash": ""
   },
   "test/home_pane_test.dart": {
-    "mtime": 1788717595.4240618,
-    "ast_hash": "0fbd9fcf922d8da947c9226148c53db5",
+    "mtime": 1788993304.872458,
+    "ast_hash": "386f176af0c9ee93c862a844137ed42f",
     "semantic_hash": ""
   },
   "test/support/inert_turn_application_session.dart": {
@@ -985,8 +985,8 @@
     "semantic_hash": ""
   },
   "lib/core/widgets/activity_pane.dart": {
-    "mtime": 1788726465.3258443,
-    "ast_hash": "d633d36d7a174c47af7ddb1d07a0fceb",
+    "mtime": 1788993269.1099894,
+    "ast_hash": "eb3dcfcd7a44f4f7772f63f7faae5eb4",
     "semantic_hash": ""
   },
   "test/activity_feed_test.dart": {
@@ -995,8 +995,8 @@
     "semantic_hash": ""
   },
   "test/activity_pane_test.dart": {
-    "mtime": 1788413500.0425613,
-    "ast_hash": "3bcfe5cbf6543bd1d0f26bfff23a5f43",
+    "mtime": 1788993332.133815,
+    "ast_hash": "aede9fb7384532f944cdff3e689f420a",
     "semantic_hash": ""
   },
   "lib/core/services/config_backup.dart": {

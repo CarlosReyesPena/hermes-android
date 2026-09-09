@@ -264,59 +264,76 @@ class _ActivityItemCard extends StatelessWidget {
     final tokens = HermesTokens.of(context);
     final title = item.title?.trim();
 
-    return HermesCard(
+    final effectiveTitle = title == null || title.isEmpty
+        ? 'Untitled chat'
+        : title;
+    final status = defaultStatusLabel(item.status);
+    final age = formatRelativeAge(item.updatedAt, now);
+    final description = item.label.trim();
+    final semanticsLabel = [
+      effectiveTitle,
+      status,
+      if (description.isNotEmpty && description != status) description,
+      age,
+    ].join(', ');
+
+    return Semantics(
+      label: semanticsLabel,
+      button: onTap != null,
       onTap: onTap,
-      // Only work that needs the user or broke is tinted: tinting every row
-      // would make none of them read as urgent.
-      status:
-          item.status == HermesStatus.blocked ||
-              item.status == HermesStatus.failed
-          ? item.status
-          : null,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Text(
-                  title == null || title.isEmpty ? 'Untitled chat' : title,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: tokens.typography.section.copyWith(
-                    color: tokens.onSurface,
+      excludeSemantics: true,
+      child: HermesCard(
+        onTap: onTap,
+        // Only work that needs the user or broke is tinted: tinting every row
+        // would make none of them read as urgent.
+        status:
+            item.status == HermesStatus.blocked ||
+                item.status == HermesStatus.failed
+            ? item.status
+            : null,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Text(
+                    effectiveTitle,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: tokens.typography.section.copyWith(
+                      color: tokens.onSurface,
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(width: HermesSpacing.sm),
-              StatusChip(status: item.status),
-            ],
-          ),
-          const SizedBox(height: HermesSpacing.xs),
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  item.label,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: tokens.typography.body.copyWith(
-                    color: tokens.colorForStatus(item.status),
+                const SizedBox(width: HermesSpacing.sm),
+                StatusChip(status: item.status),
+              ],
+            ),
+            const SizedBox(height: HermesSpacing.xs),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    item.label,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: tokens.typography.body.copyWith(
+                      color: tokens.colorForStatus(item.status),
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(width: HermesSpacing.sm),
-              Text(
-                formatRelativeAge(item.updatedAt, now),
-                style: tokens.typography.label.copyWith(color: tokens.muted),
-              ),
-            ],
-          ),
-        ],
+                const SizedBox(width: HermesSpacing.sm),
+                Text(
+                  age,
+                  style: tokens.typography.label.copyWith(color: tokens.muted),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
 }
-
-

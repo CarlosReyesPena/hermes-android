@@ -269,56 +269,69 @@ class _HomeItemCard extends StatelessWidget {
     final project = item.projectName;
     final reason = item.attentionLabel;
 
-    return HermesCard(
+    final semanticsLabel = [
+      title,
+      defaultStatusLabel(item.status),
+      ?reason,
+      ?project,
+    ].join(', ');
+
+    return Semantics(
+      label: semanticsLabel,
+      button: onTap != null,
       onTap: onTap,
-      // Only blocked work is tinted: tinting every row would make none of
-      // them read as urgent.
-      status: item.status == HermesStatus.blocked ? item.status : null,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Text(
-                  title,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: tokens.typography.section.copyWith(
-                    color: tokens.onSurface,
+      excludeSemantics: true,
+      child: HermesCard(
+        onTap: onTap,
+        // Only blocked work is tinted: tinting every row would make none of
+        // them read as urgent.
+        status: item.status == HermesStatus.blocked ? item.status : null,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Text(
+                    title,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: tokens.typography.section.copyWith(
+                      color: tokens.onSurface,
+                    ),
                   ),
                 ),
+                const SizedBox(width: HermesSpacing.sm),
+                // An idle row sits under a "Continue working" header; a grey
+                // "Idle" chip on every row would be noise, not signal. Running,
+                // blocked, and completed rows keep their chips.
+                if (item.status != HermesStatus.idle)
+                  StatusChip(status: item.status),
+              ],
+            ),
+            if (reason != null) ...[
+              const SizedBox(height: HermesSpacing.xs),
+              Text(
+                reason,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: tokens.typography.body.copyWith(
+                  color: tokens.colorForStatus(HermesStatus.blocked),
+                ),
               ),
-              const SizedBox(width: HermesSpacing.sm),
-              // An idle row sits under a "Continue working" header; a grey
-              // "Idle" chip on every row would be noise, not signal. Running,
-              // blocked, and completed rows keep their chips.
-              if (item.status != HermesStatus.idle)
-                StatusChip(status: item.status),
             ],
-          ),
-          if (reason != null) ...[
-            const SizedBox(height: HermesSpacing.xs),
-            Text(
-              reason,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: tokens.typography.body.copyWith(
-                color: tokens.colorForStatus(HermesStatus.blocked),
+            if (project != null) ...[
+              const SizedBox(height: HermesSpacing.xs),
+              Text(
+                project,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: tokens.typography.label.copyWith(color: tokens.muted),
               ),
-            ),
+            ],
           ],
-          if (project != null) ...[
-            const SizedBox(height: HermesSpacing.xs),
-            Text(
-              project,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: tokens.typography.label.copyWith(color: tokens.muted),
-            ),
-          ],
-        ],
+        ),
       ),
     );
   }
