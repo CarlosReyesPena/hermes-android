@@ -799,7 +799,8 @@ class _FilesScreenState extends State<FilesScreen> {
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                    if (_root?.branch != null)
+                    if (_root?.branch != null &&
+                        _root!.branch!.trim().isNotEmpty)
                       StatusChip(
                         status: HermesStatus.idle,
                         label: _root!.branch,

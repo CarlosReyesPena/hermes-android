@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:hermes_android/core/screens/files_screen.dart';
 import 'package:hermes_android/core/services/remote_files_client.dart';
 import 'package:hermes_android/core/theme/hermes_theme.dart';
+import 'package:hermes_android/core/widgets/hermes_components.dart';
 
 class _FakeFilesDataSource
     implements RemoteFilesDataSource, RemoteFilesWritableDataSource {
@@ -222,6 +223,18 @@ void main() {
 
     expect(find.text('.secret'), findsOneWidget);
     expect(find.text('README.md'), findsOneWidget);
+  });
+
+  testWidgets('hides the branch chip when the server reports an empty branch', (
+    tester,
+  ) async {
+    final source = _EmptyBranchFilesDataSource();
+    await _pump(tester, source);
+    await tester.pumpAndSettle();
+
+    // The path is still shown, but no empty status chip renders next to it.
+    expect(find.text('/srv/project'), findsOneWidget);
+    expect(find.byType(StatusChip), findsNothing);
   });
 
   testWidgets('downloads the selected file through the platform seam', (
@@ -544,4 +557,10 @@ class _HiddenFilesDataSource extends _FakeFilesDataSource {
     if (showHidden) return all;
     return all.where((e) => !e.name.startsWith('.')).toList();
   }
+}
+
+class _EmptyBranchFilesDataSource extends _FakeFilesDataSource {
+  @override
+  Future<RemoteDirectory> defaultDirectory() async =>
+      const RemoteDirectory(path: '/srv/project', branch: '');
 }
