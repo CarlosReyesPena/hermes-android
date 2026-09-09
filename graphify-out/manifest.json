@@ -575,8 +575,8 @@
     "semantic_hash": ""
   },
   "pubspec.yaml": {
-    "mtime": 1788909545.6737835,
-    "ast_hash": "77e320c189f13b6301779999af2cfd18",
+    "mtime": 1788945369.7885883,
+    "ast_hash": "497f712e4f133aee51cca0fde0229cc2",
     "semantic_hash": ""
   },
   "tools/fake_gateway/README.md": {
@@ -1075,23 +1075,23 @@
     "semantic_hash": ""
   },
   "lib/core/screens/files_screen.dart": {
-    "mtime": 1788926775.4711509,
-    "ast_hash": "56783dfd6a43f317e625a889e67e7282",
+    "mtime": 1788945557.7481127,
+    "ast_hash": "94e324e44b0c5dd9a37113f3b89d134b",
     "semantic_hash": ""
   },
   "lib/core/services/remote_files_client.dart": {
-    "mtime": 1787973121.6698587,
-    "ast_hash": "347b38d180a531f3d2b1855e10b80322",
+    "mtime": 1788944520.4153256,
+    "ast_hash": "47af781c65d78cd5bdfaec2c5675a947",
     "semantic_hash": ""
   },
   "test/files_screen_test.dart": {
-    "mtime": 1788926775.4971511,
-    "ast_hash": "2bd7c9e13609db22698ef6a3142db496",
+    "mtime": 1788945542.4479074,
+    "ast_hash": "967e6878ac4ebf3d877819b436e04fc5",
     "semantic_hash": ""
   },
   "test/remote_files_client_test.dart": {
-    "mtime": 1787973053.1640608,
-    "ast_hash": "bb65b0a679710fdb6021d444dbbbe1f4",
+    "mtime": 1788940365.9980757,
+    "ast_hash": "c4e8b416a0a4df926ff80d8f5075fd26",
     "semantic_hash": ""
   },
   "lib/core/widgets/markdown_code_block.dart": {
@@ -1487,6 +1487,11 @@
   "test/project_asset_test.dart": {
     "mtime": 1788935951.5905242,
     "ast_hash": "938002704c172698c3b6362bdd039b0c",
+    "semantic_hash": ""
+  },
+  "test/remote_files_client_write_test.dart": {
+    "mtime": 1788944830.111368,
+    "ast_hash": "68149a8e7c6f3b72f7e65fb8fc4ff927",
     "semantic_hash": ""
   }
 }

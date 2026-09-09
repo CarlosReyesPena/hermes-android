@@ -4,9 +4,44 @@ import 'package:hermes_android/core/screens/files_screen.dart';
 import 'package:hermes_android/core/services/remote_files_client.dart';
 import 'package:hermes_android/core/theme/hermes_theme.dart';
 
-class _FakeFilesDataSource implements RemoteFilesDataSource {
+class _FakeFilesDataSource
+    implements RemoteFilesDataSource, RemoteFilesWritableDataSource {
   Object? listError;
   final openedDirectories = <String>[];
+  final createdDirectories = <String>[];
+  final deletedEntries = <String>[];
+  final renamedEntries = <(String, String)>[];
+  final movedEntries = <(String, String)>[];
+  final copiedEntries = <(String, String)>[];
+  final uploadedEntries = <(String, List<int>, String)>[];
+
+  @override
+  Future<void> createDirectory(String path) async =>
+      createdDirectories.add(path);
+
+  @override
+  Future<void> deleteEntry(String path, {bool recursive = false}) async =>
+      deletedEntries.add(path);
+
+  @override
+  Future<void> rename(String path, String newName) async =>
+      renamedEntries.add((path, newName));
+
+  @override
+  Future<void> moveInto(String source, String destinationDirectory) async =>
+      movedEntries.add((source, destinationDirectory));
+
+  @override
+  Future<void> copyInto(String source, String destinationDirectory) async =>
+      copiedEntries.add((source, destinationDirectory));
+
+  @override
+  Future<void> uploadFile(
+    String path,
+    List<int> bytes, {
+    String mimeType = 'application/octet-stream',
+    bool overwrite = false,
+  }) async => uploadedEntries.add((path, bytes, mimeType));
 
   @override
   Future<RemoteDirectory> defaultDirectory() async =>
@@ -60,6 +95,7 @@ Future<void> _pump(
   ValueChanged<String>? onAddToChat,
   Future<void> Function(RemoteFileDownload download)? onSaveDownload,
   Future<void> Function(RemoteFileDownload download)? onShareDownload,
+  Future<List<LocalUpload>> Function()? onPickUploads,
 }) => tester.pumpWidget(
   MaterialApp(
     theme: hermesTheme(Brightness.dark),
@@ -68,6 +104,7 @@ Future<void> _pump(
       onAddToChat: onAddToChat,
       onSaveDownload: onSaveDownload,
       onShareDownload: onShareDownload,
+      onPickUploads: onPickUploads,
     ),
   ),
 );
@@ -251,6 +288,148 @@ void main() {
     // The binary "download to open" fallback must not appear for images.
     expect(find.textContaining('Binary preview is unavailable'), findsNothing);
     expect(find.text('Download'), findsOneWidget);
+  });
+
+  testWidgets('creates a folder in the current directory', (tester) async {
+    final source = _FakeFilesDataSource();
+    await _pump(tester, source);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('New folder'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), 'Invoices');
+    await tester.tap(find.widgetWithText(FilledButton, 'Create'));
+    await tester.pumpAndSettle();
+
+    expect(source.createdDirectories, ['/srv/project/Invoices']);
+  });
+
+  testWidgets('imports multiple local files into the current directory', (
+    tester,
+  ) async {
+    final source = _FakeFilesDataSource();
+    await _pump(
+      tester,
+      source,
+      onPickUploads: () async => const [
+        LocalUpload(name: 'one.txt', bytes: [1], mimeType: 'text/plain'),
+        LocalUpload(name: 'two.jpg', bytes: [2], mimeType: 'image/jpeg'),
+      ],
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Import files'));
+    await tester.pumpAndSettle();
+
+    expect(source.uploadedEntries.map((upload) => upload.$1), [
+      '/srv/project/one.txt',
+      '/srv/project/two.jpg',
+    ]);
+    expect(source.uploadedEntries.map((upload) => upload.$2.single), [1, 2]);
+    expect(source.uploadedEntries.map((upload) => upload.$3), [
+      'text/plain',
+      'image/jpeg',
+    ]);
+  });
+
+  testWidgets('long press enters multi-selection for folders and files', (
+    tester,
+  ) async {
+    final source = _FakeFilesDataSource();
+    await _pump(tester, source);
+    await tester.pumpAndSettle();
+
+    await tester.longPress(find.text('lib'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('1 selected'), findsOneWidget);
+    expect(find.byTooltip('Copy'), findsOneWidget);
+    expect(find.byTooltip('Cut'), findsOneWidget);
+    expect(find.byTooltip('Delete'), findsOneWidget);
+
+    await tester.tap(find.text('README.md'));
+    await tester.pumpAndSettle();
+    expect(find.text('2 selected'), findsOneWidget);
+  });
+
+  testWidgets('deletes every selected file or folder after confirmation', (
+    tester,
+  ) async {
+    final source = _FakeFilesDataSource();
+    await _pump(tester, source);
+    await tester.pumpAndSettle();
+
+    await tester.longPress(find.text('lib'));
+    await tester.tap(find.text('README.md'));
+    await tester.tap(find.byTooltip('Delete'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Delete 2 items?'), findsOneWidget);
+    await tester.tap(find.widgetWithText(FilledButton, 'Delete'));
+    await tester.pumpAndSettle();
+
+    expect(
+      source.deletedEntries,
+      containsAll(['/srv/project/lib', '/srv/project/README.md']),
+    );
+  });
+
+  testWidgets('renames the single selected entry', (tester) async {
+    final source = _FakeFilesDataSource();
+    await _pump(tester, source);
+    await tester.pumpAndSettle();
+
+    await tester.longPress(find.text('README.md'));
+    await tester.tap(find.byTooltip('Rename'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), 'GUIDE.md');
+    await tester.tap(find.widgetWithText(FilledButton, 'Rename'));
+    await tester.pumpAndSettle();
+
+    expect(source.renamedEntries, [('/srv/project/README.md', 'GUIDE.md')]);
+  });
+
+  testWidgets('copies a selected entry into a navigated destination folder', (
+    tester,
+  ) async {
+    final source = _FakeFilesDataSource();
+    await _pump(tester, source);
+    await tester.pumpAndSettle();
+
+    await tester.longPress(find.text('README.md'));
+    await tester.tap(find.byTooltip('Copy'));
+    await tester.pumpAndSettle();
+
+    expect(find.byTooltip('Paste here'), findsOneWidget);
+    await tester.tap(find.text('lib'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Paste here'));
+    await tester.pumpAndSettle();
+
+    expect(source.copiedEntries, [
+      ('/srv/project/README.md', '/srv/project/lib'),
+    ]);
+  });
+
+  testWidgets('cuts a selected entry into a navigated destination folder', (
+    tester,
+  ) async {
+    final source = _FakeFilesDataSource();
+    await _pump(tester, source);
+    await tester.pumpAndSettle();
+
+    await tester.longPress(find.text('README.md'));
+    await tester.tap(find.byTooltip('Cut'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('lib'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Paste here'));
+    await tester.pumpAndSettle();
+
+    expect(source.movedEntries, [
+      ('/srv/project/README.md', '/srv/project/lib'),
+    ]);
+    expect(find.byTooltip('Paste here'), findsNothing);
   });
 
   testWidgets('keeps the download affordance for non-image binaries', (

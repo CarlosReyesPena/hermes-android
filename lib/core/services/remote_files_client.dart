@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:typed_data';
 
 import 'connection_manager.dart';
@@ -68,6 +69,33 @@ class RemoteFileDownload {
     : bytes = Uint8List.fromList(bytes);
 }
 
+/// Joins a parent directory and a child name without doubling separators.
+String remoteJoin(String directory, String name) {
+  final base = directory.endsWith('/')
+      ? directory.substring(0, directory.length - 1)
+      : directory;
+  return '$base/$name';
+}
+
+/// Returns the parent directory of [path] (the path itself when it is a root).
+String remoteParentOf(String path) {
+  final trimmed = path.endsWith('/') && path.length > 1
+      ? path.substring(0, path.length - 1)
+      : path;
+  final index = trimmed.lastIndexOf('/');
+  if (index <= 0) return index == 0 ? '/' : trimmed;
+  return trimmed.substring(0, index);
+}
+
+/// Returns the final segment of [path].
+String remoteBasename(String path) {
+  final trimmed = path.endsWith('/') && path.length > 1
+      ? path.substring(0, path.length - 1)
+      : path;
+  final index = trimmed.lastIndexOf('/');
+  return index < 0 ? trimmed : trimmed.substring(index + 1);
+}
+
 abstract class RemoteFilesDataSource {
   Future<RemoteDirectory> defaultDirectory();
   Future<List<RemoteFileEntry>> listDirectory(
@@ -78,7 +106,24 @@ abstract class RemoteFilesDataSource {
   Future<RemoteFileDownload> download(String path);
 }
 
-class RemoteFilesClient implements RemoteFilesDataSource {
+/// Optional write capability. Read-only sources remain valid; the Files UI
+/// exposes mutation actions only when its source implements this contract.
+abstract class RemoteFilesWritableDataSource {
+  Future<void> createDirectory(String path);
+  Future<void> uploadFile(
+    String path,
+    List<int> bytes, {
+    String mimeType,
+    bool overwrite,
+  });
+  Future<void> deleteEntry(String path, {bool recursive});
+  Future<void> rename(String path, String newName);
+  Future<void> moveInto(String source, String destinationDirectory);
+  Future<void> copyInto(String source, String destinationDirectory);
+}
+
+class RemoteFilesClient
+    implements RemoteFilesDataSource, RemoteFilesWritableDataSource {
   final DashboardClient dashboard;
 
   RemoteFilesClient({required this.dashboard});
@@ -159,6 +204,69 @@ class RemoteFilesClient implements RemoteFilesDataSource {
     return RemoteFileDownload(
       filename: match?.group(1)?.trim() ?? path.split('/').last,
       bytes: response.bodyBytes,
+    );
+  }
+
+  @override
+  Future<void> createDirectory(String path) async {
+    await dashboard.apiPost('fs/mkdir', body: {'path': path});
+  }
+
+  @override
+  Future<void> uploadFile(
+    String path,
+    List<int> bytes, {
+    String mimeType = 'application/octet-stream',
+    bool overwrite = false,
+  }) async {
+    await dashboard.apiPost(
+      'fs/upload',
+      body: {
+        'path': path,
+        'data_url': 'data:$mimeType;base64,${base64Encode(bytes)}',
+        'overwrite': overwrite,
+      },
+    );
+  }
+
+  @override
+  Future<void> deleteEntry(String path, {bool recursive = false}) async {
+    await dashboard.apiPost(
+      'fs/delete',
+      body: {'path': path, 'recursive': recursive},
+    );
+  }
+
+  @override
+  Future<void> rename(String path, String newName) async {
+    await dashboard.apiPost(
+      'fs/move',
+      body: {
+        'source': path,
+        'destination': remoteJoin(remoteParentOf(path), newName),
+      },
+    );
+  }
+
+  @override
+  Future<void> moveInto(String source, String destinationDirectory) async {
+    await dashboard.apiPost(
+      'fs/move',
+      body: {
+        'source': source,
+        'destination': remoteJoin(destinationDirectory, remoteBasename(source)),
+      },
+    );
+  }
+
+  @override
+  Future<void> copyInto(String source, String destinationDirectory) async {
+    await dashboard.apiPost(
+      'fs/copy',
+      body: {
+        'source': source,
+        'destination': remoteJoin(destinationDirectory, remoteBasename(source)),
+      },
     );
   }
 

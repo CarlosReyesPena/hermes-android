@@ -2,17 +2,31 @@ import 'dart:async';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:mime/mime.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../services/remote_files_client.dart';
 import '../theme/hermes_theme.dart';
 import '../widgets/hermes_components.dart';
 
+class LocalUpload {
+  final String name;
+  final List<int> bytes;
+  final String mimeType;
+
+  const LocalUpload({
+    required this.name,
+    required this.bytes,
+    this.mimeType = 'application/octet-stream',
+  });
+}
+
 class FilesScreen extends StatefulWidget {
   final RemoteFilesDataSource files;
   final ValueChanged<String>? onAddToChat;
   final Future<void> Function(RemoteFileDownload download)? onSaveDownload;
   final Future<void> Function(RemoteFileDownload download)? onShareDownload;
+  final Future<List<LocalUpload>> Function()? onPickUploads;
 
   /// When set, the browser opens directly at this directory instead of the
   /// server's default working directory. Used to jump into a Project's folder
@@ -24,6 +38,7 @@ class FilesScreen extends StatefulWidget {
     this.onAddToChat,
     this.onSaveDownload,
     this.onShareDownload,
+    this.onPickUploads,
     this.initialPath,
     super.key,
   });
@@ -43,6 +58,22 @@ class _FilesScreenState extends State<FilesScreen> {
   bool _loading = true;
   bool _downloading = false;
   bool _showHidden = false;
+  final Set<String> _selectedPaths = {};
+  List<RemoteFileEntry> _clipboard = const [];
+  bool _clipboardCut = false;
+
+  RemoteFilesWritableDataSource? get _writer =>
+      widget.files is RemoteFilesWritableDataSource
+      ? widget.files as RemoteFilesWritableDataSource
+      : null;
+
+  bool get _selectionMode => _selectedPaths.isNotEmpty;
+  bool _validEntryName(String name) =>
+      name.isNotEmpty && name != '.' && name != '..' && !name.contains('/');
+
+  List<RemoteFileEntry> get _selectedEntries => _entries
+      .where((entry) => _selectedPaths.contains(entry.path))
+      .toList(growable: false);
 
   @override
   void initState() {
@@ -245,6 +276,234 @@ class _FilesScreenState extends State<FilesScreen> {
     }
   }
 
+  void _toggleSelection(RemoteFileEntry entry) {
+    if (_writer == null) return;
+    setState(() {
+      if (!_selectedPaths.add(entry.path)) _selectedPaths.remove(entry.path);
+    });
+  }
+
+  void _clearSelection() => setState(_selectedPaths.clear);
+
+  void _copySelection({required bool cut}) {
+    final selected = _selectedEntries;
+    if (selected.isEmpty) return;
+    setState(() {
+      _clipboard = List.unmodifiable(selected);
+      _clipboardCut = cut;
+      _selectedPaths.clear();
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          '${selected.length} item${selected.length == 1 ? '' : 's'} ready to ${cut ? 'move' : 'copy'}',
+        ),
+      ),
+    );
+  }
+
+  Future<void> _pasteHere() async {
+    final writer = _writer;
+    final path = _path;
+    if (writer == null || path == null || _clipboard.isEmpty) return;
+    setState(() => _loading = true);
+    try {
+      for (final entry in _clipboard) {
+        if (_clipboardCut) {
+          await writer.moveInto(entry.path, path);
+        } else {
+          await writer.copyInto(entry.path, path);
+        }
+      }
+      if (_clipboardCut) _clipboard = const [];
+      if (!mounted) return;
+      await _openDirectory(path);
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Paste complete')));
+    } catch (error) {
+      if (!mounted) return;
+      setState(() => _loading = false);
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Could not paste: $error')));
+    }
+  }
+
+  Future<void> _createFolder() async {
+    final writer = _writer;
+    final path = _path;
+    if (writer == null || path == null) return;
+    var proposedName = '';
+    final name = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('New folder'),
+        content: TextField(
+          autofocus: true,
+          onChanged: (value) => proposedName = value,
+          decoration: const InputDecoration(labelText: 'Folder name'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, proposedName.trim()),
+            child: const Text('Create'),
+          ),
+        ],
+      ),
+    );
+    if (name == null || !_validEntryName(name)) return;
+    try {
+      await writer.createDirectory(remoteJoin(path, name));
+      await _openDirectory(path);
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not create folder: $error')),
+      );
+    }
+  }
+
+  Future<List<LocalUpload>> _pickUploads() async {
+    final injected = widget.onPickUploads;
+    if (injected != null) return injected();
+    final result = await FilePicker.platform.pickFiles(
+      allowMultiple: true,
+      withData: true,
+    );
+    if (result == null) return const [];
+    return [
+      for (final file in result.files)
+        if (file.bytes != null)
+          LocalUpload(
+            name: file.name,
+            bytes: file.bytes!,
+            mimeType: lookupMimeType(file.name) ?? 'application/octet-stream',
+          ),
+    ];
+  }
+
+  Future<void> _importFiles() async {
+    final writer = _writer;
+    final path = _path;
+    if (writer == null || path == null) return;
+    try {
+      final uploads = await _pickUploads();
+      if (uploads.isEmpty || !mounted) return;
+      setState(() => _loading = true);
+      for (final upload in uploads) {
+        await writer.uploadFile(
+          remoteJoin(path, upload.name),
+          upload.bytes,
+          mimeType: upload.mimeType,
+        );
+      }
+      if (!mounted) return;
+      await _openDirectory(path);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            '${uploads.length} file${uploads.length == 1 ? '' : 's'} imported',
+          ),
+        ),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      setState(() => _loading = false);
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Import failed: $error')));
+    }
+  }
+
+  Future<void> _deleteSelection() async {
+    final writer = _writer;
+    final selected = _selectedEntries;
+    if (writer == null || selected.isEmpty) return;
+    final count = selected.length;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Delete $count item${count == 1 ? '' : 's'}?'),
+        content: const Text(
+          'Selected files and folders will be permanently deleted. This cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    try {
+      for (final entry in selected) {
+        await writer.deleteEntry(entry.path, recursive: entry.isDirectory);
+      }
+      _selectedPaths.clear();
+      await _openDirectory(_path!);
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Could not delete: $error')));
+    }
+  }
+
+  Future<void> _renameSelection() async {
+    final writer = _writer;
+    final selected = _selectedEntries;
+    if (writer == null || selected.length != 1) return;
+    final entry = selected.single;
+    var proposedName = entry.name;
+    final newName = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Rename item'),
+        content: TextFormField(
+          initialValue: entry.name,
+          autofocus: true,
+          onChanged: (value) => proposedName = value,
+          decoration: const InputDecoration(labelText: 'New name'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, proposedName.trim()),
+            child: const Text('Rename'),
+          ),
+        ],
+      ),
+    );
+    if (newName == null || !_validEntryName(newName) || newName == entry.name) {
+      return;
+    }
+    try {
+      await writer.rename(entry.path, newName);
+      _selectedPaths.clear();
+      await _openDirectory(_path!);
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Could not rename: $error')));
+    }
+  }
+
   Widget _directoryBody() {
     if (_entries.isEmpty) {
       return const Center(
@@ -263,16 +522,33 @@ class _FilesScreenState extends State<FilesScreen> {
         separatorBuilder: (_, _) => const SizedBox(height: HermesSpacing.sm),
         itemBuilder: (context, index) {
           final entry = _entries[index];
+          final selected = _selectedPaths.contains(entry.path);
           return HermesCard(
+            key: Key('file-entry-${entry.path}'),
+            status: selected ? HermesStatus.running : null,
             padding: const EdgeInsets.symmetric(
               horizontal: HermesSpacing.lg,
               vertical: HermesSpacing.md,
             ),
-            onTap: () => entry.isDirectory
-                ? unawaited(_openDirectory(entry.path))
-                : unawaited(_openFile(entry)),
+            onLongPress: _writer == null ? null : () => _toggleSelection(entry),
+            onTap: () {
+              if (_selectionMode) {
+                _toggleSelection(entry);
+              } else if (entry.isDirectory) {
+                unawaited(_openDirectory(entry.path));
+              } else {
+                unawaited(_openFile(entry));
+              }
+            },
             child: Row(
               children: [
+                if (_selectionMode) ...[
+                  Checkbox(
+                    value: selected,
+                    onChanged: (_) => _toggleSelection(entry),
+                  ),
+                  const SizedBox(width: HermesSpacing.sm),
+                ],
                 Icon(
                   entry.isDirectory
                       ? Icons.folder_outlined
@@ -433,21 +709,70 @@ class _FilesScreenState extends State<FilesScreen> {
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(
-      leading: IconButton(onPressed: _back, icon: const Icon(Icons.arrow_back)),
-      title: const Text('Files'),
-      actions: [
-        IconButton(
-          key: const Key('toggle-hidden'),
-          tooltip: _showHidden ? 'Hide hidden files' : 'Show hidden files',
-          icon: Icon(
-            _showHidden
-                ? Icons.visibility_off_outlined
-                : Icons.visibility_outlined,
-          ),
-          onPressed: _selected == null ? _toggleHidden : null,
-        ),
-      ],
-      bottom: _selected == null && _path != null
+      leading: IconButton(
+        onPressed: _selectionMode ? _clearSelection : _back,
+        icon: Icon(_selectionMode ? Icons.close : Icons.arrow_back),
+      ),
+      title: Text(
+        _selectionMode ? '${_selectedPaths.length} selected' : 'Files',
+      ),
+      actions: _selectionMode
+          ? [
+              if (_selectedPaths.length == 1)
+                IconButton(
+                  tooltip: 'Rename',
+                  icon: const Icon(Icons.drive_file_rename_outline),
+                  onPressed: () => unawaited(_renameSelection()),
+                ),
+              IconButton(
+                tooltip: 'Copy',
+                icon: const Icon(Icons.copy_outlined),
+                onPressed: () => _copySelection(cut: false),
+              ),
+              IconButton(
+                tooltip: 'Cut',
+                icon: const Icon(Icons.content_cut),
+                onPressed: () => _copySelection(cut: true),
+              ),
+              IconButton(
+                tooltip: 'Delete',
+                icon: const Icon(Icons.delete_outline),
+                onPressed: () => unawaited(_deleteSelection()),
+              ),
+            ]
+          : [
+              if (_clipboard.isNotEmpty && _selected == null)
+                IconButton(
+                  tooltip: 'Paste here',
+                  icon: const Icon(Icons.content_paste),
+                  onPressed: () => unawaited(_pasteHere()),
+                ),
+              if (_writer != null && _selected == null)
+                IconButton(
+                  tooltip: 'New folder',
+                  icon: const Icon(Icons.create_new_folder_outlined),
+                  onPressed: () => unawaited(_createFolder()),
+                ),
+              if (_writer != null && _selected == null)
+                IconButton(
+                  tooltip: 'Import files',
+                  icon: const Icon(Icons.upload_file_outlined),
+                  onPressed: () => unawaited(_importFiles()),
+                ),
+              IconButton(
+                key: const Key('toggle-hidden'),
+                tooltip: _showHidden
+                    ? 'Hide hidden files'
+                    : 'Show hidden files',
+                icon: Icon(
+                  _showHidden
+                      ? Icons.visibility_off_outlined
+                      : Icons.visibility_outlined,
+                ),
+                onPressed: _selected == null ? _toggleHidden : null,
+              ),
+            ],
+      bottom: !_selectionMode && _selected == null && _path != null
           ? PreferredSize(
               preferredSize: const Size.fromHeight(42),
               child: Padding(
