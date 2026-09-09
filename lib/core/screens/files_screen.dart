@@ -7,6 +7,7 @@ import 'package:share_plus/share_plus.dart';
 
 import '../services/remote_files_client.dart';
 import '../theme/hermes_theme.dart';
+import '../utils/file_breadcrumb.dart';
 import '../utils/file_size.dart';
 import '../utils/file_sort.dart';
 import '../utils/relative_time.dart';
@@ -867,19 +868,22 @@ class _FilesScreenState extends State<FilesScreen> {
                 ),
                 child: Row(
                   children: [
-                    Expanded(
-                      child: Text(
-                        _path!,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                    Expanded(child: _buildBreadcrumb()),
+                    const SizedBox(width: HermesSpacing.md),
+                    Text(
+                      formatItemCount(_entries.length),
+                      style: HermesTokens.of(context).typography.label.copyWith(
+                        color: HermesTokens.of(context).muted,
                       ),
                     ),
                     if (_root?.branch != null &&
-                        _root!.branch!.trim().isNotEmpty)
+                        _root!.branch!.trim().isNotEmpty) ...[
+                      const SizedBox(width: HermesSpacing.sm),
                       StatusChip(
                         status: HermesStatus.idle,
                         label: _root!.branch,
                       ),
+                    ],
                   ],
                 ),
               ),
@@ -888,4 +892,35 @@ class _FilesScreenState extends State<FilesScreen> {
     ),
     body: _body(),
   );
+
+  Widget _buildBreadcrumb() {
+    final root = _root?.path;
+    final path = _path;
+    if (root == null || path == null) return const SizedBox.shrink();
+    final steps = buildFileBreadcrumb(root, path);
+    final tokens = HermesTokens.of(context);
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      reverse: true,
+      child: Row(
+        children: [
+          for (var i = 0; i < steps.length; i++) ...[
+            if (i > 0) Icon(Icons.chevron_right, size: 16, color: tokens.muted),
+            InkWell(
+              key: Key('breadcrumb-${steps[i].path}'),
+              onTap: () => unawaited(_openDirectory(steps[i].path)),
+              child: Text(
+                steps[i].label,
+                style: tokens.typography.label.copyWith(
+                  color: i == steps.length - 1
+                      ? tokens.onSurface
+                      : tokens.accent,
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
 }

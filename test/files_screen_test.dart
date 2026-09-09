@@ -121,7 +121,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Files'), findsOneWidget);
-    expect(find.text('/srv/project'), findsOneWidget);
+    expect(find.text('project'), findsOneWidget);
+    expect(find.text('2 items'), findsOneWidget);
     expect(find.text('main'), findsOneWidget);
     expect(find.text('lib'), findsOneWidget);
     expect(find.text('README.md'), findsOneWidget);
@@ -131,6 +132,25 @@ void main() {
 
     expect(source.openedDirectories, contains('/srv/project/lib'));
     expect(find.text('main.dart'), findsOneWidget);
+    expect(find.text('1 item'), findsOneWidget);
+  });
+
+  testWidgets('breadcrumb navigates back to the root directory', (
+    tester,
+  ) async {
+    final source = _FakeFilesDataSource();
+    await _pump(tester, source);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('lib'));
+    await tester.pumpAndSettle();
+
+    // The trail now reads project > lib; tapping the root step returns.
+    await tester.tap(find.byKey(const Key('breadcrumb-/srv/project')));
+    await tester.pumpAndSettle();
+
+    expect(source.openedDirectories.last, '/srv/project');
+    expect(find.text('README.md'), findsOneWidget);
   });
 
   testWidgets('previews text and adds its server reference to chat', (
@@ -234,8 +254,9 @@ void main() {
     await _pump(tester, source);
     await tester.pumpAndSettle();
 
-    // The path is still shown, but no empty status chip renders next to it.
-    expect(find.text('/srv/project'), findsOneWidget);
+    // The path is still shown as a breadcrumb, but no empty status chip
+    // renders next to it.
+    expect(find.text('project'), findsOneWidget);
     expect(find.byType(StatusChip), findsNothing);
   });
 
