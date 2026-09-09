@@ -85,7 +85,7 @@ This makes the new daily-driver experience look optional and unfinished. Workspa
 | Projects list | Server source of truth, cache/offline states, create, migration entry | No counts/current-focus summary on cards; no archived section; no reorder/pin/color/icon controls |
 | Project detail | Chats/Overview, create chat, move chat, per-project search, repositories/location | Rename and archive absent; deletion added in this audit slice; Files/Assets/Activity tabs absent |
 | Activity | Durable per-turn timeline with grouped states and elapsed time | Local journal only; no unified approvals/clarifications/cron/platform events or action controls |
-| More | Files, Cron, Skills, Memory, Search, Settings/Dashboard fallback | Assets remains a placeholder pending a server Assets index; long flat list lacks stronger grouping/navigation hierarchy |
+| More | Files, Cron, Skills, Memory, Search, Settings/Dashboard fallback | Assets now served by the Gateway `assets.list` index (committed 2026-09-09); long flat list lacks stronger grouping/navigation hierarchy |
 | Chat | Durable recovery, model/effort controls, attachments, voice, approvals/clarifications, reasoning/tool cards, code copy/wrap, long-press actions | Phase 1.5 remains partial: sticky context header, richer diff rendering, scroll/process restoration audit, haptic polish |
 | Project administration | Create and server-backed assignment | Rename/archive/restore not surfaced; archived Projects are invisible; destructive management was missing until this slice |
 | Quick Chat | 72-hour local archive lifecycle, never deletes sessions | No visible Archived destination and no Promote action, so the lifecycle is technically present but hard to manage |
