@@ -1075,8 +1075,8 @@
     "semantic_hash": ""
   },
   "lib/core/screens/files_screen.dart": {
-    "mtime": 1788945557.7481127,
-    "ast_hash": "94e324e44b0c5dd9a37113f3b89d134b",
+    "mtime": 1788947431.723422,
+    "ast_hash": "687d09a1015bc065f7fb2aecefe297a6",
     "semantic_hash": ""
   },
   "lib/core/services/remote_files_client.dart": {
@@ -1085,8 +1085,8 @@
     "semantic_hash": ""
   },
   "test/files_screen_test.dart": {
-    "mtime": 1788945542.4479074,
-    "ast_hash": "967e6878ac4ebf3d877819b436e04fc5",
+    "mtime": 1788947373.8746393,
+    "ast_hash": "75f7a6f63d08aabdca846697780506f8",
     "semantic_hash": ""
   },
   "test/remote_files_client_test.dart": {
