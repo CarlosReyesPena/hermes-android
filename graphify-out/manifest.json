@@ -195,8 +195,8 @@
     "semantic_hash": ""
   },
   "lib/core/services/desktop_gateway_client.dart": {
-    "mtime": 1788727124.7541761,
-    "ast_hash": "07da30a04120f8530f5ae4977c396383",
+    "mtime": 1788936307.3744025,
+    "ast_hash": "e79b027b51e4b205c0e462b928da41ac",
     "semantic_hash": ""
   },
   "lib/core/services/gateway_turn_application_controller.dart": {
@@ -845,8 +845,8 @@
     "semantic_hash": ""
   },
   "lib/core/screens/workspace_screen.dart": {
-    "mtime": 1788927079.4491324,
-    "ast_hash": "15487b1103c0bd223f3900bd4aecf12b",
+    "mtime": 1788936472.6006727,
+    "ast_hash": "ade0080df262adbd6fe4bb0ec57ae466",
     "semantic_hash": ""
   },
   "test/workspace_screen_test.dart": {
@@ -1065,8 +1065,8 @@
     "semantic_hash": ""
   },
   "lib/core/widgets/project_detail_screen.dart": {
-    "mtime": 1788650061.815892,
-    "ast_hash": "ce66320d1c80bd704be45a7a7461fc00",
+    "mtime": 1788936527.5494277,
+    "ast_hash": "3e00e92846d96517f69bd93262b11fae",
     "semantic_hash": ""
   },
   "test/project_detail_screen_test.dart": {
@@ -1457,6 +1457,36 @@
   "test/turn_notification_router_test.dart": {
     "mtime": 1788911204.3828921,
     "ast_hash": "b8a41e02db1a035b85b07a4125254fcc",
+    "semantic_hash": ""
+  },
+  "lib/core/models/project_asset.dart": {
+    "mtime": 1788935922.6801286,
+    "ast_hash": "e89ea98f19add20fd71f7659c9ebdddf",
+    "semantic_hash": ""
+  },
+  "lib/core/services/assets_gateway_client.dart": {
+    "mtime": 1788936012.1083524,
+    "ast_hash": "9b4a448dc57af881c066284f466b3766",
+    "semantic_hash": ""
+  },
+  "lib/core/widgets/assets_screen.dart": {
+    "mtime": 1788936645.985055,
+    "ast_hash": "6a4c5c4fc87d40d4b9fa00960a36f559",
+    "semantic_hash": ""
+  },
+  "test/assets_gateway_client_test.dart": {
+    "mtime": 1788936646.0150554,
+    "ast_hash": "4fc4f1b8e9a0d325f06f743f689ab2d5",
+    "semantic_hash": ""
+  },
+  "test/assets_screen_test.dart": {
+    "mtime": 1788936646.0210555,
+    "ast_hash": "510a52959da57144739fcc2f863005eb",
+    "semantic_hash": ""
+  },
+  "test/project_asset_test.dart": {
+    "mtime": 1788935951.5905242,
+    "ast_hash": "938002704c172698c3b6362bdd039b0c",
     "semantic_hash": ""
   }
 }

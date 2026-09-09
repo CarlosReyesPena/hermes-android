@@ -17,6 +17,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../models/attachment_draft.dart';
 import '../models/hermes_project.dart';
 import '../services/android_share_intent_service.dart';
+import '../services/assets_gateway_client.dart';
 import '../services/attachment_draft_service.dart';
 import '../services/chat_space_store.dart';
 import '../services/connection_manager.dart';
@@ -36,6 +37,7 @@ import '../utils/home_turn_signals.dart';
 import '../utils/new_chat_options.dart';
 import '../utils/pending_approval_probe.dart';
 import '../widgets/activity_pane.dart';
+import '../widgets/assets_screen.dart';
 import '../widgets/cron_due_banner.dart';
 import '../widgets/cron_failures_banner.dart';
 import '../widgets/hermes_components.dart';
@@ -1054,6 +1056,16 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
           onArchiveProject: () => repository.archive(projectId),
           onDeleteProject: () => repository.delete(projectId),
           onOpenFolder: (path) => unawaited(_openProjectFolder(path)),
+          loadAssets: () async {
+            final gateway = _ownedGateway;
+            if (gateway == null) {
+              throw const AssetsUnsupportedException(
+                'assets.list',
+                'No Desktop Gateway transport',
+              );
+            }
+            return gateway.assets.list(projectId: projectId);
+          },
         ),
       ),
     );
@@ -1745,6 +1757,32 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
     }
   }
 
+  /// Opens the global Assets gallery (server-authoritative `assets.list`).
+  Future<void> _openAssets() async {
+    final gateway = _ownedGateway;
+    if (gateway == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Assets need a Desktop Gateway connection.'),
+        ),
+      );
+      return;
+    }
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => AssetsScreen(
+          load: () => gateway.assets.list(),
+          onAddToChat: (asset) {
+            Navigator.of(context).pop();
+            unawaited(
+              _startQuickChat(initialComposerText: '@file ${asset.path} '),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
   void _openMoreEntry(MoreEntry entry) {
     final connection = widget.connection;
     switch (entry.id) {
@@ -1758,6 +1796,8 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
         unawaited(_openWorkspaceSessionView(WorkspaceSessionView.search));
       case 'files':
         unawaited(_openFiles());
+      case 'assets':
+        unawaited(_openAssets());
       case 'pin-batch-undo':
         _shellController.select(HermesDestination.chats);
       case 'ai-filing':

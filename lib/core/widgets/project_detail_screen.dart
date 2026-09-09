@@ -28,6 +28,7 @@ import '../services/projects_repository.dart';
 import '../theme/hermes_theme.dart';
 import '../utils/project_session_filter.dart';
 import '../utils/relative_time.dart';
+import 'assets_screen.dart';
 import 'hermes_components.dart';
 
 /// Reads one project's chats. Mirrors `ProjectsRepository.projectSessions` so
@@ -75,6 +76,11 @@ class ProjectDetailScreen extends StatefulWidget {
   /// When null, the folder cards are drawn inert rather than fake-tappable.
   final ValueChanged<String>? onOpenFolder;
 
+  /// Reads the Project's Assets index (`assets.list` scoped to this project).
+  /// When null, the Assets tab shows the compatibility notice instead of a
+  /// gallery, so an older gateway is never faked.
+  final AssetsLoader? loadAssets;
+
   const ProjectDetailScreen({
     required this.projectId,
     required this.projectName,
@@ -87,6 +93,7 @@ class ProjectDetailScreen extends StatefulWidget {
     this.onArchiveProject,
     this.onDeleteProject,
     this.onOpenFolder,
+    this.loadAssets,
     super.key,
   });
 
@@ -771,27 +778,34 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen>
     );
   }
 
-  /// Honest capability gate: no server Assets index, no fake gallery.
+  /// The Project's Assets: a server-authoritative gallery when the connection
+  /// supplied [ProjectDetailScreen.loadAssets], or the honest capability gate
+  /// when it did not (an older gateway, or a connection with no Desktop
+  /// Gateway transport at all).
   Widget _buildAssets(ProjectSessionsView view) {
-    return RefreshIndicator(
-      onRefresh: () => _load(refresh: true),
-      child: ListView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.only(bottom: HermesSpacing.xl),
-        children: [
-          if (view.isStale) const _OfflineNotice(),
-          const Padding(
-            padding: EdgeInsets.only(top: HermesSpacing.xl),
-            child: ErrorState.unsupported(
-              title: 'Assets unavailable',
-              message:
-                  'Assets need a server-authoritative Assets index in the '
-                  'Hermes Gateway before they can be shown per project.',
+    final loadAssets = widget.loadAssets;
+    if (loadAssets == null) {
+      return RefreshIndicator(
+        onRefresh: () => _load(refresh: true),
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.only(bottom: HermesSpacing.xl),
+          children: [
+            if (view.isStale) const _OfflineNotice(),
+            const Padding(
+              padding: EdgeInsets.only(top: HermesSpacing.xl),
+              child: ErrorState.unsupported(
+                title: 'Assets unavailable',
+                message:
+                    'Assets need a server-authoritative Assets index in the '
+                    'Hermes Gateway before they can be shown per project.',
+              ),
             ),
-          ),
-        ],
-      ),
-    );
+          ],
+        ),
+      );
+    }
+    return AssetsGallery(load: loadAssets);
   }
 
   /// The project's own activity: every chat with its current state and when

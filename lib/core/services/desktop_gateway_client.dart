@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:crypto/crypto.dart';
 
 import 'capability_registry.dart';
+import 'assets_gateway_client.dart';
 import 'connection_manager.dart';
 import 'gateway_turn_coordinator.dart';
 import 'gateway_turn_journal.dart';
@@ -39,6 +40,7 @@ class DesktopGatewayClient {
   GatewayTurnCoordinatorRegistry? _turnCoordinatorRegistry;
   ProjectsGatewayClient? _projects;
   final CapabilityRegistry _capabilities = CapabilityRegistry();
+  AssetsGatewayClient? _assets;
 
   static const _asyncEventTypes = {
     'background.complete',
@@ -225,6 +227,18 @@ class DesktopGatewayClient {
   /// instead of an error state, so callers can fall back to local grouping.
   ProjectsGatewayClient get projects {
     return _projects ??= ProjectsGatewayClient((method, params) async {
+      final client = await _connectControl();
+      return client.send(method, params);
+    }, capabilities: _capabilities);
+  }
+
+  /// Server-owned Assets index for this gateway (`assets.list`).
+  ///
+  /// Shares the same control socket as Projects; an older gateway without the
+  /// index surfaces an [AssetsUnsupportedException] so the UI can show a calm
+  /// compatibility notice instead of an error screen.
+  AssetsGatewayClient get assets {
+    return _assets ??= AssetsGatewayClient((method, params) async {
       final client = await _connectControl();
       return client.send(method, params);
     }, capabilities: _capabilities);
@@ -480,6 +494,7 @@ class DesktopGatewayClient {
     _asyncEventListener = null;
     _connectionListener = null;
     _projects = null;
+    _assets = null;
     _ws?.close();
     _ws = null;
     _gatewaySessionIds.clear();
