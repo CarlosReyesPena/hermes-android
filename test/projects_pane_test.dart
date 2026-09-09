@@ -349,6 +349,13 @@ void main() {
     expect(find.text('Archived'), findsOneWidget);
     expect(find.text('Retired'), findsOneWidget);
     expect(find.byKey(const Key('project-actions-p2')), findsOneWidget);
+
+    // Archived cards are restored through their explicit actions menu. Until
+    // archived detail mode exists, the card body must not advertise a dead tap.
+    expect(
+      find.ancestor(of: find.text('Retired'), matching: find.byType(InkWell)),
+      findsNothing,
+    );
   });
 
   testWidgets('shows archived projects and restores them from their actions', (

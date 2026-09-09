@@ -329,7 +329,6 @@ class _ProjectsPaneState extends State<ProjectsPane> {
                   child: _ProjectCard(
                     project: project,
                     isActive: false,
-                    onTap: () {},
                     onRestore: () => _restoreProject(project),
                   ),
                 ),
@@ -526,7 +525,7 @@ class _OfflineBanner extends StatelessWidget {
 class _ProjectCard extends StatelessWidget {
   final HermesProject project;
   final bool isActive;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
   final ProjectOverviewNode? overview;
   final VoidCallback? onRename;
   final VoidCallback? onArchive;
@@ -536,7 +535,7 @@ class _ProjectCard extends StatelessWidget {
   const _ProjectCard({
     required this.project,
     required this.isActive,
-    required this.onTap,
+    this.onTap,
     this.overview,
     this.onRename,
     this.onArchive,

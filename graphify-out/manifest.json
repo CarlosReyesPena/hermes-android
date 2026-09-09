@@ -145,8 +145,8 @@
     "semantic_hash": ""
   },
   "lib/core/screens/chat_screen.dart": {
-    "mtime": 1788910890.897458,
-    "ast_hash": "c7328bf2f72af38ef5f736091c66b4cc",
+    "mtime": 1788957055.730589,
+    "ast_hash": "ee19e4439ef891602916f2a5ac572adc",
     "semantic_hash": ""
   },
   "lib/core/screens/cron_screen.dart": {
@@ -470,8 +470,8 @@
     "semantic_hash": ""
   },
   "test/widget_test.dart": {
-    "mtime": 1788909912.5277996,
-    "ast_hash": "a7bf2a0f37404b7012c893e067eddfe0",
+    "mtime": 1788956045.685936,
+    "ast_hash": "d2ebf9dd31f8e98505723c20ff780420",
     "semantic_hash": ""
   },
   "tools/fake_gateway/fake_gateway.py": {
@@ -835,13 +835,13 @@
     "semantic_hash": ""
   },
   "lib/core/widgets/projects_pane.dart": {
-    "mtime": 1788926643.4244359,
-    "ast_hash": "d440f685ec1ae5014c8043faf485bc45",
+    "mtime": 1788991088.7231712,
+    "ast_hash": "46ddaa3204baaed4d1c2e229a8749c25",
     "semantic_hash": ""
   },
   "test/projects_pane_test.dart": {
-    "mtime": 1788926775.491151,
-    "ast_hash": "9397f06cdf4d6642f3e96cb6f48c157d",
+    "mtime": 1788991095.5902584,
+    "ast_hash": "006a3632d700bbd3e498db5940b8b714",
     "semantic_hash": ""
   },
   "lib/core/screens/workspace_screen.dart": {
@@ -1075,18 +1075,18 @@
     "semantic_hash": ""
   },
   "lib/core/screens/files_screen.dart": {
-    "mtime": 1788947431.723422,
-    "ast_hash": "687d09a1015bc065f7fb2aecefe297a6",
+    "mtime": 1788955445.1758165,
+    "ast_hash": "aaf061d38d7c52b1aca899e9043a54d8",
     "semantic_hash": ""
   },
   "lib/core/services/remote_files_client.dart": {
-    "mtime": 1788944520.4153256,
-    "ast_hash": "47af781c65d78cd5bdfaec2c5675a947",
+    "mtime": 1788954774.9728117,
+    "ast_hash": "c9fa3d7d1f708c80f4008d618f9ea81a",
     "semantic_hash": ""
   },
   "test/files_screen_test.dart": {
-    "mtime": 1788947373.8746393,
-    "ast_hash": "75f7a6f63d08aabdca846697780506f8",
+    "mtime": 1788955556.2743208,
+    "ast_hash": "2133d6154440e6fe6b04ee40761952c5",
     "semantic_hash": ""
   },
   "test/remote_files_client_test.dart": {
@@ -1095,8 +1095,8 @@
     "semantic_hash": ""
   },
   "lib/core/widgets/markdown_code_block.dart": {
-    "mtime": 1787974302.0952623,
-    "ast_hash": "476f1b447715ec47112ae6be5c6cbf6c",
+    "mtime": 1788956056.960088,
+    "ast_hash": "f5ca6e63089782231016055da7837c40",
     "semantic_hash": ""
   },
   "test/space_migration_write_test.dart": {
@@ -1180,8 +1180,8 @@
     "semantic_hash": ""
   },
   "lib/core/utils/relative_time.dart": {
-    "mtime": 1788909866.0611641,
-    "ast_hash": "26b4fb61fbea3c9c8d80eaad99e622ad",
+    "mtime": 1788954241.2417138,
+    "ast_hash": "041425652e9c23210ace9d5488535fcf",
     "semantic_hash": ""
   },
   "docs/plans/2026-08-30-project-detail-5-tabs.md": {
@@ -1492,6 +1492,76 @@
   "test/remote_files_client_write_test.dart": {
     "mtime": 1788944830.111368,
     "ast_hash": "68149a8e7c6f3b72f7e65fb8fc4ff927",
+    "semantic_hash": ""
+  },
+  "lib/core/services/haptics_service.dart": {
+    "mtime": 1788957380.497996,
+    "ast_hash": "fd012e3ed1eb9bb3c283df889c609a31",
+    "semantic_hash": ""
+  },
+  "lib/core/utils/diff_block.dart": {
+    "mtime": 1788956093.0495753,
+    "ast_hash": "8be72917b9985555293fbbf44973601d",
+    "semantic_hash": ""
+  },
+  "lib/core/utils/file_breadcrumb.dart": {
+    "mtime": 1788955465.7110946,
+    "ast_hash": "87d4eddca9416caeb5c4ef9f78a22d19",
+    "semantic_hash": ""
+  },
+  "lib/core/utils/file_size.dart": {
+    "mtime": 1788951128.6256511,
+    "ast_hash": "77abf6dad7579dc166bfc04f2fdad666",
+    "semantic_hash": ""
+  },
+  "lib/core/utils/file_sort.dart": {
+    "mtime": 1788955009.1519258,
+    "ast_hash": "02d5bbc6cc2e3ba35399f436696f7090",
+    "semantic_hash": ""
+  },
+  "lib/core/widgets/diff_block.dart": {
+    "mtime": 1788956249.409686,
+    "ast_hash": "a560430039ad898b9ac5bed8d075c1b7",
+    "semantic_hash": ""
+  },
+  "test/chat_haptics_wiring_test.dart": {
+    "mtime": 1788957380.7659998,
+    "ast_hash": "781e01c46fe9313f9d877621897b2a4e",
+    "semantic_hash": ""
+  },
+  "test/diff_block_test.dart": {
+    "mtime": 1788955956.8447366,
+    "ast_hash": "df743578903a08c707acc131f9102e63",
+    "semantic_hash": ""
+  },
+  "test/file_breadcrumb_test.dart": {
+    "mtime": 1788955445.1858168,
+    "ast_hash": "2e2d5a78bd1cacaf755d4f5f2bc772fd",
+    "semantic_hash": ""
+  },
+  "test/file_size_test.dart": {
+    "mtime": 1788951188.390467,
+    "ast_hash": "4dc3df782b5e9166f846d4e85bde6f7b",
+    "semantic_hash": ""
+  },
+  "test/file_sort_test.dart": {
+    "mtime": 1788954942.9770458,
+    "ast_hash": "ff5fbe4a980bfce0bb8e08fce3281037",
+    "semantic_hash": ""
+  },
+  "test/haptics_service_test.dart": {
+    "mtime": 1788956600.6604276,
+    "ast_hash": "30244b2543bb503d33f449f272e1f082",
+    "semantic_hash": ""
+  },
+  "test/support/recording_haptics_sink.dart": {
+    "mtime": 1788956846.5617504,
+    "ast_hash": "da55212443039f28dd240c3d9b980adc",
+    "semantic_hash": ""
+  },
+  "docs/DAILY_DRIVER_FIT_FINISH_GOAL.md": {
+    "mtime": 1788953554.7165632,
+    "ast_hash": "08756e0f97e4f4c8f9a3a1eb227dbf85",
     "semantic_hash": ""
   }
 }
