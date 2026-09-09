@@ -97,6 +97,7 @@ Future<void> _pump(
   Future<void> Function(RemoteFileDownload download)? onSaveDownload,
   Future<void> Function(RemoteFileDownload download)? onShareDownload,
   Future<List<LocalUpload>> Function()? onPickUploads,
+  DateTime Function()? now,
 }) => tester.pumpWidget(
   MaterialApp(
     theme: hermesTheme(Brightness.dark),
@@ -106,6 +107,7 @@ Future<void> _pump(
       onSaveDownload: onSaveDownload,
       onShareDownload: onShareDownload,
       onPickUploads: onPickUploads,
+      now: now,
     ),
   ),
 );
@@ -241,12 +243,33 @@ void main() {
     tester,
   ) async {
     final source = _SizedFilesDataSource();
-    await _pump(tester, source);
+    await _pump(
+      tester,
+      source,
+      now: () => DateTime.fromMillisecondsSinceEpoch(1700000000 * 1000),
+    );
     await tester.pumpAndSettle();
 
     // The file's size renders; the directory carries no size label.
-    expect(find.text('2.00 KB'), findsOneWidget);
+    expect(find.textContaining('2.00 KB'), findsOneWidget);
     expect(find.text('lib'), findsOneWidget);
+  });
+
+  testWidgets('shows a modified time for files and hides unknown times', (
+    tester,
+  ) async {
+    final source = _SizedFilesDataSource();
+    await _pump(
+      tester,
+      source,
+      now: () => DateTime.fromMillisecondsSinceEpoch(1700000000 * 1000),
+    );
+    await tester.pumpAndSettle();
+
+    // README.md was modified exactly at the injected "now", so it reads "now";
+    // the directory (no mtime) must not render a bogus 1970 date.
+    expect(find.text('2.00 KB · now'), findsOneWidget);
+    expect(find.textContaining('1970'), findsNothing);
   });
 
   testWidgets('downloads the selected file through the platform seam', (
@@ -589,6 +612,7 @@ class _SizedFilesDataSource extends _FakeFilesDataSource {
       path: '/srv/project/README.md',
       isDirectory: false,
       size: 2048,
+      modifiedAt: 1700000000,
     ),
   ];
 }

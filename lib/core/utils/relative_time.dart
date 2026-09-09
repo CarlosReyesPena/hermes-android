@@ -31,6 +31,17 @@ String formatRelativeTime(DateTime now, double lastActiveSeconds) {
   return formatRelativeAge(activity, now);
 }
 
+/// File modification time as an epoch-seconds value, rendered through the one
+/// canonical relative formatter. Returns an empty string for an unknown mtime
+/// (0 or negative), so a caller never prints a misleading "1970" date.
+String formatModifiedAt(double epochSeconds, DateTime now) {
+  if (epochSeconds <= 0) return '';
+  final modified = DateTime.fromMillisecondsSinceEpoch(
+    (epochSeconds * 1000).round(),
+  );
+  return formatRelativeAge(modified, now);
+}
+
 /// Message timestamp from the raw Gateway message map.
 ///
 /// The API server stores a `timestamp` epoch-seconds column on every message

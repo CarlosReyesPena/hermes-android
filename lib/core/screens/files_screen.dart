@@ -8,6 +8,7 @@ import 'package:share_plus/share_plus.dart';
 import '../services/remote_files_client.dart';
 import '../theme/hermes_theme.dart';
 import '../utils/file_size.dart';
+import '../utils/relative_time.dart';
 import '../widgets/hermes_components.dart';
 
 class LocalUpload {
@@ -34,6 +35,10 @@ class FilesScreen extends StatefulWidget {
   /// from the Project detail Files tab.
   final String? initialPath;
 
+  /// Clock used to render relative modification times. Injected for
+  /// deterministic widget tests; defaults to [DateTime.now].
+  final DateTime Function()? now;
+
   const FilesScreen({
     required this.files,
     this.onAddToChat,
@@ -41,6 +46,7 @@ class FilesScreen extends StatefulWidget {
     this.onShareDownload,
     this.onPickUploads,
     this.initialPath,
+    this.now,
     super.key,
   });
 
@@ -71,6 +77,18 @@ class _FilesScreenState extends State<FilesScreen> {
   bool get _selectionMode => _selectedPaths.isNotEmpty;
   bool _validEntryName(String name) =>
       name.isNotEmpty && name != '.' && name != '..' && !name.contains('/');
+
+  /// Composes "size · modified" for a file. The two pieces are only ever
+  /// joined when both are present, so an entry with an unknown size or mtime
+  /// never renders a dangling separator.
+  String _formatSubtitle(RemoteFileEntry entry) {
+    final now = widget.now?.call() ?? DateTime.now();
+    final size = formatFileSize(entry.size);
+    final modified = formatModifiedAt(entry.modifiedAt, now);
+    if (size.isEmpty) return modified;
+    if (modified.isEmpty) return size;
+    return '$size · $modified';
+  }
 
   List<RemoteFileEntry> get _selectedEntries => _entries
       .where((entry) => _selectedPaths.contains(entry.path))
@@ -576,7 +594,18 @@ class _FilesScreenState extends State<FilesScreen> {
                         ),
                         if (!entry.isDirectory)
                           Text(
-                            formatFileSize(entry.size),
+                            _formatSubtitle(entry),
+                            style: HermesTokens.of(context).typography.label
+                                .copyWith(
+                                  color: HermesTokens.of(context).muted,
+                                ),
+                          )
+                        else
+                          Text(
+                            formatModifiedAt(
+                              entry.modifiedAt,
+                              widget.now?.call() ?? DateTime.now(),
+                            ),
                             style: HermesTokens.of(context).typography.label
                                 .copyWith(
                                   color: HermesTokens.of(context).muted,

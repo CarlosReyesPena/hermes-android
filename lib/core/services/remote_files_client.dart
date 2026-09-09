@@ -19,11 +19,15 @@ class RemoteFileEntry {
   /// Byte size for files; 0 for directories.
   final int size;
 
+  /// Last-modified time as epoch seconds; 0 when unknown.
+  final double modifiedAt;
+
   const RemoteFileEntry({
     required this.name,
     required this.path,
     required this.isDirectory,
     this.size = 0,
+    this.modifiedAt = 0,
   });
 
   factory RemoteFileEntry.fromJson(Map<String, dynamic> json) =>
@@ -32,6 +36,7 @@ class RemoteFileEntry {
         path: json['path'] as String? ?? '',
         isDirectory: json['isDirectory'] == true,
         size: (json['size'] as num?)?.toInt() ?? 0,
+        modifiedAt: (json['modifiedAt'] as num?)?.toDouble() ?? 0,
       );
 }
 
