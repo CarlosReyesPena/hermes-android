@@ -44,7 +44,8 @@ same treatment in turn until the whole app is done.
 3. **Projects** — verify card counts/focus, archived section,
    reorder / pin / color / icon.
 4. **Home + Activity** — accessibility dedup, idle-chip cleanup, full a11y pass.
-5. **More + Settings** — grouping/hierarchy (offline resilience already done).
+5. **More + Settings** — grouping/hierarchy, whole-screen refresh recovery,
+   per-section loading/empty/error states (in progress).
 6. **Cron / Skills / Memory** — same lens.
 7. **Cross-cutting** — tablet/foldable two-pane, light-theme tuning.
 
