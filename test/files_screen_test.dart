@@ -237,6 +237,18 @@ void main() {
     expect(find.byType(StatusChip), findsNothing);
   });
 
+  testWidgets('shows the file size under file names but not directories', (
+    tester,
+  ) async {
+    final source = _SizedFilesDataSource();
+    await _pump(tester, source);
+    await tester.pumpAndSettle();
+
+    // The file's size renders; the directory carries no size label.
+    expect(find.text('2.00 KB'), findsOneWidget);
+    expect(find.text('lib'), findsOneWidget);
+  });
+
   testWidgets('downloads the selected file through the platform seam', (
     tester,
   ) async {
@@ -563,4 +575,20 @@ class _EmptyBranchFilesDataSource extends _FakeFilesDataSource {
   @override
   Future<RemoteDirectory> defaultDirectory() async =>
       const RemoteDirectory(path: '/srv/project', branch: '');
+}
+
+class _SizedFilesDataSource extends _FakeFilesDataSource {
+  @override
+  Future<List<RemoteFileEntry>> listDirectory(
+    String path, {
+    bool showHidden = false,
+  }) async => const [
+    RemoteFileEntry(name: 'lib', path: '/srv/project/lib', isDirectory: true),
+    RemoteFileEntry(
+      name: 'README.md',
+      path: '/srv/project/README.md',
+      isDirectory: false,
+      size: 2048,
+    ),
+  ];
 }

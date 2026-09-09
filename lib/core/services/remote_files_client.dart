@@ -16,10 +16,14 @@ class RemoteFileEntry {
   final String path;
   final bool isDirectory;
 
+  /// Byte size for files; 0 for directories.
+  final int size;
+
   const RemoteFileEntry({
     required this.name,
     required this.path,
     required this.isDirectory,
+    this.size = 0,
   });
 
   factory RemoteFileEntry.fromJson(Map<String, dynamic> json) =>
@@ -27,6 +31,7 @@ class RemoteFileEntry {
         name: json['name'] as String? ?? '',
         path: json['path'] as String? ?? '',
         isDirectory: json['isDirectory'] == true,
+        size: (json['size'] as num?)?.toInt() ?? 0,
       );
 }
 

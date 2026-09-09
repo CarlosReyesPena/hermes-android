@@ -7,6 +7,7 @@ import 'package:share_plus/share_plus.dart';
 
 import '../services/remote_files_client.dart';
 import '../theme/hermes_theme.dart';
+import '../utils/file_size.dart';
 import '../widgets/hermes_components.dart';
 
 class LocalUpload {
@@ -563,7 +564,27 @@ class _FilesScreenState extends State<FilesScreen> {
                     ),
                   ),
                   const SizedBox(width: HermesSpacing.md),
-                  Expanded(child: Text(entry.name)),
+                  Expanded(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          entry.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        if (!entry.isDirectory)
+                          Text(
+                            formatFileSize(entry.size),
+                            style: HermesTokens.of(context).typography.label
+                                .copyWith(
+                                  color: HermesTokens.of(context).muted,
+                                ),
+                          ),
+                      ],
+                    ),
+                  ),
                   if (!entry.isDirectory)
                     PopupMenuButton<String>(
                       key: Key('file-actions-${entry.path}'),
