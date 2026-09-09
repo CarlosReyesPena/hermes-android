@@ -47,7 +47,8 @@ same treatment in turn until the whole app is done.
 5. **More + Settings** — grouping/hierarchy, whole-screen refresh recovery,
    per-section loading/empty/error states (in progress).
 6. **Cron / Skills / Memory** — same lens.
-7. **Cross-cutting** — tablet/foldable two-pane, light-theme tuning.
+7. **Cross-cutting** — tablet/foldable two-pane, light-theme tuning (done: theme
+   WCAG + adaptive shell verified; breakpoints consolidated into Responsive).
 
 ## Working rules
 
