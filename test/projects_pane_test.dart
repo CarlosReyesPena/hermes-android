@@ -128,6 +128,14 @@ class _FakeGateway {
               project,
         ];
         return _ok({'projects': projects, 'active_id': activeId});
+      case 'projects.delete':
+        final id = params['id'] as String;
+        projects = [
+          for (final project in projects)
+            if (project['id'] != id) project,
+        ];
+        if (activeId == id) activeId = null;
+        return _ok({'projects': projects, 'active_id': activeId});
       case 'projects.assign_session':
         assignments.add(Map<String, dynamic>.from(params));
         return _ok({
@@ -401,6 +409,33 @@ void main() {
 
     expect(repository.current.projects, isEmpty);
     expect(repository.current.archived.single.name, 'New name');
+  });
+
+  testWidgets('deletes a live project directly from its card actions', (
+    tester,
+  ) async {
+    final gateway = _FakeGateway(
+      projects: [_projectJson(id: 'p1', name: 'Delete me')],
+    );
+    final repository = await _repo(gateway);
+
+    await _pumpPane(tester, repository);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('project-actions-p1')));
+    await tester.pumpAndSettle();
+    expect(find.text('Delete project'), findsOneWidget);
+
+    await tester.tap(find.text('Delete project'));
+    await tester.pumpAndSettle();
+    expect(find.text('Delete Delete me?'), findsOneWidget);
+    expect(find.textContaining('Chats will not be deleted'), findsOneWidget);
+
+    await tester.tap(find.widgetWithText(TextButton, 'Delete'));
+    await tester.pumpAndSettle();
+
+    expect(repository.current.projects, isEmpty);
+    expect(find.text('Delete me'), findsNothing);
   });
 
   testWidgets('marks the active project', (tester) async {

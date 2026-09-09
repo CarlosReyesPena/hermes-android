@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../services/remote_files_client.dart';
 import '../theme/hermes_theme.dart';
@@ -11,6 +12,7 @@ class FilesScreen extends StatefulWidget {
   final RemoteFilesDataSource files;
   final ValueChanged<String>? onAddToChat;
   final Future<void> Function(RemoteFileDownload download)? onSaveDownload;
+  final Future<void> Function(RemoteFileDownload download)? onShareDownload;
 
   /// When set, the browser opens directly at this directory instead of the
   /// server's default working directory. Used to jump into a Project's folder
@@ -21,6 +23,7 @@ class FilesScreen extends StatefulWidget {
     required this.files,
     this.onAddToChat,
     this.onSaveDownload,
+    this.onShareDownload,
     this.initialPath,
     super.key,
   });
@@ -153,12 +156,11 @@ class _FilesScreenState extends State<FilesScreen> {
     Navigator.maybePop(context);
   }
 
-  Future<void> _download() async {
-    final selected = _selected;
-    if (selected == null || _downloading) return;
+  Future<void> _saveEntry(RemoteFileEntry entry) async {
+    if (_downloading) return;
     setState(() => _downloading = true);
     try {
-      final download = await widget.files.download(selected.path);
+      final download = await widget.files.download(entry.path);
       final saver = widget.onSaveDownload;
       if (saver != null) {
         await saver(download);
@@ -180,6 +182,54 @@ class _FilesScreenState extends State<FilesScreen> {
       ).showSnackBar(SnackBar(content: Text('Download failed: $error')));
     } finally {
       if (mounted) setState(() => _downloading = false);
+    }
+  }
+
+  Future<void> _shareEntry(RemoteFileEntry entry) async {
+    if (_downloading) return;
+    setState(() => _downloading = true);
+    try {
+      final download = await widget.files.download(entry.path);
+      final sharer = widget.onShareDownload;
+      if (sharer != null) {
+        await sharer(download);
+      } else {
+        await SharePlus.instance.share(
+          ShareParams(
+            files: [XFile.fromData(download.bytes, name: download.filename)],
+          ),
+        );
+      }
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Share failed: $error')));
+    } finally {
+      if (mounted) setState(() => _downloading = false);
+    }
+  }
+
+  Future<void> _download() async {
+    final selected = _selected;
+    if (selected != null) await _saveEntry(selected);
+  }
+
+  void _addEntryToChat(RemoteFileEntry entry) {
+    widget.onAddToChat?.call(entry.path);
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('File reference added to chat')),
+    );
+  }
+
+  void _handleFileAction(String action, RemoteFileEntry entry) {
+    switch (action) {
+      case 'download':
+        unawaited(_saveEntry(entry));
+      case 'add':
+        _addEntryToChat(entry);
+      case 'share':
+        unawaited(_shareEntry(entry));
     }
   }
 
@@ -219,7 +269,41 @@ class _FilesScreenState extends State<FilesScreen> {
                 ),
                 const SizedBox(width: HermesSpacing.md),
                 Expanded(child: Text(entry.name)),
-                const Icon(Icons.chevron_right),
+                if (!entry.isDirectory)
+                  PopupMenuButton<String>(
+                    key: Key('file-actions-${entry.path}'),
+                    tooltip: 'File actions',
+                    onSelected: (action) => _handleFileAction(action, entry),
+                    itemBuilder: (_) => [
+                      const PopupMenuItem(
+                        value: 'download',
+                        child: ListTile(
+                          leading: Icon(Icons.download_outlined),
+                          title: Text('Download'),
+                          contentPadding: EdgeInsets.zero,
+                        ),
+                      ),
+                      if (widget.onAddToChat != null)
+                        const PopupMenuItem(
+                          value: 'add',
+                          child: ListTile(
+                            leading: Icon(Icons.add_comment_outlined),
+                            title: Text('Add to chat'),
+                            contentPadding: EdgeInsets.zero,
+                          ),
+                        ),
+                      const PopupMenuItem(
+                        value: 'share',
+                        child: ListTile(
+                          leading: Icon(Icons.share_outlined),
+                          title: Text('Share'),
+                          contentPadding: EdgeInsets.zero,
+                        ),
+                      ),
+                    ],
+                  )
+                else
+                  const Icon(Icons.chevron_right),
               ],
             ),
           );

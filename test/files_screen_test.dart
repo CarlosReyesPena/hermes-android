@@ -56,6 +56,7 @@ Future<void> _pump(
   _FakeFilesDataSource source, {
   ValueChanged<String>? onAddToChat,
   Future<void> Function(RemoteFileDownload download)? onSaveDownload,
+  Future<void> Function(RemoteFileDownload download)? onShareDownload,
 }) => tester.pumpWidget(
   MaterialApp(
     theme: hermesTheme(Brightness.dark),
@@ -63,6 +64,7 @@ Future<void> _pump(
       files: source,
       onAddToChat: onAddToChat,
       onSaveDownload: onSaveDownload,
+      onShareDownload: onShareDownload,
     ),
   ),
 );
@@ -105,6 +107,63 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(references, ['/srv/project/README.md']);
+  });
+
+  testWidgets('offers file actions directly from the directory row', (
+    tester,
+  ) async {
+    final source = _FakeFilesDataSource();
+    final downloads = <RemoteFileDownload>[];
+    final shares = <RemoteFileDownload>[];
+    final references = <String>[];
+    await _pump(
+      tester,
+      source,
+      onAddToChat: references.add,
+      onSaveDownload: (download) async => downloads.add(download),
+      onShareDownload: (download) async => shares.add(download),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(
+      find.byKey(const Key('file-actions-/srv/project/README.md')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Download'), findsOneWidget);
+    expect(find.text('Add to chat'), findsOneWidget);
+    expect(find.text('Share'), findsOneWidget);
+
+    await tester.tap(find.text('Share'));
+    await tester.pumpAndSettle();
+    expect(shares.single.filename, 'README.md');
+
+    await tester.tap(
+      find.byKey(const Key('file-actions-/srv/project/README.md')),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Add to chat'));
+    await tester.pumpAndSettle();
+    expect(references, ['/srv/project/README.md']);
+
+    await tester.tap(
+      find.byKey(const Key('file-actions-/srv/project/README.md')),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Download'));
+    await tester.pumpAndSettle();
+    expect(downloads.single.filename, 'README.md');
+  });
+
+  testWidgets('folder rows do not offer file-only actions', (tester) async {
+    final source = _FakeFilesDataSource();
+    await _pump(tester, source);
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const Key('file-actions-/srv/project/lib')),
+      findsNothing,
+    );
   });
 
   testWidgets('downloads the selected file through the platform seam', (

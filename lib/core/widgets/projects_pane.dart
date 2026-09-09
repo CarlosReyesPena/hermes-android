@@ -192,6 +192,35 @@ class _ProjectsPaneState extends State<ProjectsPane> {
     }
   }
 
+  Future<void> _deleteProject(HermesProject project) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text('Delete ${project.name}?'),
+        content: const Text(
+          'This permanently deletes the Project. Chats will not be deleted; '
+          'they’ll return to Unassigned.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    try {
+      await widget.repository.delete(project.id);
+    } catch (error) {
+      if (mounted) _showMutationError('delete', error);
+    }
+  }
+
   void _showMutationError(String action, Object error) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('Could not $action the project: $error')),
@@ -284,6 +313,7 @@ class _ProjectsPaneState extends State<ProjectsPane> {
                   overview: _overviewFor(project.id),
                   onRename: () => _renameProject(project),
                   onArchive: () => _archiveProject(project),
+                  onDelete: () => _deleteProject(project),
                 ),
               ),
             if (view.archived.isNotEmpty) ...[
@@ -501,6 +531,7 @@ class _ProjectCard extends StatelessWidget {
   final VoidCallback? onRename;
   final VoidCallback? onArchive;
   final VoidCallback? onRestore;
+  final VoidCallback? onDelete;
 
   const _ProjectCard({
     required this.project,
@@ -510,6 +541,7 @@ class _ProjectCard extends StatelessWidget {
     this.onRename,
     this.onArchive,
     this.onRestore,
+    this.onDelete,
   });
 
   @override
@@ -610,6 +642,8 @@ class _ProjectCard extends StatelessWidget {
                   onArchive?.call();
                 case 'restore':
                   onRestore?.call();
+                case 'delete':
+                  onDelete?.call();
               }
             },
             itemBuilder: (_) => [
@@ -627,6 +661,11 @@ class _ProjectCard extends StatelessWidget {
                 const PopupMenuItem(
                   value: 'restore',
                   child: Text('Restore project'),
+                ),
+              if (onDelete != null)
+                const PopupMenuItem(
+                  value: 'delete',
+                  child: Text('Delete project'),
                 ),
             ],
           ),

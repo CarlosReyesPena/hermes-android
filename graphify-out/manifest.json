@@ -835,18 +835,18 @@
     "semantic_hash": ""
   },
   "lib/core/widgets/projects_pane.dart": {
-    "mtime": 1788822708.417473,
-    "ast_hash": "d7ec2b780ac81ee99969788e333c939a",
+    "mtime": 1788926643.4244359,
+    "ast_hash": "d440f685ec1ae5014c8043faf485bc45",
     "semantic_hash": ""
   },
   "test/projects_pane_test.dart": {
-    "mtime": 1788822725.925701,
-    "ast_hash": "791babb627c5603f694edc5bcf14b4e6",
+    "mtime": 1788926775.491151,
+    "ast_hash": "9397f06cdf4d6642f3e96cb6f48c157d",
     "semantic_hash": ""
   },
   "lib/core/screens/workspace_screen.dart": {
-    "mtime": 1788910874.007219,
-    "ast_hash": "3af4f09a77c24e93e4260db7d8da919b",
+    "mtime": 1788927079.4491324,
+    "ast_hash": "15487b1103c0bd223f3900bd4aecf12b",
     "semantic_hash": ""
   },
   "test/workspace_screen_test.dart": {
@@ -1075,8 +1075,8 @@
     "semantic_hash": ""
   },
   "lib/core/screens/files_screen.dart": {
-    "mtime": 1788911179.9485464,
-    "ast_hash": "71cf11ecb6048609e60f3e9d1c3d3734",
+    "mtime": 1788926775.4711509,
+    "ast_hash": "56783dfd6a43f317e625a889e67e7282",
     "semantic_hash": ""
   },
   "lib/core/services/remote_files_client.dart": {
@@ -1085,8 +1085,8 @@
     "semantic_hash": ""
   },
   "test/files_screen_test.dart": {
-    "mtime": 1788911179.971547,
-    "ast_hash": "4ce5f4ff61e7fdf4f3a1acf6560a4585",
+    "mtime": 1788926775.4971511,
+    "ast_hash": "2bd7c9e13609db22698ef6a3142db496",
     "semantic_hash": ""
   },
   "test/remote_files_client_test.dart": {

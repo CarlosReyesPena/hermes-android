@@ -1,16 +1,16 @@
-# Graph Report - hermes-android  (2026-09-08)
+# Graph Report - hermes-android  (2026-09-09)
 
 ## Corpus Check
-- 245 files · ~258,211 words
+- 245 files · ~258,756 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 4869 nodes · 6430 edges · 215 communities (202 shown, 13 thin omitted)
+- 4875 nodes · 6437 edges · 221 communities (208 shown, 13 thin omitted)
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 14 edges (avg confidence: 0.5)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `69cf7bd7`
+- Built from commit: `df5d9de1`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -220,8 +220,14 @@
 - [[_COMMUNITY_Community 209|Community 209]]
 - [[_COMMUNITY_Community 210|Community 210]]
 - [[_COMMUNITY_Community 211|Community 211]]
+- [[_COMMUNITY_Community 212|Community 212]]
+- [[_COMMUNITY_Community 213|Community 213]]
+- [[_COMMUNITY_Community 214|Community 214]]
 - [[_COMMUNITY_Community 215|Community 215]]
+- [[_COMMUNITY_Community 216|Community 216]]
 - [[_COMMUNITY_Community 217|Community 217]]
+- [[_COMMUNITY_Community 218|Community 218]]
+- [[_COMMUNITY_Community 219|Community 219]]
 - [[_COMMUNITY_Community 220|Community 220]]
 
 ## God Nodes (most connected - your core abstractions)
@@ -237,6 +243,8 @@
 10. `state_from()` - 19 edges
 
 ## Surprising Connections (you probably didn't know these)
+- `_MemoryCredentialStore` --implements--> `CredentialStore`  [EXTRACTED]
+  test/workspace_entry_point_test.dart → lib/core/services/connection_manager.dart
 - `_CronScreenState` --inherits--> `state`  [EXTRACTED]
   lib/core/screens/cron_screen.dart → test/gateway_turn_journal_test.dart
 - `_FilesScreenState` --inherits--> `state`  [EXTRACTED]
@@ -245,13 +253,11 @@
   lib/core/screens/memory_screen.dart → test/gateway_turn_journal_test.dart
 - `_SkillsScreenState` --inherits--> `state`  [EXTRACTED]
   lib/core/screens/skills_screen.dart → test/gateway_turn_journal_test.dart
-- `WorkspaceSessionsScreenState` --inherits--> `state`  [EXTRACTED]
-  lib/core/screens/workspace_sessions_screen.dart → test/gateway_turn_journal_test.dart
 
 ## Import Cycles
 - None detected.
 
-## Communities (215 total, 13 thin omitted)
+## Communities (221 total, 13 thin omitted)
 
 ### Community 0 - "Community 0"
 Cohesion: 0.01
@@ -263,7 +269,7 @@ Nodes (122): dart:collection, GatewaySessionBinding? get, GatewayTurnJournalBind
 
 ### Community 2 - "Community 2"
 Cohesion: 0.02
-Nodes (100): class FlutterSecureGatewayTurnJournalStore, Expando, FlutterSecureStorage, _, ackUncertain, activeRetention, allowedJsonKeys, _androidOptions (+92 more)
+Nodes (99): class FlutterSecureGatewayTurnJournalStore, Expando, _, ackUncertain, activeRetention, allowedJsonKeys, _androidOptions, authority (+91 more)
 
 ### Community 3 - "Community 3"
 Cohesion: 0.02
@@ -275,7 +281,7 @@ Nodes (93): IOWebSocketChannel?, package:web_socket_channel/io.dart, _addConnect
 
 ### Community 5 - "Community 5"
 Cohesion: 0.02
-Nodes (98): ApiClient, package:flutter_secure_storage/flutter_secure_storage.dart, package:http/io_client.dart, abort, _activeStreamCancelled, _activeStreamCompletion, _activeStreamSubscription, _androidOptions (+90 more)
+Nodes (99): ApiClient, FlutterSecureStorage, package:flutter_secure_storage/flutter_secure_storage.dart, package:http/io_client.dart, abort, _activeStreamCancelled, _activeStreamCompletion, _activeStreamSubscription (+91 more)
 
 ### Community 6 - "Community 6"
 Cohesion: 0.14
@@ -329,12 +335,12 @@ Nodes (41): GatewayTurnSnapshot, _, ackUncertain, applyAck, applyEvent, applyRec
 
 ### Community 17 - "Community 17"
 Cohesion: 0.05
-Nodes (40): EdgeInsets, ListView, package:flutter/semantics.dart, package:hermes_android/core/utils/chat_history_scroll.dart, package:hermes_android/core/widgets/chat_end_affordance.dart, required String sessionId,
-  double, StreamCallback, apiClient (+32 more)
+Nodes (38): EdgeInsets, ListView, package:flutter/semantics.dart, package:hermes_android/core/utils/chat_history_scroll.dart, package:hermes_android/core/widgets/chat_end_affordance.dart, required String sessionId,
+  double, StreamCallback, apiClient (+30 more)
 
 ### Community 18 - "Community 18"
 Cohesion: 0.10
-Nodes (20): applyTo, description, followsSystemExactly, fromStorage, hashCode, label, maximumExplicitMultiplier, minimumExplicitMultiplier (+12 more)
+Nodes (21): applyTo, description, followsSystemExactly, fromStorage, hashCode, label, maximumExplicitMultiplier, minimumExplicitMultiplier (+13 more)
 
 ### Community 19 - "Community 19"
 Cohesion: 0.05
@@ -368,8 +374,8 @@ Cohesion: 0.08
 Nodes (25): gateway_turn_coordinator.dart, package:crypto/crypto.dart, DesktopGatewayClient, _client, close, _closed, _connectionScopeKey, credentialDigest (+17 more)
 
 ### Community 26 - "Community 26"
-Cohesion: 0.06
-Nodes (32): Exception, QuickChatPromotionCancelled, CredentialStorageException, GatewayTurnCoordinatorException, GatewayTurnJournalException, JsonRpcError, StreamController, _cache (+24 more)
+Cohesion: 0.08
+Nodes (25): StreamController, _cache, cancelled, client, close, connectionCount, controller, delete (+17 more)
 
 ### Community 27 - "Community 27"
 Cohesion: 0.05
@@ -396,32 +402,32 @@ Cohesion: 0.10
 Nodes (20): activeId, assignmentParams, call, calls, chatSeq, chatsPerSpace, createCount, createParams (+12 more)
 
 ### Community 33 - "Community 33"
-Cohesion: 0.20
-Nodes (9): package:hermes_android/core/models/gateway_turn_contract.dart, package:hermes_android/core/services/gateway_turn_recovery.dart, package:hermes_android/core/services/gateway_turn_ui_projection.dart, _acceptedState, _clientTurnId, main, _manifestDigest, _messageId (+1 more)
+Cohesion: 0.22
+Nodes (8): package:hermes_android/core/models/gateway_turn_contract.dart, package:hermes_android/core/services/gateway_turn_ui_projection.dart, _acceptedState, _clientTurnId, main, _manifestDigest, _messageId, _turnId
 
 ### Community 34 - "Community 34"
-Cohesion: 0.09
-Nodes (32): _AddDialog, _AddDialogState, ChatScreen, _ChatScreenState, _AboutCard, _AboutCardState, _SessionSourcesFilter, _SessionSourcesFilterState (+24 more)
+Cohesion: 0.08
+Nodes (36): _AddDialog, _AddDialogState, HermesApp, HermesAppState, ChatScreen, _ChatScreenState, _AboutCard, _AboutCardState (+28 more)
 
 ### Community 35 - "Community 35"
 Cohesion: 0.11
 Nodes (19): AiSearchModel, clear, configuredFromOptions, fromStorage, isRecommended, _key, model, open (+11 more)
 
 ### Community 36 - "Community 36"
-Cohesion: 0.12
-Nodes (15): Container, Icon, package:hermes_android/core/widgets/cron_failures_banner.dart, package:hermes_android/core/widgets/hermes_components.dart, Size, main, pump, brightness (+7 more)
+Cohesion: 0.11
+Nodes (18): ../models/gateway_clarify.dart, GatewayClarifyRequest, _set, build, ClarifyResponder, createState, dispose, _error (+10 more)
 
 ### Community 37 - "Community 37"
 Cohesion: 0.09
 Nodes (21): gateway_turn_recovery.dart, ../models/gateway_turn_contract.dart, GatewayRecoveryTurnStatus, GatewayTurnPendingInput, GatewayTurnRecoveryFailure, assistantText, attachmentManifestDigest, clientTurnId (+13 more)
 
 ### Community 38 - "Community 38"
-Cohesion: 0.17
-Nodes (11): close, closeCount, _connection, detachAttachments, interrupt, main, onSessionBound, onTurnSettled (+3 more)
+Cohesion: 0.15
+Nodes (12): package:hermes_android/core/services/gateway_turn_application_controller.dart, close, closeCount, _connection, detachAttachments, interrupt, main, onSessionBound (+4 more)
 
 ### Community 39 - "Community 39"
-Cohesion: 0.08
-Nodes (25): AnimationController, EdgeInsetsGeometry, actionLabel, build, child, _controller, count, createState (+17 more)
+Cohesion: 0.07
+Nodes (26): AnimationController, EdgeInsetsGeometry, actionLabel, build, child, _controller, count, createState (+18 more)
 
 ### Community 40 - "Community 40"
 Cohesion: 0.08
@@ -456,8 +462,8 @@ Cohesion: 0.06
 Nodes (30): package:flutter_local_notifications/flutter_local_notifications.dart, body, cancel, cancelAll, cancelTurnCompleted, channel, description, dispose (+22 more)
 
 ### Community 47 - "Community 47"
-Cohesion: 0.07
-Nodes (30): SavedConnection, build, _buildBody, _client, connection, createState, dispose, _entries (+22 more)
+Cohesion: 0.13
+Nodes (15): build, _buildBody, _client, connection, createState, dispose, _entries, _error (+7 more)
 
 ### Community 48 - "Community 48"
 Cohesion: 0.12
@@ -480,8 +486,8 @@ Cohesion: 0.07
 Nodes (27): active, activeId, addedAt, archived, _asInt, boardSlug, color, createdAt (+19 more)
 
 ### Community 53 - "Community 53"
-Cohesion: 0.05
-Nodes (45): http.BaseClient, package:hermes_android/core/controllers/voice_composer_controller.dart, package:hermes_android/core/screens/chat_screen.dart, package:hermes_android/core/services/connection_manager.dart, package:hermes_android/core/widgets/voice_composer_controls.dart, package:http/http.dart, StreamedResponse, support/fake_voice_composer_adapter.dart (+37 more)
+Cohesion: 0.08
+Nodes (25): package:hermes_android/core/controllers/voice_composer_controller.dart, package:hermes_android/core/screens/chat_screen.dart, package:hermes_android/core/services/connection_manager.dart, package:hermes_android/core/services/remote_files_client.dart, package:hermes_android/core/widgets/voice_composer_controls.dart, support/fake_voice_composer_adapter.dart, support/inert_turn_application_session.dart, _EmptyHttpClient (+17 more)
 
 ### Community 54 - "Community 54"
 Cohesion: 0.14
@@ -508,16 +514,16 @@ Cohesion: 0.17
 Nodes (12): build, code, _copy, createState, cursor, language, MarkdownCodeBlock, _MarkdownCodeBlockState (+4 more)
 
 ### Community 60 - "Community 60"
-Cohesion: 0.05
-Nodes (46): ../services/chat_space_store.dart, ProjectsRepository, ProjectsView, space_migration_preview.dart, StreamSubscription, ../utils/project_card_summary.dart, _archiveProject, _bootstrap (+38 more)
+Cohesion: 0.04
+Nodes (48): ../services/chat_space_store.dart, ProjectsRepository, ProjectsView, space_migration_preview.dart, StreamSubscription, ../utils/project_card_summary.dart, _archiveProject, _bootstrap (+40 more)
 
 ### Community 61 - "Community 61"
 Cohesion: 0.10
 Nodes (20): GatewayTurnSettledCallback, background, _clientTurnId, close, _completedState, detachAttachments, foreground, interrupt (+12 more)
 
 ### Community 62 - "Community 62"
-Cohesion: 0.14
-Nodes (13): message_content.dart, buildChatDisplayItems, currentGroup, displayItems, flushToolGroup, initiallyExpanded, lastUserPrompt, notices (+5 more)
+Cohesion: 0.13
+Nodes (14): message_content.dart, ../models/gateway_activity.dart, buildChatDisplayItems, currentGroup, displayItems, flushToolGroup, initiallyExpanded, lastUserPrompt (+6 more)
 
 ### Community 63 - "Community 63"
 Cohesion: 0.20
@@ -636,8 +642,8 @@ Cohesion: 0.22
 Nodes (9): Delivery roadmap, Phase 0 — Contracts and shell foundation, Phase 1.5 — Chat interface rework, Phase 1 — Organization-first daily home, Phase 2 — Cheap AI organizer, Phase 3 — Attention Center and reliable notifications, Phase 4 — Project Files and Assets, Phase 5 — Settings and control-plane parity (+1 more)
 
 ### Community 101 - "Community 101"
-Cohesion: 0.15
-Nodes (12): package:hermes_android/core/widgets/hermes_shell.dart, badges, brightness, initial, main, pumpAndSettle, _pumpShell, pumpWidget (+4 more)
+Cohesion: 0.06
+Nodes (30): Brightness, Container, Icon, package:hermes_android/core/widgets/hermes_shell.dart, package:hermes_android/core/widgets/space_migration_preview.dart, Size, brightness, main (+22 more)
 
 ### Community 102 - "Community 102"
 Cohesion: 0.33
@@ -669,7 +675,7 @@ Nodes (3): Delivery architecture, Native Android notifications, Notification cha
 
 ### Community 109 - "Community 109"
 Cohesion: 0.13
-Nodes (14): JsonRpcError get, ProjectsUnsupportedException, activeId, call, calls, connectionId, failNext, _FakeGateway (+6 more)
+Nodes (14): JsonRpcError get, package:hermes_android/core/services/projects_gateway_client.dart, activeId, call, calls, connectionId, failNext, _FakeGateway (+6 more)
 
 ### Community 110 - "Community 110"
 Cohesion: 0.20
@@ -684,8 +690,8 @@ Cohesion: 0.08
 Nodes (25): ai_search_query_rewriter.dart, AiSearchModel?, AiSearchModel? get, _aiModel, _aiRewriter, availableModels, fromConnection, hits (+17 more)
 
 ### Community 113 - "Community 113"
-Cohesion: 0.13
-Nodes (14): package:hermes_android/core/services/projects_gateway_client.dart, call, _error, id, isAuto, isNoProject, label, main (+6 more)
+Cohesion: 0.10
+Nodes (21): Exception, QuickChatPromotionCancelled, ConfigBackupException, CredentialStorageException, GatewayTurnCoordinatorException, GatewayTurnJournalException, ProjectsUnsupportedException, JsonRpcError (+13 more)
 
 ### Community 114 - "Community 114"
 Cohesion: 0.12
@@ -698,8 +704,8 @@ Nodes (26): DateTime? now,
   int, _binding, buildActivityFeed, _clientTurn, clientTurnId, connectionId, _digestA (+18 more)
 
 ### Community 116 - "Community 116"
-Cohesion: 0.06
-Nodes (29): dart:math, package:flutter/services.dart, package:hermes_android/core/services/android_launch_intent_service.dart, package:hermes_android/core/services/android_share_intent_service.dart, channel, main, channel, main (+21 more)
+Cohesion: 0.14
+Nodes (13): buildManager, _cache, create, delete, main, prefs, pumpAndSettle, pumpHome (+5 more)
 
 ### Community 117 - "Community 117"
 Cohesion: 0.10
@@ -711,21 +717,19 @@ Nodes (54): _MoveTarget, TabController, ../utils/project_session_filter.dart, _a
 
 ### Community 119 - "Community 119"
 Cohesion: 0.08
-Nodes (27): HermesHeader, ../models/gateway_insight.dart, GatewayNotice, MessageBubble, _ModelSectionError, _MetaChip, StatelessWidget, _OfflineBanner (+19 more)
+Nodes (26): HermesHeader, ../models/gateway_insight.dart, GatewayNotice, MessageBubble, _ModelSectionError, _MetaChip, StatelessWidget, _OfflineBanner (+18 more)
 
 ### Community 120 - "Community 120"
 Cohesion: 0.11
 Nodes (18): completer, StateError, call, callsTo, failNextSessions, _FakeGateway, gate, listSupported (+10 more)
 
 ### Community 121 - "Community 121"
-Cohesion: 0.14
-Nodes (13): Duration? endedAgo,
-  int, required String id,
-  String, _epoch, _ids, main, messageCount, _now, null (+5 more)
+Cohesion: 0.12
+Nodes (16): http.BaseClient, StreamedResponse, body, _HangingHttpClient, _JsonHttpClient, main, send, _EmptyChatHttpClient (+8 more)
 
 ### Community 122 - "Community 122"
-Cohesion: 0.05
-Nodes (38): ../models/gateway_clarify.dart, GatewayClarifyRequest, _set, archivedAt, connectionId, empty, expiresAtFor, expiries (+30 more)
+Cohesion: 0.10
+Nodes (20): archivedAt, connectionId, empty, expiresAtFor, expiries, isQuick, _key, load (+12 more)
 
 ### Community 123 - "Community 123"
 Cohesion: 0.09
@@ -747,12 +751,12 @@ Cohesion: 0.17
 Nodes (11): Client, AiSearchQueryRewriter, _apiKey, _baseUrl, close, _errorMessage, _http, _joinBaseUrl (+3 more)
 
 ### Community 127 - "Community 127"
-Cohesion: 0.07
-Nodes (29): package:cryptography/cryptography.dart, appVersion, ConfigBackup, ConfigBackupCodec, _connectionFromJson, connections, _connectionToJson, createdAt (+21 more)
+Cohesion: 0.06
+Nodes (30): dart:typed_data, package:cryptography/cryptography.dart, appVersion, ConfigBackup, ConfigBackupCodec, _connectionFromJson, connections, _connectionToJson (+22 more)
 
 ### Community 128 - "Community 128"
-Cohesion: 0.07
-Nodes (32): dart:convert, package:hermes_android/core/screens/cron_screen.dart, package:hermes_android/core/services/ai_search_query_rewriter.dart, package:hermes_android/core/services/remote_files_client.dart, package:hermes_android/core/services/session_search_client.dart, package:hermes_android/core/services/session_search_controller.dart, package:hermes_android/core/services/session_search_preferences.dart, package:http/testing.dart (+24 more)
+Cohesion: 0.11
+Nodes (23): dart:convert, package:hermes_android/core/services/ai_search_query_rewriter.dart, package:hermes_android/core/services/session_search_client.dart, package:hermes_android/core/services/session_search_controller.dart, package:hermes_android/core/services/session_search_preferences.dart, package:http/http.dart, package:http/testing.dart, AiSearchRewriteException (+15 more)
 
 ### Community 129 - "Community 129"
 Cohesion: 0.09
@@ -763,9 +767,11 @@ Cohesion: 0.11
 Nodes (18): ../services/android_share_intent_service.dart, ../utils/new_chat_options.dart, NewChatMode, action, build, buildSharedPrompt, createState, hasAttachments (+10 more)
 
 ### Community 131 - "Community 131"
-Cohesion: 0.12
-Nodes (15): Duration? endedAgo,
-  String, package:hermes_android/core/widgets/home_pane.dart, attention, _epoch, main, _now, preview, projectNames (+7 more)
+Cohesion: 0.07
+Nodes (29): Duration? endedAgo,
+  int, Duration? endedAgo,
+  String, package:hermes_android/core/utils/home_digest.dart, package:hermes_android/core/widgets/home_pane.dart, required String id,
+  String, _epoch, _ids, main (+21 more)
 
 ### Community 132 - "Community 132"
 Cohesion: 0.14
@@ -781,12 +787,12 @@ Cohesion: 0.50
 Nodes (3): ../services/gateway_turn_coordinator.dart, classifyTurnRecoveryFailure, TurnRecoveryFallback
 
 ### Community 135 - "Community 135"
-Cohesion: 0.11
-Nodes (18): package:hermes_android/core/services/gateway_turn_journal.dart, FlutterSecureGatewayTurnJournalStore, GatewayTurnJournalSerializationAuthority, GatewayTurnJournalStore, delete, deleteLegacy, _guard, legacyValue (+10 more)
+Cohesion: 0.18
+Nodes (10): package:hermes_android/core/services/gateway_turn_journal.dart, delete, deleteLegacy, _guard, legacyValue, read, readLegacy, unavailable (+2 more)
 
 ### Community 136 - "Community 136"
-Cohesion: 0.07
-Nodes (25): package:hermes_android/core/services/config_backup.dart, package:hermes_android/core/services/config_backup_service.dart, package:hermes_android/core/widgets/config_backup_card.dart, ConfigBackupException, ConfigImportResult, buildCard, completeExportSheet, enterText (+17 more)
+Cohesion: 0.09
+Nodes (21): package:hermes_android/core/services/config_backup.dart, package:hermes_android/core/services/config_backup_service.dart, package:hermes_android/core/widgets/config_backup_card.dart, ConfigImportResult, buildCard, completeExportSheet, enterText, main (+13 more)
 
 ### Community 137 - "Community 137"
 Cohesion: 0.17
@@ -802,16 +808,16 @@ Cohesion: 0.12
 Nodes (15): config_backup.dart, config_backup_service.dart, ConfigBackupService get, ConnectionManager, package:file_picker/file_picker.dart, package:package_info_plus/package_info_plus.dart, package:path_provider/path_provider.dart, package:share_plus/share_plus.dart (+7 more)
 
 ### Community 140 - "Community 140"
-Cohesion: 0.15
-Nodes (13): ../models/gateway_activity.dart, GatewayToolActivity, activities, activity, build, createState, _emojiFor, _expanded (+5 more)
+Cohesion: 0.17
+Nodes (12): GatewayToolActivity, activities, activity, build, createState, _emojiFor, _expanded, GatewayActivityCard (+4 more)
 
 ### Community 141 - "Community 141"
-Cohesion: 0.12
-Nodes (15): package:hermes_android/core/services/turn_notification_router.dart, _baseMs, _cache, _client, controller, delete, _digest, main (+7 more)
+Cohesion: 0.13
+Nodes (14): _baseMs, _cache, _client, controller, delete, _digest, main, managerWithConnection (+6 more)
 
 ### Community 142 - "Community 142"
-Cohesion: 0.07
-Nodes (28): _back, _body, build, createState, _directoryBody, _download, _downloading, _entries (+20 more)
+Cohesion: 0.06
+Nodes (32): _addEntryToChat, _back, _body, build, createState, _directoryBody, _download, _downloading (+24 more)
 
 ### Community 143 - "Community 143"
 Cohesion: 0.15
@@ -835,16 +841,16 @@ Cohesion: 0.12
 Nodes (15): Color?, IconData, build, ChatContextHeader, _connectionColor, connectionLabel, connectionStatus, _ContextChip (+7 more)
 
 ### Community 148 - "Community 148"
-Cohesion: 0.13
-Nodes (15): ../utils/pending_approval_probe.dart, PendingApprovalSummary, approval, _approvals, build, createState, initState, loadApprovals (+7 more)
+Cohesion: 0.14
+Nodes (13): ../utils/pending_approval_probe.dart, PendingApprovalSummary, approval, _approvals, build, createState, initState, loadApprovals (+5 more)
 
 ### Community 149 - "Community 149"
-Cohesion: 0.08
-Nodes (21): double get, package:hermes_android/core/screens/workspace_screen.dart, package:hermes_android/core/services/chat_model_override_store.dart, package:hermes_android/core/services/composer_draft_store.dart, package:hermes_android/core/services/text_size_preference.dart, package:hermes_android/core/widgets/text_size_settings_card.dart, package:hermes_android/main.dart, package:shared_preferences/shared_preferences.dart (+13 more)
+Cohesion: 0.11
+Nodes (16): double get, package:hermes_android/core/screens/workspace_screen.dart, package:hermes_android/core/services/text_size_preference.dart, package:hermes_android/core/widgets/text_size_settings_card.dart, package:hermes_android/main.dart, main, scale, textScaleFactor (+8 more)
 
 ### Community 150 - "Community 150"
 Cohesion: 0.07
-Nodes (27): dart:typed_data, desktop_gateway_client.dart, binary, branch, bytes, byteSize, close, dashboard (+19 more)
+Nodes (28): desktop_gateway_client.dart, binary, branch, bytes, byteSize, close, dashboard, defaultDirectory (+20 more)
 
 ### Community 151 - "Community 151"
 Cohesion: 0.11
@@ -855,16 +861,16 @@ Cohesion: 0.11
 Nodes (17): cancel, cancelAll, cancelAllCount, cancelled, fireTap, getLaunchPayload, initialize, initializeCount (+9 more)
 
 ### Community 153 - "Community 153"
-Cohesion: 0.12
-Nodes (14): package:hermes_android/core/theme/hermes_theme.dart, package:hermes_android/core/utils/pending_approval_probe.dart, package:hermes_android/core/widgets/pending_approvals_banner.dart, main, _pump, pumpWidget, verbose, command (+6 more)
+Cohesion: 0.10
+Nodes (19): package:hermes_android/core/theme/hermes_theme.dart, package:hermes_android/core/utils/pending_approval_probe.dart, package:hermes_android/core/widgets/cron_failures_banner.dart, package:hermes_android/core/widgets/hermes_components.dart, package:hermes_android/core/widgets/pending_approvals_banner.dart, main, pump, main (+11 more)
 
 ### Community 154 - "Community 154"
 Cohesion: 0.22
 Nodes (8): Définition de terminé pour chaque tranche, Hermes Android — produit indispensable, Pilier 11 — Sécurité, Pilier 12 — Automatisations, Pilier 8 — Continuité et mode dégradé, Pilier 9 — Accès instantané Android, Principes non négociables, Vision
 
 ### Community 155 - "Community 155"
-Cohesion: 0.10
-Nodes (19): package:hermes_android/core/services/quick_chat_store.dart, package:hermes_android/core/utils/home_digest.dart, package:hermes_android/core/utils/new_chat_options.dart, _connection, _idsIn, main, _now, _projectJson (+11 more)
+Cohesion: 0.07
+Nodes (25): package:hermes_android/core/services/android_share_intent_service.dart, package:hermes_android/core/services/quick_chat_store.dart, package:hermes_android/core/utils/new_chat_options.dart, package:hermes_android/core/widgets/share_text_review_sheet.dart, RadioListTile, channel, main, _connection (+17 more)
 
 ### Community 156 - "Community 156"
 Cohesion: 0.22
@@ -883,20 +889,20 @@ Cohesion: 0.14
 Nodes (14): ../services/text_size_preference.dart, TextSizePreference, TextSizePreferenceStore, build, createState, initState, onChanged, _preference (+6 more)
 
 ### Community 160 - "Community 160"
-Cohesion: 0.14
-Nodes (12): Brightness, package:hermes_android/core/services/chat_space_store.dart, package:hermes_android/core/widgets/space_migration_preview.dart, main, session, brightness, main, _project (+4 more)
+Cohesion: 0.12
+Nodes (15): package:hermes_android/core/widgets/biometric_settings_card.dart, SwitchListTile, auth, authenticate, capabilities, capabilityChecks, enabled, enrolled (+7 more)
 
 ### Community 161 - "Community 161"
 Cohesion: 0.33
 Nodes (9): Bugs discovered and fixed during on-device verification, Live verification (emulator, restored real config), Task 1: Lock the five-destination shell contract, Task 2: Embed the conversation browser in Workspace, Task 3: Wire Chats to real Workspace data, Task 4: Make Workspace the connection launch surface, Task 5: Remove normal legacy navigation and stale claims, Task 6: Full quality and device gate (+1 more)
 
 ### Community 162 - "Community 162"
-Cohesion: 0.14
-Nodes (13): support/memory_turn_journal_store.dart, _baseMs, _binding, _client, _connection, _digest, _entry, journal (+5 more)
+Cohesion: 0.13
+Nodes (14): package:hermes_android/core/services/turn_notification_router.dart, support/memory_turn_journal_store.dart, _baseMs, _binding, _client, _connection, _digest, _entry (+6 more)
 
 ### Community 163 - "Community 163"
-Cohesion: 0.17
-Nodes (11): connection_manager.dart, gateway_turn_journal.dart, GatewayTurnJournal, connection, _journal, _lastUsedConnection, resolve, _resolveFromJournal (+3 more)
+Cohesion: 0.15
+Nodes (12): connection_manager.dart, gateway_turn_journal.dart, SavedConnection, GatewayTurnJournal, connection, _journal, _lastUsedConnection, resolve (+4 more)
 
 ### Community 164 - "Community 164"
 Cohesion: 0.50
@@ -919,8 +925,8 @@ Cohesion: 0.33
 Nodes (6): Phase A — Fondation indispensable, Phase B — Action mobile, Phase C — Pilotage autonome, Phase D — Assistant personnel, Phase E — Plateforme sécurisée, Plan de livraison
 
 ### Community 170 - "Community 170"
-Cohesion: 0.17
-Nodes (11): package:hermes_android/core/models/project_sessions_tree.dart, package:hermes_android/core/widgets/project_detail_screen.dart, ProjectSessionsView, main, projectId, projectName, projects, _pump (+3 more)
+Cohesion: 0.07
+Nodes (28): package:hermes_android/core/models/hermes_project.dart, package:hermes_android/core/models/project_sessions_tree.dart, package:hermes_android/core/screens/workspace_sessions_screen.dart, package:hermes_android/core/services/projects_repository.dart, package:hermes_android/core/widgets/project_detail_screen.dart, ProjectSessionsView, archived, firstWhere (+20 more)
 
 ### Community 171 - "Community 171"
 Cohesion: 0.40
@@ -928,19 +934,19 @@ Nodes (5): Critères d’acceptation, Dépendance serveur, Objectif, Pilier 3 �
 
 ### Community 172 - "Community 172"
 Cohesion: 0.09
-Nodes (22): CredentialStore, FlutterSecureCredentialStore, approve, authenticate, _cache, capabilities, create, delete (+14 more)
+Nodes (19): package:hermes_android/core/services/biometric_lock_store.dart, package:hermes_android/core/services/chat_model_override_store.dart, package:hermes_android/core/services/composer_draft_store.dart, package:shared_preferences/shared_preferences.dart, approve, authenticate, _cache, capabilities (+11 more)
 
 ### Community 173 - "Community 173"
 Cohesion: 0.50
 Nodes (4): Aperçu intelligent, Dépendance serveur, Pilier 6 — Intelligence des Projects, Politique validée
 
 ### Community 174 - "Community 174"
-Cohesion: 0.20
-Nodes (9): package:hermes_android/core/services/projects_repository.dart, archived, firstWhere, id, main, name, _now, _option (+1 more)
+Cohesion: 0.13
+Nodes (13): package:hermes_android/core/models/gateway_sensitive_prompt.dart, package:hermes_android/core/widgets/gateway_sensitive_prompt_dialog.dart, apiClient, _connectionId, main, pumpAndSettle, _pumpChat, pumpWidget (+5 more)
 
 ### Community 175 - "Community 175"
-Cohesion: 0.10
-Nodes (18): package:hermes_android/core/services/biometric_lock_store.dart, package:hermes_android/core/widgets/biometric_lock_gate.dart, auth, authenticate, authenticateCalls, autoApprove, capabilities, enabled (+10 more)
+Cohesion: 0.12
+Nodes (16): package:hermes_android/core/widgets/biometric_lock_gate.dart, auth, authenticate, authenticateCalls, autoApprove, capabilities, enabled, enrolled (+8 more)
 
 ### Community 176 - "Community 176"
 Cohesion: 0.50
@@ -975,8 +981,8 @@ Cohesion: 0.20
 Nodes (9): allowPermanent, choices, command, description, fromEventData, fromWireValue, smartDenied, wireValue (+1 more)
 
 ### Community 184 - "Community 184"
-Cohesion: 0.06
-Nodes (31): BiometricAuthenticator, package:hermes_android/core/screens/settings_screen.dart, package:hermes_android/core/services/biometric_authenticator.dart, package:hermes_android/core/widgets/biometric_settings_card.dart, LocalAuthBiometricAuthenticator, SwitchListTile, _LockAuthenticator, _FakeAuthenticator (+23 more)
+Cohesion: 0.12
+Nodes (16): BiometricAuthenticator, package:hermes_android/core/screens/settings_screen.dart, package:hermes_android/core/services/biometric_authenticator.dart, LocalAuthBiometricAuthenticator, _LockAuthenticator, _FakeAuthenticator, _FakeAuthenticator, authenticate (+8 more)
 
 ### Community 185 - "Community 185"
 Cohesion: 0.18
@@ -1000,7 +1006,7 @@ Nodes (11): activity, day, elapsed, formatRelativeAge, formatRelativeTime, local
 
 ### Community 190 - "Community 190"
 Cohesion: 0.18
-Nodes (10): package:hermes_android/core/services/gateway_turn_application_controller.dart, close, closed, detachAttachments, interrupt, onSessionBound, onTurnSettled, recoverPending (+2 more)
+Nodes (10): package:hermes_android/core/services/gateway_turn_recovery.dart, close, closed, detachAttachments, interrupt, onSessionBound, onTurnSettled, recoverPending (+2 more)
 
 ### Community 191 - "Community 191"
 Cohesion: 0.29
@@ -1010,30 +1016,38 @@ Nodes (6): Chat UI — en-tête contextuel et composer unifié, Tests, Tranche 1
 Cohesion: 0.50
 Nodes (4): ChangeNotifier, VoiceComposerController, CapabilityRegistry, HermesShellController
 
+### Community 193 - "Community 193"
+Cohesion: 0.14
+Nodes (14): build, _buildBody, _client, connection, createState, dispose, _error, initState (+6 more)
+
 ### Community 194 - "Community 194"
-Cohesion: 0.12
-Nodes (13): package:hermes_android/core/models/hermes_project.dart, package:hermes_android/core/models/session.dart, package:hermes_android/core/screens/workspace_sessions_screen.dart, package:hermes_android/core/utils/project_session_filter.dart, main, _session, main, enterSelection (+5 more)
+Cohesion: 0.18
+Nodes (9): package:hermes_android/core/models/gateway_insight.dart, package:hermes_android/core/utils/chat_display_items.dart, package:hermes_android/core/widgets/gateway_insight_card.dart, main, _notice, _subagent, _tool, main (+1 more)
 
 ### Community 195 - "Community 195"
 Cohesion: 0.17
 Nodes (10): dart:async, package:hermes_android/core/services/capability_registry.dart, package:hermes_android/core/services/gateway_turn_coordinator.dart, package:hermes_android/core/services/ws_client.dart, package:hermes_android/core/utils/turn_recovery_fallback.dart, main, protocolMajor, protocolName (+2 more)
 
 ### Community 196 - "Community 196"
-Cohesion: 0.15
-Nodes (13): ../services/biometric_authenticator.dart, ../services/biometric_lock_store.dart, authenticator, BiometricSettingsCard, _BiometricSettingsCardState, build, _busy, createState (+5 more)
+Cohesion: 0.10
+Nodes (19): ../services/biometric_authenticator.dart, BiometricLockStore, ../services/biometric_lock_store.dart, enabled, preferenceKey, _preferences, setEnabled, SharedPreferences (+11 more)
 
 ### Community 197 - "Community 197"
 Cohesion: 0.14
 Nodes (13): ../controllers/voice_composer_controller.dart, build, cancelKey, controller, enabled, _formatElapsed, indicatorKey, onCancel (+5 more)
 
 ### Community 198 - "Community 198"
-Cohesion: 0.11
-Nodes (17): bool get, LocalAuthentication, choices, fromEventData, hasChoices, multiSelect, question, requestId (+9 more)
+Cohesion: 0.18
+Nodes (10): LocalAuthentication, package:local_auth/local_auth.dart, _auth, authenticate, BiometricAuthenticator, BiometricCapabilities, canPrompt, capabilities (+2 more)
 
 ### Community 199 - "Community 199"
 Cohesion: 0.14
 Nodes (13): package:hermes_android/core/widgets/chat_context_header.dart, String? projectName,
   String, connection, main, model, _pump, pumpAndSettle, pumpWidget (+5 more)
+
+### Community 200 - "Community 200"
+Cohesion: 0.20
+Nodes (9): dart:math, _contrastRatio, dark, darker, light, lighter, linearize, main (+1 more)
 
 ### Community 201 - "Community 201"
 Cohesion: 0.20
@@ -1043,21 +1057,17 @@ Nodes (9): package:hermes_android/core/services/turn_notification_service.dart, 
 Cohesion: 0.17
 Nodes (11): ../models/projects_tree_overview.dart, relative_time.dart, buildProjectCardSummary, chats, currentFocus, _firstNamedPreview, focus, isEmpty (+3 more)
 
-### Community 204 - "Community 204"
-Cohesion: 0.29
-Nodes (7): main, _pumpAndReadTokens, pumpWidget, seen, _tokensFrom, HermesTokens, ThemeExtension
-
 ### Community 205 - "Community 205"
 Cohesion: 0.20
 Nodes (9): clear, ComposerDraftStore, _key, open, _preferences, _prefix, read, write (+1 more)
 
 ### Community 206 - "Community 206"
-Cohesion: 0.07
-Nodes (25): package:flutter_test/flutter_test.dart, package:hermes_android/core/models/connection.dart, package:hermes_android/core/models/gateway_insight.dart, package:hermes_android/core/services/connection_config_string.dart, package:hermes_android/core/services/desktop_gateway_client.dart, package:hermes_android/core/utils/chat_display_items.dart, package:hermes_android/core/utils/message_content.dart, package:hermes_android/core/utils/relative_time.dart (+17 more)
+Cohesion: 0.18
+Nodes (9): package:hermes_android/core/models/connection.dart, package:hermes_android/core/services/connection_config_string.dart, package:hermes_android/core/services/desktop_gateway_client.dart, _connection, main, _connection, desktopGatewayUrl, gatewayPrefix (+1 more)
 
 ### Community 207 - "Community 207"
-Cohesion: 0.29
-Nodes (6): BiometricLockStore, enabled, preferenceKey, _preferences, setEnabled, SharedPreferences
+Cohesion: 0.22
+Nodes (9): CredentialStore, FlutterSecureCredentialStore, _MemoryCredentialStore, _MemoryCredentialStore, _MemoryCredentialStore, _MemoryCredentialStore, _MemoryCredentialStore, _FaultInjectingCredentialStore (+1 more)
 
 ### Community 208 - "Community 208"
 Cohesion: 0.12
@@ -1073,37 +1083,57 @@ Nodes (7): _CoordinatorGatewayTurnApplicationSession, GatewayTurnApplicationSess
 Cohesion: 0.33
 Nodes (5): static const double, gridColumns, isTablet, Responsive, tabletBreakpoint
 
+### Community 212 - "Community 212"
+Cohesion: 0.25
+Nodes (7): bool get, choices, fromEventData, hasChoices, multiSelect, question, requestId
+
+### Community 213 - "Community 213"
+Cohesion: 0.29
+Nodes (8): package:hermes_android/core/screens/cron_screen.dart, _, _clientFactory, _connection, main, _pump, pumpAndSettle, pumpWidget
+
+### Community 214 - "Community 214"
+Cohesion: 0.29
+Nodes (8): FlutterSecureGatewayTurnJournalStore, GatewayTurnJournalSerializationAuthority, GatewayTurnJournalStore, MemoryTurnJournalStore, _CrashJournalStore, _MemoryJournalStore, _SharedMemoryJournalStore, _MemoryJournalStore
+
 ### Community 215 - "Community 215"
-Cohesion: 0.06
-Nodes (28): FilledButton, package:flutter/material.dart, package:hermes_android/core/models/gateway_activity.dart, package:hermes_android/core/models/gateway_approval.dart, package:hermes_android/core/models/gateway_clarify.dart, package:hermes_android/core/models/gateway_sensitive_prompt.dart, package:hermes_android/core/widgets/gateway_activity_card.dart, package:hermes_android/core/widgets/gateway_approval_dialog.dart (+20 more)
+Cohesion: 0.07
+Nodes (23): FilledButton, package:flutter/material.dart, package:hermes_android/core/models/gateway_activity.dart, package:hermes_android/core/models/gateway_approval.dart, package:hermes_android/core/models/gateway_clarify.dart, package:hermes_android/core/widgets/gateway_activity_card.dart, package:hermes_android/core/widgets/gateway_approval_dialog.dart, package:hermes_android/core/widgets/gateway_clarify_dialog.dart (+15 more)
+
+### Community 216 - "Community 216"
+Cohesion: 0.40
+Nodes (4): package:flutter/services.dart, package:hermes_android/core/services/android_launch_intent_service.dart, channel, main
 
 ### Community 217 - "Community 217"
-Cohesion: 0.25
-Nodes (7): package:hermes_android/core/models/projects_tree_overview.dart, package:hermes_android/core/utils/project_card_summary.dart, main, _node, now, secondsAgo, _session
+Cohesion: 0.08
+Nodes (22): package:flutter_test/flutter_test.dart, package:hermes_android/core/models/projects_tree_overview.dart, package:hermes_android/core/models/session.dart, package:hermes_android/core/services/chat_space_store.dart, package:hermes_android/core/utils/message_content.dart, package:hermes_android/core/utils/project_card_summary.dart, package:hermes_android/core/utils/project_session_filter.dart, package:hermes_android/core/utils/relative_time.dart (+14 more)
+
+### Community 218 - "Community 218"
+Cohesion: 0.50
+Nodes (3): fastIterations, main, sampleBackup
 
 ### Community 220 - "Community 220"
 Cohesion: 0.40
 Nodes (4): return, filterProjectSessions, needle, sessions
 
 ## Knowledge Gaps
-- **3699 isolated node(s):** `Bundle`, `FlutterEngine`, `Boolean`, `List`, `Int` (+3694 more)
+- **3705 isolated node(s):** `Bundle`, `FlutterEngine`, `Boolean`, `List`, `Int` (+3700 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **13 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `list` connect `Community 183` to `Community 0`, `Community 2`, `Community 3`, `Community 132`, `Community 133`, `Community 7`, `Community 9`, `Community 10`, `Community 140`, `Community 142`, `Community 15`, `Community 17`, `Community 19`, `Community 22`, `Community 152`, `Community 28`, `Community 29`, `Community 32`, `Community 42`, `Community 45`, `Community 47`, `Community 52`, `Community 55`, `Community 187`, `Community 62`, `Community 64`, `Community 65`, `Community 69`, `Community 198`, `Community 87`, `Community 109`, `Community 113`, `Community 118`, `Community 119`, `Community 120`, `Community 123`, `Community 125`, `Community 127`?**
-  _High betweenness centrality (0.096) - this node is a cross-community bridge._
-- **Why does `_` connect `Community 2` to `Community 128`, `Community 195`, `Community 163`, `Community 37`, `Community 198`, `Community 7`, `Community 5`, `Community 135`, `Community 138`, `Community 205`, `Community 14`, `Community 15`, `Community 16`, `Community 183`, `Community 26`, `Community 220`?**
+- **Why does `list` connect `Community 183` to `Community 0`, `Community 2`, `Community 3`, `Community 132`, `Community 133`, `Community 7`, `Community 9`, `Community 10`, `Community 140`, `Community 142`, `Community 15`, `Community 17`, `Community 19`, `Community 22`, `Community 152`, `Community 28`, `Community 29`, `Community 32`, `Community 42`, `Community 45`, `Community 47`, `Community 52`, `Community 55`, `Community 187`, `Community 62`, `Community 64`, `Community 193`, `Community 65`, `Community 69`, `Community 212`, `Community 87`, `Community 109`, `Community 113`, `Community 118`, `Community 119`, `Community 120`, `Community 123`, `Community 125`, `Community 127`?**
+  _High betweenness centrality (0.094) - this node is a cross-community bridge._
+- **Why does `_` connect `Community 2` to `Community 128`, `Community 195`, `Community 163`, `Community 37`, `Community 5`, `Community 7`, `Community 138`, `Community 205`, `Community 14`, `Community 15`, `Community 16`, `Community 113`, `Community 212`, `Community 214`, `Community 183`, `Community 220`?**
   _High betweenness centrality (0.072) - this node is a cross-community bridge._
-- **Why does `_` connect `Community 1` to `Community 128`, `Community 64`, `Community 2`, `Community 195`, `Community 163`, `Community 37`, `Community 198`, `Community 3`, `Community 26`, `Community 11`, `Community 44`, `Community 15`, `Community 111`, `Community 22`, `Community 157`, `Community 25`, `Community 58`, `Community 61`?**
-  _High betweenness centrality (0.057) - this node is a cross-community bridge._
+- **Why does `_` connect `Community 1` to `Community 128`, `Community 64`, `Community 2`, `Community 195`, `Community 163`, `Community 37`, `Community 3`, `Community 11`, `Community 44`, `Community 15`, `Community 111`, `Community 113`, `Community 212`, `Community 22`, `Community 157`, `Community 25`, `Community 58`, `Community 61`?**
+  _High betweenness centrality (0.060) - this node is a cross-community bridge._
 - **What connects `Bundle`, `FlutterEngine`, `Boolean` to the rest of the system?**
-  _3702 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _3708 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Community 0` be split into smaller, more focused modules?**
   _Cohesion score 0.009433962264150943 - nodes in this community are weakly interconnected._
 - **Should `Community 1` be split into smaller, more focused modules?**
   _Cohesion score 0.01652892561983471 - nodes in this community are weakly interconnected._
 - **Should `Community 2` be split into smaller, more focused modules?**
-  _Cohesion score 0.020202020202020204 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.02040816326530612 - nodes in this community are weakly interconnected._

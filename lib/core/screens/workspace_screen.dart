@@ -582,7 +582,7 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
     }
   }
 
-  Future<void> _startQuickChat() async {
+  Future<void> _startQuickChat({String? initialComposerText}) async {
     await _initialization;
     if (!mounted) return;
     final draft = buildNewChatDraft(
@@ -603,7 +603,7 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
       } catch (_) {}
     }
     if (!mounted) return;
-    await _finishNewChat(draft);
+    await _finishNewChat(draft, initialComposerText: initialComposerText);
   }
 
   /// Opens the session a tapped turn notification named.
@@ -1714,7 +1714,17 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
     final files = RemoteFilesClient.fromConnection(widget.connection);
     try {
       await Navigator.of(context).push(
-        MaterialPageRoute<void>(builder: (_) => FilesScreen(files: files)),
+        MaterialPageRoute<void>(
+          builder: (_) => FilesScreen(
+            files: files,
+            onAddToChat: (path) {
+              Navigator.of(context).pop();
+              unawaited(
+                _startQuickChat(initialComposerText: '@file ${path.trim()} '),
+              );
+            },
+          ),
+        ),
       );
     } finally {
       files.close();
