@@ -272,6 +272,46 @@ void main() {
     expect(find.textContaining('1970'), findsNothing);
   });
 
+  testWidgets('re-sorts the listing from the sort menu', (tester) async {
+    final source = _MultiFileDataSource();
+    await _pump(tester, source);
+    await tester.pumpAndSettle();
+
+    // Default order: directory first, then files alphabetically
+    // (big.txt < mid.txt < small.txt).
+    expect(
+      tester.getTopLeft(find.text('lib')).dy,
+      lessThan(tester.getTopLeft(find.text('big.txt')).dy),
+    );
+    expect(
+      tester.getTopLeft(find.text('big.txt')).dy,
+      lessThan(tester.getTopLeft(find.text('mid.txt')).dy),
+    );
+    expect(
+      tester.getTopLeft(find.text('mid.txt')).dy,
+      lessThan(tester.getTopLeft(find.text('small.txt')).dy),
+    );
+
+    await tester.tap(find.byKey(const Key('toggle-sort')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Size'));
+    await tester.pumpAndSettle();
+
+    // Size sort (descending): directory still leads, then big → mid → small.
+    expect(
+      tester.getTopLeft(find.text('lib')).dy,
+      lessThan(tester.getTopLeft(find.text('big.txt')).dy),
+    );
+    expect(
+      tester.getTopLeft(find.text('big.txt')).dy,
+      lessThan(tester.getTopLeft(find.text('mid.txt')).dy),
+    );
+    expect(
+      tester.getTopLeft(find.text('mid.txt')).dy,
+      lessThan(tester.getTopLeft(find.text('small.txt')).dy),
+    );
+  });
+
   testWidgets('downloads the selected file through the platform seam', (
     tester,
   ) async {
@@ -613,6 +653,34 @@ class _SizedFilesDataSource extends _FakeFilesDataSource {
       isDirectory: false,
       size: 2048,
       modifiedAt: 1700000000,
+    ),
+  ];
+}
+
+class _MultiFileDataSource extends _FakeFilesDataSource {
+  @override
+  Future<List<RemoteFileEntry>> listDirectory(
+    String path, {
+    bool showHidden = false,
+  }) async => const [
+    RemoteFileEntry(name: 'lib', path: '/srv/project/lib', isDirectory: true),
+    RemoteFileEntry(
+      name: 'small.txt',
+      path: '/srv/project/small.txt',
+      isDirectory: false,
+      size: 10,
+    ),
+    RemoteFileEntry(
+      name: 'big.txt',
+      path: '/srv/project/big.txt',
+      isDirectory: false,
+      size: 5000,
+    ),
+    RemoteFileEntry(
+      name: 'mid.txt',
+      path: '/srv/project/mid.txt',
+      isDirectory: false,
+      size: 100,
     ),
   ];
 }

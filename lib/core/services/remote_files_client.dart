@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'connection_manager.dart';
 import 'desktop_gateway_client.dart';
+import '../utils/file_sort.dart';
 
 class RemoteDirectory {
   final String path;
@@ -181,14 +182,7 @@ class RemoteFilesClient
         .map(RemoteFileEntry.fromJson)
         .where((entry) => showHidden || !entry.name.startsWith('.'))
         .toList();
-    entries.sort(
-      (left, right) => left.isDirectory == right.isDirectory
-          ? left.name.toLowerCase().compareTo(right.name.toLowerCase())
-          : left.isDirectory
-          ? -1
-          : 1,
-    );
-    return entries;
+    return sortFileEntries(entries);
   }
 
   @override

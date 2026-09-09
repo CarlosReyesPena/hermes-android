@@ -8,6 +8,7 @@ import 'package:share_plus/share_plus.dart';
 import '../services/remote_files_client.dart';
 import '../theme/hermes_theme.dart';
 import '../utils/file_size.dart';
+import '../utils/file_sort.dart';
 import '../utils/relative_time.dart';
 import '../widgets/hermes_components.dart';
 
@@ -65,6 +66,7 @@ class _FilesScreenState extends State<FilesScreen> {
   bool _loading = true;
   bool _downloading = false;
   bool _showHidden = false;
+  FileSortKey _sortKey = FileSortKey.name;
   final Set<String> _selectedPaths = {};
   List<RemoteFileEntry> _clipboard = const [];
   bool _clipboardCut = false;
@@ -140,7 +142,7 @@ class _FilesScreenState extends State<FilesScreen> {
       if (!mounted) return;
       setState(() {
         _path = path;
-        _entries = entries;
+        _entries = sortFileEntries(entries, key: _sortKey);
         _loading = false;
       });
     } catch (error) {
@@ -199,6 +201,14 @@ class _FilesScreenState extends State<FilesScreen> {
     if (path != null) {
       await _openDirectory(path);
     }
+  }
+
+  void _changeSort(FileSortKey key) {
+    if (key == _sortKey) return;
+    setState(() {
+      _sortKey = key;
+      _entries = sortFileEntries(_entries, key: key);
+    });
   }
 
   void _back() {
@@ -817,6 +827,21 @@ class _FilesScreenState extends State<FilesScreen> {
                   icon: const Icon(Icons.upload_file_outlined),
                   onPressed: () => unawaited(_importFiles()),
                 ),
+              PopupMenuButton<FileSortKey>(
+                key: const Key('toggle-sort'),
+                tooltip: 'Sort by',
+                icon: const Icon(Icons.sort),
+                enabled: _selected == null,
+                onSelected: _changeSort,
+                itemBuilder: (_) => const [
+                  PopupMenuItem(value: FileSortKey.name, child: Text('Name')),
+                  PopupMenuItem(value: FileSortKey.size, child: Text('Size')),
+                  PopupMenuItem(
+                    value: FileSortKey.modified,
+                    child: Text('Modified'),
+                  ),
+                ],
+              ),
               IconButton(
                 key: const Key('toggle-hidden'),
                 tooltip: _showHidden
