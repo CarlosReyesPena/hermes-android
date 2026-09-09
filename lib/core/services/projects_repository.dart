@@ -339,6 +339,46 @@ class ProjectsRepository {
     }
   }
 
+  Future<HermesProject> updateAppearance(
+    String id, {
+    required String? color,
+    required String? icon,
+  }) async {
+    _requireSupported();
+    final previous = _current;
+    _emit(
+      previous.copyWith(
+        projects: _withAppearance(
+          previous.projects,
+          id,
+          color: color,
+          icon: icon,
+        ),
+      ),
+    );
+
+    try {
+      final updated = await client.updateAppearance(
+        id: id,
+        color: color,
+        icon: icon,
+      );
+      final view = previous.copyWith(
+        projects: [
+          for (final project in previous.projects)
+            if (project.id == id) updated else project,
+        ],
+        clearError: true,
+      );
+      await _writeCache(view);
+      _emit(view);
+      return updated;
+    } catch (_) {
+      _emit(previous);
+      rethrow;
+    }
+  }
+
   /// Archives a project (reversible), or restores it when [restore] is true.
   Future<void> archive(String id, {bool restore = false}) async {
     _requireSupported();
@@ -650,27 +690,46 @@ class ProjectsRepository {
     List<HermesProject> projects,
     String id,
     String name,
-  ) {
-    return [
-      for (final project in projects)
-        if (project.id == id)
-          HermesProject(
-            id: project.id,
-            slug: project.slug,
-            name: name.trim(),
-            description: project.description,
-            icon: project.icon,
-            color: project.color,
-            boardSlug: project.boardSlug,
-            primaryPath: project.primaryPath,
-            archived: project.archived,
-            createdAt: project.createdAt,
-            folders: project.folders,
-          )
-        else
-          project,
-    ];
-  }
+  ) => [
+    for (final project in projects)
+      if (project.id == id)
+        _copyProject(project, name: name.trim())
+      else
+        project,
+  ];
+
+  static List<HermesProject> _withAppearance(
+    List<HermesProject> projects,
+    String id, {
+    required String? color,
+    required String? icon,
+  }) => [
+    for (final project in projects)
+      if (project.id == id)
+        _copyProject(project, color: color, icon: icon, replaceAppearance: true)
+      else
+        project,
+  ];
+
+  static HermesProject _copyProject(
+    HermesProject project, {
+    String? name,
+    String? color,
+    String? icon,
+    bool replaceAppearance = false,
+  }) => HermesProject(
+    id: project.id,
+    slug: project.slug,
+    name: name ?? project.name,
+    description: project.description,
+    icon: replaceAppearance ? icon : project.icon,
+    color: replaceAppearance ? color : project.color,
+    boardSlug: project.boardSlug,
+    primaryPath: project.primaryPath,
+    archived: project.archived,
+    createdAt: project.createdAt,
+    folders: project.folders,
+  );
 
   static ProjectsView _locallyArchived(
     ProjectsView view,

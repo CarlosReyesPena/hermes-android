@@ -156,6 +156,23 @@ class _ProjectsPaneState extends State<ProjectsPane> {
     }
   }
 
+  Future<void> _changeProjectAppearance(HermesProject project) async {
+    final appearance = await showDialog<({String? color, String? icon})>(
+      context: context,
+      builder: (_) => _ProjectAppearanceDialog(project: project),
+    );
+    if (appearance == null || !mounted) return;
+    try {
+      await widget.repository.updateAppearance(
+        project.id,
+        color: appearance.color,
+        icon: appearance.icon,
+      );
+    } catch (error) {
+      if (mounted) _showMutationError('change the appearance of', error);
+    }
+  }
+
   Future<void> _archiveProject(HermesProject project) async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -313,6 +330,7 @@ class _ProjectsPaneState extends State<ProjectsPane> {
                   onTap: () => widget.onProjectSelected?.call(project.id),
                   overview: _overviewFor(project.id),
                   onRename: () => _renameProject(project),
+                  onChangeAppearance: () => _changeProjectAppearance(project),
                   onArchive: () => _archiveProject(project),
                   onDelete: () => _deleteProject(project),
                 ),
@@ -529,6 +547,7 @@ class _ProjectCard extends StatelessWidget {
   final VoidCallback? onTap;
   final ProjectOverviewNode? overview;
   final VoidCallback? onRename;
+  final VoidCallback? onChangeAppearance;
   final VoidCallback? onArchive;
   final VoidCallback? onRestore;
   final VoidCallback? onDelete;
@@ -539,6 +558,7 @@ class _ProjectCard extends StatelessWidget {
     this.onTap,
     this.overview,
     this.onRename,
+    this.onChangeAppearance,
     this.onArchive,
     this.onRestore,
     this.onDelete,
@@ -644,6 +664,8 @@ class _ProjectCard extends StatelessWidget {
               switch (action) {
                 case 'rename':
                   onRename?.call();
+                case 'appearance':
+                  onChangeAppearance?.call();
                 case 'archive':
                   onArchive?.call();
                 case 'restore':
@@ -657,6 +679,11 @@ class _ProjectCard extends StatelessWidget {
                 const PopupMenuItem(
                   value: 'rename',
                   child: Text('Rename project'),
+                ),
+              if (onChangeAppearance != null)
+                const PopupMenuItem(
+                  value: 'appearance',
+                  child: Text('Change appearance'),
                 ),
               if (onArchive != null)
                 const PopupMenuItem(
@@ -677,6 +704,90 @@ class _ProjectCard extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _ProjectAppearanceDialog extends StatefulWidget {
+  final HermesProject project;
+
+  const _ProjectAppearanceDialog({required this.project});
+
+  @override
+  State<_ProjectAppearanceDialog> createState() =>
+      _ProjectAppearanceDialogState();
+}
+
+class _ProjectAppearanceDialogState extends State<_ProjectAppearanceDialog> {
+  late String? _color = widget.project.color;
+  late String? _icon = widget.project.icon;
+
+  void _submit() => Navigator.pop(context, (color: _color, icon: _icon));
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = HermesTokens.of(context);
+    return AlertDialog(
+      title: Text('Appearance · ${widget.project.name}'),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Color', style: tokens.typography.label),
+            const SizedBox(height: HermesSpacing.sm),
+            Wrap(
+              spacing: HermesSpacing.sm,
+              runSpacing: HermesSpacing.sm,
+              children: [
+                ChoiceChip(
+                  key: const Key('project-color-default'),
+                  label: const Text('Default'),
+                  selected: _color == null,
+                  onSelected: (_) => setState(() => _color = null),
+                ),
+                for (final color in projectColorChoices)
+                  ChoiceChip(
+                    key: Key('project-color-${color.substring(1)}'),
+                    label: const SizedBox.shrink(),
+                    avatar: CircleAvatar(
+                      backgroundColor: projectDisplayColor(
+                        color,
+                        fallback: tokens.accent,
+                      ),
+                    ),
+                    selected: _color == color,
+                    onSelected: (_) => setState(() => _color = color),
+                  ),
+              ],
+            ),
+            const SizedBox(height: HermesSpacing.lg),
+            Text('Icon', style: tokens.typography.label),
+            const SizedBox(height: HermesSpacing.sm),
+            Wrap(
+              spacing: HermesSpacing.sm,
+              runSpacing: HermesSpacing.sm,
+              children: [
+                for (final entry in projectIconChoices.entries)
+                  IconButton.filledTonal(
+                    key: Key('project-icon-${entry.key}'),
+                    tooltip: entry.key,
+                    isSelected: _icon == entry.key,
+                    onPressed: () => setState(() => _icon = entry.key),
+                    icon: Icon(entry.value),
+                  ),
+              ],
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(onPressed: _submit, child: const Text('Save')),
+      ],
     );
   }
 }

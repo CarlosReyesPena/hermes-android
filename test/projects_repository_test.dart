@@ -56,7 +56,12 @@ class _FakeGateway {
         projects = [
           for (final project in projects)
             if (project['id'] == params['id'])
-              {...project, 'name': params['name']}
+              {
+                ...project,
+                if (params.containsKey('name')) 'name': params['name'],
+                if (params.containsKey('color')) 'color': params['color'],
+                if (params.containsKey('icon')) 'icon': params['icon'],
+              }
             else
               project,
         ];
@@ -309,6 +314,25 @@ void main() {
       );
       expect(repo.current.projects.single.name, 'Before');
     });
+
+    test(
+      'appearance updates optimistically and survives the round trip',
+      () async {
+        final gateway = _FakeGateway(
+          projects: [_projectJson(id: 'p1', name: 'Launch')],
+        );
+        final repo = _repository(
+          gateway,
+          await SharedPreferences.getInstance(),
+        );
+        await repo.refresh();
+
+        await repo.updateAppearance('p1', color: '#2F81F7', icon: 'rocket');
+
+        expect(repo.current.projects.single.color, '#2F81F7');
+        expect(repo.current.projects.single.icon, 'rocket');
+      },
+    );
 
     test('archiving removes a project from the active list', () async {
       final gateway = _FakeGateway(

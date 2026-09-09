@@ -165,6 +165,21 @@ class ProjectsGatewayClient {
     return _requireProject('projects.update', result);
   }
 
+  /// Updates the visual identity shared by Desktop and Android.
+  /// Empty strings deliberately clear the corresponding server field.
+  Future<HermesProject> updateAppearance({
+    required String id,
+    required String? color,
+    required String? icon,
+  }) async {
+    final result = await _request('projects.update', {
+      'id': _requireId(id),
+      'color': color?.trim() ?? '',
+      'icon': icon?.trim() ?? '',
+    });
+    return _requireProject('projects.update', result);
+  }
+
   /// Archives a project, or restores it when [restore] is true.
   ///
   /// Archiving is deliberately preferred over deletion in the mobile flows:

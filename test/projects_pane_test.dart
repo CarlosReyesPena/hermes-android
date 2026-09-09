@@ -115,10 +115,17 @@ class _FakeGateway {
         return _ok({'project': created});
       case 'projects.update':
         final id = params['id'] as String;
-        final name = params['name'] as String;
         projects = [
           for (final project in projects)
-            if (project['id'] == id) {...project, 'name': name} else project,
+            if (project['id'] == id)
+              {
+                ...project,
+                if (params.containsKey('name')) 'name': params['name'],
+                if (params.containsKey('color')) 'color': params['color'],
+                if (params.containsKey('icon')) 'icon': params['icon'],
+              }
+            else
+              project,
         ];
         return _ok({'project': projects.firstWhere((p) => p['id'] == id)});
       case 'projects.archive':
@@ -453,6 +460,31 @@ void main() {
 
     expect(repository.current.projects, isEmpty);
     expect(repository.current.archived.single.name, 'New name');
+  });
+
+  testWidgets('changes project appearance from its actions menu', (
+    tester,
+  ) async {
+    final gateway = _FakeGateway(
+      projects: [_projectJson(id: 'p1', name: 'Launch')],
+    );
+    final repository = await _repo(gateway);
+
+    await _pumpPane(tester, repository);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('project-actions-p1')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Change appearance'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('project-color-2F81F7')));
+    await tester.tap(find.byKey(const Key('project-icon-rocket')));
+    await tester.tap(find.widgetWithText(FilledButton, 'Save'));
+    await tester.pumpAndSettle();
+
+    expect(repository.current.projects.single.color, '#2F81F7');
+    expect(repository.current.projects.single.icon, 'rocket');
+    expect(find.byIcon(Icons.rocket_launch_rounded), findsOneWidget);
   });
 
   testWidgets('deletes a live project directly from its card actions', (

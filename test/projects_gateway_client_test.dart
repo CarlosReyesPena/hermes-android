@@ -246,6 +246,30 @@ void main() {
       expect(project.name, 'Renamed');
     });
 
+    test('updates project appearance through projects.update', () async {
+      final rpc = _RecordingRpc([
+        _ok({
+          'project': {..._projectJson(), 'color': '#2F81F7', 'icon': 'rocket'},
+        }),
+      ]);
+      final client = ProjectsGatewayClient(rpc.call);
+
+      final project = await client.updateAppearance(
+        id: 'p1',
+        color: '#2F81F7',
+        icon: 'rocket',
+      );
+
+      expect(rpc.calls.single.method, 'projects.update');
+      expect(rpc.calls.single.params, {
+        'id': 'p1',
+        'color': '#2F81F7',
+        'icon': 'rocket',
+      });
+      expect(project.color, '#2F81F7');
+      expect(project.icon, 'rocket');
+    });
+
     test(
       'archive and restore use the same RPC with an explicit flag',
       () async {

@@ -785,13 +785,13 @@
     "semantic_hash": ""
   },
   "lib/core/services/projects_gateway_client.dart": {
-    "mtime": 1788020783.6973443,
-    "ast_hash": "70ae458be0740a4d4f48bf15909e7a37",
+    "mtime": 1788992074.6986766,
+    "ast_hash": "79f0163e35bda7fa4d1010eee4471e60",
     "semantic_hash": ""
   },
   "test/projects_gateway_client_test.dart": {
-    "mtime": 1788021298.1762936,
-    "ast_hash": "c2f8a58a8527a85cd6a39f4e295c153e",
+    "mtime": 1788992361.6623302,
+    "ast_hash": "4df4ade728292c419c6b3dcea2aa0830",
     "semantic_hash": ""
   },
   "lib/core/theme/hermes_theme.dart": {
@@ -825,23 +825,23 @@
     "semantic_hash": ""
   },
   "lib/core/services/projects_repository.dart": {
-    "mtime": 1788043056.5175915,
-    "ast_hash": "e78562ae13a6b77abf42a8a3a14d87ed",
+    "mtime": 1788992361.6193297,
+    "ast_hash": "9be8b0a161686954befd3264ec9228dd",
     "semantic_hash": ""
   },
   "test/projects_repository_test.dart": {
-    "mtime": 1788040182.585371,
-    "ast_hash": "5f79e02fb77903ef02b93dda7b6ca735",
+    "mtime": 1788992361.6733303,
+    "ast_hash": "9fdaa61d3a40703101a4974357ceefa5",
     "semantic_hash": ""
   },
   "lib/core/widgets/projects_pane.dart": {
-    "mtime": 1788991575.2373385,
-    "ast_hash": "d09b18411ba6abaf688b43811ba62ec2",
+    "mtime": 1788992353.6802285,
+    "ast_hash": "f589833aca6d6491596c26aecc23aa86",
     "semantic_hash": ""
   },
   "test/projects_pane_test.dart": {
-    "mtime": 1788991655.0013497,
-    "ast_hash": "04d4f5910c9d1a5c5bb998a45a28a26d",
+    "mtime": 1788992361.6903305,
+    "ast_hash": "80d2575f92de63bceb509750e62e32bd",
     "semantic_hash": ""
   },
   "lib/core/screens/workspace_screen.dart": {
@@ -1565,8 +1565,8 @@
     "semantic_hash": ""
   },
   "lib/core/utils/project_appearance.dart": {
-    "mtime": 1788991524.6576974,
-    "ast_hash": "311c44143df6cdd04664b5796770a4b1",
+    "mtime": 1788992218.375506,
+    "ast_hash": "7a31da0cb4d97dc69b8a6a658b0f11cd",
     "semantic_hash": ""
   },
   "test/project_appearance_test.dart": {

@@ -13,8 +13,20 @@ Color projectDisplayColor(String? value, {required Color fallback}) {
   return Color(int.parse(argb, radix: 16));
 }
 
+/// A compact mobile subset of the Desktop swatches, using the same wire values.
+const projectColorChoices = <String>[
+  '#2F81F7',
+  '#A371F7',
+  '#F778BA',
+  '#F85149',
+  '#D29922',
+  '#3FB950',
+  '#39C5CF',
+  '#8B949E',
+];
+
 /// Material equivalents for the curated Codicons offered by Hermes Desktop.
-const _projectIcons = <String, IconData>{
+const projectIconChoices = <String, IconData>{
   'folder-library': Icons.folder_rounded,
   'repo': Icons.account_tree_rounded,
   'rocket': Icons.rocket_launch_rounded,
@@ -46,4 +58,4 @@ const _projectIcons = <String, IconData>{
 };
 
 IconData projectDisplayIcon(String? value) =>
-    _projectIcons[value] ?? Icons.folder_rounded;
+    projectIconChoices[value] ?? Icons.folder_rounded;
