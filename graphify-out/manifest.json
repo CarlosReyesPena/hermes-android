@@ -160,8 +160,8 @@
     "semantic_hash": ""
   },
   "lib/core/screens/settings_screen.dart": {
-    "mtime": 1788994042.912107,
-    "ast_hash": "4a8c993a82d04a537b25cc87b53e3ff0",
+    "mtime": 1788994666.92778,
+    "ast_hash": "25053c8ab5b312ef91a59b0455fa7176",
     "semantic_hash": ""
   },
   "lib/core/screens/skills_screen.dart": {
@@ -1560,8 +1560,8 @@
     "semantic_hash": ""
   },
   "docs/DAILY_DRIVER_FIT_FINISH_GOAL.md": {
-    "mtime": 1788953554.7165632,
-    "ast_hash": "08756e0f97e4f4c8f9a3a1eb227dbf85",
+    "mtime": 1788994328.9940832,
+    "ast_hash": "e62e874da9563c8693320aea7060f247",
     "semantic_hash": ""
   },
   "lib/core/utils/project_appearance.dart": {
@@ -1577,6 +1577,16 @@
   "test/settings_screen_refresh_test.dart": {
     "mtime": 1788994278.8683865,
     "ast_hash": "976f2fed425ec08b442bcf6a0b5c6ec3",
+    "semantic_hash": ""
+  },
+  "lib/core/utils/voice_label.dart": {
+    "mtime": 1788994624.2441866,
+    "ast_hash": "9707a2d4428613bb1b6f9f8e4bcd8832",
+    "semantic_hash": ""
+  },
+  "test/voice_label_test.dart": {
+    "mtime": 1788994678.4689405,
+    "ast_hash": "67743e07ebdb07754293b50312ecbe0d",
     "semantic_hash": ""
   }
 }

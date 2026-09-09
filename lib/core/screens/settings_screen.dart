@@ -8,6 +8,7 @@ import '../services/config_backup_io.dart';
 import '../services/config_backup_service.dart';
 import '../services/biometric_authenticator.dart';
 import '../services/connection_manager.dart';
+import '../utils/voice_label.dart';
 import '../widgets/biometric_settings_card.dart';
 import '../widgets/config_backup_card.dart';
 import '../widgets/text_size_settings_card.dart';
@@ -798,15 +799,10 @@ class _VoicePickerState extends State<_VoicePicker> {
   }
 
   String _voiceLabel(Map<String, String> voice) {
-    final name = voice['name'] ?? '';
-    final locale = voice['locale'] ?? '';
-    if (name == locale) return locale;
-    final gender = name.contains('male')
-        ? '(male)'
-        : name.contains('female')
-        ? '(female)'
-        : '';
-    return '$locale $gender  [$name]';
+    return formatVoiceLabel(
+      name: voice['name'] ?? '',
+      locale: voice['locale'] ?? '',
+    );
   }
 
   @override
@@ -825,7 +821,7 @@ class _VoicePickerState extends State<_VoicePicker> {
         child: Padding(
           padding: EdgeInsets.all(16),
           child: Text(
-            'No TTS voices found.\\n'
+            'No TTS voices found.\n'
             'Install Google Text-to-Speech and download voice data.',
             style: TextStyle(color: Colors.grey),
           ),
