@@ -835,13 +835,13 @@
     "semantic_hash": ""
   },
   "lib/core/widgets/projects_pane.dart": {
-    "mtime": 1788991088.7231712,
-    "ast_hash": "46ddaa3204baaed4d1c2e229a8749c25",
+    "mtime": 1788991575.2373385,
+    "ast_hash": "d09b18411ba6abaf688b43811ba62ec2",
     "semantic_hash": ""
   },
   "test/projects_pane_test.dart": {
-    "mtime": 1788991095.5902584,
-    "ast_hash": "006a3632d700bbd3e498db5940b8b714",
+    "mtime": 1788991655.0013497,
+    "ast_hash": "04d4f5910c9d1a5c5bb998a45a28a26d",
     "semantic_hash": ""
   },
   "lib/core/screens/workspace_screen.dart": {
@@ -1562,6 +1562,16 @@
   "docs/DAILY_DRIVER_FIT_FINISH_GOAL.md": {
     "mtime": 1788953554.7165632,
     "ast_hash": "08756e0f97e4f4c8f9a3a1eb227dbf85",
+    "semantic_hash": ""
+  },
+  "lib/core/utils/project_appearance.dart": {
+    "mtime": 1788991524.6576974,
+    "ast_hash": "311c44143df6cdd04664b5796770a4b1",
+    "semantic_hash": ""
+  },
+  "test/project_appearance_test.dart": {
+    "mtime": 1788991622.535938,
+    "ast_hash": "b5f11db00ca2ca242a093ae9831f94d3",
     "semantic_hash": ""
   }
 }

@@ -16,6 +16,7 @@ import '../models/projects_tree_overview.dart';
 import '../services/chat_space_store.dart';
 import '../services/projects_repository.dart';
 import '../theme/hermes_theme.dart';
+import '../utils/project_appearance.dart';
 import '../utils/project_card_summary.dart';
 import 'hermes_components.dart';
 import 'space_migration_preview.dart';
@@ -547,6 +548,11 @@ class _ProjectCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final tokens = HermesTokens.of(context);
     final path = project.workingDirectory;
+    final projectColor = projectDisplayColor(
+      project.color,
+      fallback: tokens.accent,
+    );
+    final projectIcon = projectDisplayIcon(project.icon);
     final summary = buildProjectCardSummary(
       overview: overview,
       now: DateTime.now(),
@@ -564,13 +570,14 @@ class _ProjectCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
+            key: Key('project-glyph-${project.id}'),
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: tokens.accent.withValues(alpha: 0.14),
+              color: projectColor.withValues(alpha: 0.14),
               borderRadius: BorderRadius.circular(HermesRadius.sm),
             ),
-            child: Icon(Icons.folder_rounded, size: 20, color: tokens.accent),
+            child: Icon(projectIcon, size: 20, color: projectColor),
           ),
           const SizedBox(width: HermesSpacing.md),
           Expanded(

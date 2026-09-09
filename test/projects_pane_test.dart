@@ -16,11 +16,15 @@ Map<String, dynamic> _projectJson({
   required String id,
   required String name,
   bool archived = false,
+  String? color,
+  String? icon,
 }) => {
   'id': id,
   'slug': name.toLowerCase().replaceAll(' ', '-'),
   'name': name,
   'archived': archived,
+  'color': ?color,
+  'icon': ?icon,
   'created_at': 1750000000,
   'folders': const [],
 };
@@ -239,6 +243,39 @@ void main() {
     expect(find.text('Hermes Android'), findsOneWidget);
     expect(find.text('ScriptHive'), findsOneWidget);
     expect(find.byType(HermesCard), findsNWidgets(2));
+  });
+
+  testWidgets('renders the server-owned project icon and color', (
+    tester,
+  ) async {
+    final repository = await _repo(
+      _FakeGateway(
+        projects: [
+          _projectJson(
+            id: 'p1',
+            name: 'Launch',
+            color: '#2F81F7',
+            icon: 'rocket',
+          ),
+        ],
+      ),
+    );
+
+    await _pumpPane(tester, repository);
+    await tester.pumpAndSettle();
+
+    final glyph = tester.widget<Container>(
+      find.byKey(const Key('project-glyph-p1')),
+    );
+    final decoration = glyph.decoration! as BoxDecoration;
+    expect(decoration.color, const Color(0xFF2F81F7).withValues(alpha: 0.14));
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('project-glyph-p1')),
+        matching: find.byIcon(Icons.rocket_launch_rounded),
+      ),
+      findsOneWidget,
+    );
   });
 
   testWidgets('shows authoritative chat counts on project cards', (
