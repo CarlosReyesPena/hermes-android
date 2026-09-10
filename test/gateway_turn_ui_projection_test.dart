@@ -99,6 +99,50 @@ void main() {
     expect(projection.attachmentManifestDigest, _manifestDigest);
   });
 
+  test('snapshot projects pending input for blocked-turn recovery', () {
+    // A turn can finish its assistant text and still have a decision pending
+    // (for example a command approval that arrived after the message streamed).
+    final page = GatewayTurnReconcilePage.fromWire(
+      {
+        'automatic_resubmit': false,
+        'mode': 'snapshot',
+        'earliest_seq': 1,
+        'last_seq': 4,
+        'next_after_seq': 4,
+        'has_more': false,
+        'snapshot': {
+          'turn_id': _turnId,
+          'client_turn_id': _clientTurnId,
+          'status': 'completed',
+          'last_seq': 4,
+          'assistant': {
+            'message_id': _messageId,
+            'text': 'Done, but I need your approval for the next step.',
+            'complete': true,
+          },
+          'attachment_manifest_digest': _manifestDigest,
+          'final_message_ref': 1,
+          'pending_input': {
+            'request_id': 'approval-1',
+            'kind': 'approval',
+            'created_at': 100,
+            'expires_at': 200,
+          },
+        },
+      },
+      expectedAfterSeq: 1,
+      expectedTurnId: _turnId,
+      expectedClientTurnId: _clientTurnId,
+    );
+    expect(page, isNotNull);
+
+    final state = _acceptedState().applyReconcilePage(page!);
+    final projection = GatewayTurnUiProjection.fromState(state);
+
+    expect(projection.pendingInput?.requestId, 'approval-1');
+    expect(projection.pendingInput?.kind, 'approval');
+  });
+
   test('rehydrated terminal result projects after process recreation', () {
     final state = GatewayTurnRecoveryState.rehydrate(
       clientTurnId: _clientTurnId,

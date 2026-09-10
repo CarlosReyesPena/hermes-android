@@ -8,10 +8,33 @@
 import 'package:flutter/material.dart';
 
 import '../services/connection_manager.dart';
+import '../utils/cron_health.dart';
+import '../utils/relative_time.dart';
+
+/// Creates the dashboard client for a connection. Injectable so widget tests
+/// can substitute a mock transport without reaching the network.
+typedef CronDashboardClientFactory =
+    DashboardClient Function(SavedConnection connection);
+
+DashboardClient _defaultDashboardClient(SavedConnection connection) {
+  return DashboardClient(
+    host: connection.host,
+    port: connection.dashboardPort,
+    pathPrefix: connection.dashboardPrefix ?? '',
+    proxied: connection.dashboardProxied,
+    useHttps: connection.useHttps,
+    username: connection.dashboardUsername,
+    password: connection.dashboardPassword,
+  );
+}
 
 class CronScreen extends StatefulWidget {
   final SavedConnection connection;
-  const CronScreen({required this.connection, super.key});
+
+  /// Overrides client construction for tests.
+  final CronDashboardClientFactory? clientFactory;
+
+  const CronScreen({required this.connection, this.clientFactory, super.key});
 
   @override
   State<CronScreen> createState() => _CronScreenState();
@@ -26,15 +49,8 @@ class _CronScreenState extends State<CronScreen> {
   @override
   void initState() {
     super.initState();
-    _client = DashboardClient(
-      host: widget.connection.host,
-      port: widget.connection.dashboardPort,
-      pathPrefix: widget.connection.dashboardPrefix ?? "",
-      proxied: widget.connection.dashboardProxied,
-      useHttps: widget.connection.useHttps,
-      username: widget.connection.dashboardUsername,
-      password: widget.connection.dashboardPassword,
-    );
+    final factory = widget.clientFactory ?? _defaultDashboardClient;
+    _client = factory(widget.connection);
     _loadJobs();
   }
 
@@ -56,10 +72,13 @@ class _CronScreenState extends State<CronScreen> {
       for (final item in data) {
         if (item is Map<String, dynamic>) items.add(item);
       }
+      // Failing jobs first so the screen is an attention surface, not an
+      // alphabetical directory.
+      final ranked = rankCronJobs(items);
 
       if (!mounted) return;
       setState(() {
-        _jobs = items;
+        _jobs = ranked;
         _loading = false;
       });
     } catch (e) {
@@ -380,6 +399,7 @@ class _CronScreenState extends State<CronScreen> {
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: _loading ? null : _loadJobs,
+            tooltip: 'Refresh',
           ),
         ],
       ),
@@ -437,23 +457,42 @@ class _CronScreenState extends State<CronScreen> {
       );
     }
 
+    final failing = _jobs
+        .where((j) => classifyCronJobHealth(j).needsAttention)
+        .toList();
+    final hasAttention = failing.isNotEmpty;
+    final headerCount = hasAttention ? 1 : 0;
+
     return RefreshIndicator(
       onRefresh: _loadJobs,
       child: ListView.builder(
         padding: const EdgeInsets.all(16),
-        itemCount: _jobs.length,
+        itemCount: _jobs.length + headerCount,
         itemBuilder: (context, index) {
-          final job = _jobs[index];
+          if (hasAttention && index == 0) {
+            return _AttentionBanner(count: failing.length);
+          }
+          final job = _jobs[index - headerCount];
+          final health = classifyCronJobHealth(job);
           final name = _jobName(job);
           final prompt = _jobPrompt(job);
           final schedule = _scheduleDisplay(job);
-          final paused = _isPaused(job);
+          final paused = health == CronJobHealth.paused;
           final lastRun = job['last_run_at'] as String?;
           final nextRun = job['next_run_at'] as String?;
           final isNoAgent = job['no_agent'] == true;
+          final failureDetail = health == CronJobHealth.failing
+              ? cronFailureDetail(job)
+              : null;
 
           return Card(
             margin: const EdgeInsets.only(bottom: 8),
+            shape: health == CronJobHealth.failing
+                ? RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(4),
+                    side: BorderSide(color: Colors.red.withValues(alpha: 0.4)),
+                  )
+                : null,
             child: InkWell(
               onTap: () => _showEditJobDialog(job),
               borderRadius: BorderRadius.circular(4),
@@ -465,8 +504,16 @@ class _CronScreenState extends State<CronScreen> {
                     Row(
                       children: [
                         Icon(
-                          paused ? Icons.pause_circle : Icons.play_circle,
-                          color: paused ? Colors.orange : Colors.green,
+                          paused
+                              ? Icons.pause_circle
+                              : health == CronJobHealth.failing
+                              ? Icons.error
+                              : Icons.play_circle,
+                          color: paused
+                              ? Colors.orange
+                              : health == CronJobHealth.failing
+                              ? Colors.red
+                              : Colors.green,
                           size: 20,
                         ),
                         const SizedBox(width: 8),
@@ -478,6 +525,26 @@ class _CronScreenState extends State<CronScreen> {
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
+                        if (health == CronJobHealth.failing)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
+                            margin: const EdgeInsets.only(right: 4),
+                            decoration: BoxDecoration(
+                              color: Colors.red.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: const Text(
+                              'failed',
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: Colors.red,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
                         if (isNoAgent)
                           Container(
                             padding: const EdgeInsets.symmetric(
@@ -591,16 +658,48 @@ class _CronScreenState extends State<CronScreen> {
                         ],
                       ),
                     ],
+                    if (failureDetail != null) ...[
+                      const SizedBox(height: 6),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.red.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          failureDetail,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.red[900],
+                          ),
+                          maxLines: 3,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
                     if (lastRun != null && lastRun.isNotEmpty) ...[
-                      const SizedBox(height: 2),
+                      const SizedBox(height: 4),
                       Text(
-                        'Last: $lastRun',
-                        style: TextStyle(fontSize: 11, color: Colors.grey[600]),
+                        '${health == CronJobHealth.failing
+                            ? 'Failed'
+                            : health == CronJobHealth.paused
+                            ? 'Paused after'
+                            : 'Last run'}: ${_formatRunTime(lastRun)}',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: health == CronJobHealth.failing
+                              ? Colors.red[800]
+                              : Colors.grey[600],
+                        ),
                       ),
                     ],
                     if (nextRun != null && nextRun.isNotEmpty)
                       Text(
-                        'Next: $nextRun',
+                        'Next: ${_formatRunTime(nextRun)}',
                         style: TextStyle(fontSize: 11, color: Colors.grey[600]),
                       ),
                   ],
@@ -609,6 +708,54 @@ class _CronScreenState extends State<CronScreen> {
             ),
           );
         },
+      ),
+    );
+  }
+
+  /// Renders an ISO timestamp as a compact, human-friendly string. The
+  /// dashboard sends absolute ISO times; a list of raw ISO blobs hides which
+  /// job just failed, so we show the time since instead. Delegates to the
+  /// canonical [formatRelativeAge] so Cron reads time exactly like Activity
+  /// and the session lists.
+  String _formatRunTime(String iso) {
+    final parsed = DateTime.tryParse(iso);
+    if (parsed == null) return iso;
+    return formatRelativeAge(parsed, DateTime.now());
+  }
+}
+
+/// Red banner pinned above the job list when at least one job is failing.
+class _AttentionBanner extends StatelessWidget {
+  final int count;
+
+  const _AttentionBanner({required this.count});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.red.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.red.withValues(alpha: 0.5)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.warning_amber_rounded, color: Colors.red, size: 20),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              count == 1
+                  ? '1 cron job needs attention'
+                  : '$count cron jobs need attention',
+              style: const TextStyle(
+                color: Colors.red,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -1,23 +1,71 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'core/services/android_launch_intent_service.dart';
+import 'core/services/android_share_intent_service.dart';
+import 'core/services/biometric_authenticator.dart';
+import 'core/services/biometric_lock_store.dart';
+import 'core/services/config_backup.dart';
+import 'core/services/config_backup_io.dart';
+import 'core/services/config_backup_service.dart';
+import 'core/services/connection_config_string.dart';
 import 'core/services/connection_manager.dart';
 import 'core/services/gateway_turn_application_controller.dart';
 import 'core/services/text_size_preference.dart';
-import 'core/screens/session_list_screen.dart';
+import 'core/services/turn_notification_router.dart';
+import 'core/services/turn_notification_service.dart';
+import 'core/screens/workspace_screen.dart';
+import 'core/theme/hermes_theme.dart';
 import 'core/utils/responsive.dart';
+import 'core/widgets/biometric_lock_gate.dart';
+import 'core/widgets/config_backup_card.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final prefs = await SharedPreferences.getInstance();
   final connManager = await ConnectionManager.create(prefs);
-  runApp(HermesApp(connManager: connManager));
+  final shareIntents = AndroidShareIntentService();
+  final launchIntents = AndroidLaunchIntentService();
+  // Initialise notifications before the first frame so a cold-start launch
+  // (the user tapped a notification to open the app) has its launch payload
+  // available to HomeScreen before it builds, and so the tap callback is
+  // registered before any warm-start tap can arrive.
+  final turnNotifications = TurnNotificationService();
+  await turnNotifications.ensureInitialized();
+  await Future.wait([shareIntents.initialize(), launchIntents.initialize()]);
+  runApp(
+    HermesApp(
+      connManager: connManager,
+      shareIntents: shareIntents,
+      launchIntents: launchIntents,
+      turnNotifications: turnNotifications,
+    ),
+  );
 }
 
 class HermesApp extends StatefulWidget {
   final ConnectionManager connManager;
-  const HermesApp({required this.connManager, super.key});
+  final AndroidShareIntentService? shareIntents;
+  final AndroidLaunchIntentService? launchIntents;
+
+  /// The app-level notification service, created and initialised in `main()`
+  /// so cold-start launch details are available before the first frame. When
+  /// `null` (direct construction in tests), the app creates its own.
+  final TurnNotificationService? turnNotifications;
+
+  /// Overrides the OS biometric prompt for tests.
+  final BiometricAuthenticator? biometricAuthenticator;
+
+  const HermesApp({
+    required this.connManager,
+    this.shareIntents,
+    this.launchIntents,
+    this.turnNotifications,
+    this.biometricAuthenticator,
+    super.key,
+  });
 
   @override
   State<HermesApp> createState() => HermesAppState();
@@ -53,11 +101,18 @@ class HermesApp extends StatefulWidget {
 
 class HermesAppState extends State<HermesApp> {
   late final GatewayTurnApplicationController _turnApplicationController;
+  late final BiometricAuthenticator _biometricAuthenticator;
+  late final TurnNotificationService _turnNotifications;
+  late final TurnNotificationRouter _turnNotificationRouter;
 
   @override
   void initState() {
     super.initState();
     _turnApplicationController = GatewayTurnApplicationController();
+    _biometricAuthenticator =
+        widget.biometricAuthenticator ?? LocalAuthBiometricAuthenticator();
+    _turnNotifications = widget.turnNotifications ?? TurnNotificationService();
+    _turnNotificationRouter = TurnNotificationRouter();
   }
 
   Future<void> setTextSizePreference(TextSizePreference preference) async {
@@ -67,72 +122,36 @@ class HermesAppState extends State<HermesApp> {
 
   @override
   Widget build(BuildContext context) {
-    const gold = Color(0xFFD4AF37);
-
     return MaterialApp(
       title: 'Hermes Agent',
       themeMode: HermesApp.getThemeMode(widget.connManager.prefs),
-      theme: ThemeData(
-        colorSchemeSeed: gold,
-        brightness: Brightness.light,
-        useMaterial3: true,
-        scaffoldBackgroundColor: const Color(0xFFFAFAFA),
-        appBarTheme: const AppBarTheme(
-          backgroundColor: Colors.white,
-          elevation: 0,
-          centerTitle: true,
-        ),
-        cardTheme: CardThemeData(
-          color: Colors.white,
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-            side: BorderSide(color: Colors.grey.withValues(alpha: 0.15)),
-          ),
-        ),
-        floatingActionButtonTheme: const FloatingActionButtonThemeData(
-          backgroundColor: gold,
-          foregroundColor: Colors.white,
-        ),
-      ),
-      darkTheme: ThemeData(
-        colorSchemeSeed: gold,
-        brightness: Brightness.dark,
-        useMaterial3: true,
-        scaffoldBackgroundColor: Colors.black,
-        appBarTheme: const AppBarTheme(
-          backgroundColor: Colors.black,
-          elevation: 0,
-          centerTitle: true,
-        ),
-        cardTheme: CardThemeData(
-          color: const Color(0xFF1A1A1A),
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-            side: BorderSide(color: Colors.white.withValues(alpha: 0.05)),
-          ),
-        ),
-        floatingActionButtonTheme: const FloatingActionButtonThemeData(
-          backgroundColor: gold,
-          foregroundColor: Colors.black,
-        ),
-      ),
+      theme: hermesTheme(Brightness.light),
+      darkTheme: hermesTheme(Brightness.dark),
       builder: (context, child) {
         final systemMediaQuery = MediaQuery.of(context);
         final preference = HermesApp.getTextSizePreference(
           widget.connManager.prefs,
         );
-        return MediaQuery(
-          data: systemMediaQuery.copyWith(
-            textScaler: preference.applyTo(systemMediaQuery.textScaler),
+        // The biometric gate wraps the whole Navigator so pushed routes
+        // (chats, workspace, settings) can never appear above the lock.
+        return BiometricLockGate(
+          store: BiometricLockStore(widget.connManager.prefs),
+          authenticator: _biometricAuthenticator,
+          child: MediaQuery(
+            data: systemMediaQuery.copyWith(
+              textScaler: preference.applyTo(systemMediaQuery.textScaler),
+            ),
+            child: child!,
           ),
-          child: child!,
         );
       },
       home: HomeScreen(
         connManager: widget.connManager,
         turnApplicationController: _turnApplicationController,
+        turnNotifications: _turnNotifications,
+        turnNotificationRouter: _turnNotificationRouter,
+        shareIntents: widget.shareIntents,
+        launchIntents: widget.launchIntents,
       ),
     );
   }
@@ -140,6 +159,7 @@ class HermesAppState extends State<HermesApp> {
   @override
   void dispose() {
     unawaited(_turnApplicationController.close());
+    unawaited(_turnNotifications.dispose());
     super.dispose();
   }
 }
@@ -166,7 +186,8 @@ class HermesHeader extends StatelessWidget {
         children: [
           Text(
             'HERMES',
-            style: TextStyle(fontFamily: 'Cinzel', 
+            style: TextStyle(
+              fontFamily: 'Cinzel',
               fontSize: 28,
               fontWeight: FontWeight.w700,
               color: const Color(0xFFD4AF37),
@@ -194,23 +215,101 @@ class HomeScreen extends StatefulWidget {
   final ConnectionManager connManager;
   final GatewayTurnApplicationController turnApplicationController;
 
+  /// The single app-level notification service. Owned by [HermesAppState]; a
+  /// chat opened from here reuses it so the platform tap callback is
+  /// registered exactly once. When `null` (direct construction in tests), the
+  /// screen creates its own.
+  final TurnNotificationService? turnNotifications;
+
+  /// Resolves a tapped turn-notification payload into the chat to open.
+  final TurnNotificationRouter? turnNotificationRouter;
+
+  final AndroidShareIntentService? shareIntents;
+  final AndroidLaunchIntentService? launchIntents;
+  final Future<String?> Function()? pickBackupFile;
+  final Future<ConfigImportResult> Function(
+    String contents,
+    String passphrase,
+    ConfigImportMode mode,
+  )?
+  importBackup;
+
   const HomeScreen({
     required this.connManager,
     required this.turnApplicationController,
+    this.turnNotifications,
+    this.turnNotificationRouter,
+    this.shareIntents,
+    this.launchIntents,
+    this.pickBackupFile,
+    this.importBackup,
     super.key,
   });
 
   @override
-  State<HomeScreen> createState() => _HomeScreenState();
+  State<HomeScreen> createState() => HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class HomeScreenState extends State<HomeScreen> {
   List<SavedConnection> _connections = [];
   bool _autoNavigated = false;
   static const String _lastConnectionKey = 'last_connection_id';
 
+  late final TurnNotificationService _turnNotifications;
+  late final TurnNotificationRouter _turnNotificationRouter;
+  StreamSubscription<String>? _notificationTapSub;
+
   void _refresh() {
     setState(() => _connections = widget.connManager.getConnections());
+  }
+
+  /// Public only so the import flow and its widget test can refresh Home after
+  /// restoring connections without restarting the process.
+  void refreshConnections() => _refresh();
+
+  ConfigBackupIo get _backupIo =>
+      ConfigBackupIo(connectionManager: widget.connManager);
+
+  Future<void> _showRestoreConfig() async {
+    String? contents;
+    try {
+      contents =
+          await (widget.pickBackupFile?.call() ?? _backupIo.pickBackupFile());
+    } catch (error) {
+      if (!mounted) return;
+      _showRestoreError(error);
+      return;
+    }
+    if (contents == null || !mounted) return;
+
+    final choice = await showModalBottomSheet<ImportChoice>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => const ImportOptionsSheet(),
+    );
+    if (choice == null || !mounted) return;
+
+    try {
+      final importer = widget.importBackup ?? _backupIo.importEncrypted;
+      final result = await importer(contents, choice.passphrase, choice.mode);
+      if (!mounted) return;
+      _refresh();
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(result.summary)));
+    } catch (error) {
+      if (!mounted) return;
+      _showRestoreError(error);
+    }
+  }
+
+  void _showRestoreError(Object error) {
+    final message = error is ConfigBackupException
+        ? error.message
+        : 'The backup could not be restored.';
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   Future<void> _closeDialogAndRefresh(BuildContext dialogContext) async {
@@ -230,6 +329,73 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _refresh();
+    _turnNotifications = widget.turnNotifications ?? TurnNotificationService();
+    _turnNotificationRouter =
+        widget.turnNotificationRouter ?? TurnNotificationRouter();
+    unawaited(_turnNotifications.ensureInitialized());
+    _notificationTapSub = _turnNotifications.notificationTaps.listen(
+      _onNotificationTap,
+    );
+    widget.shareIntents?.pendingShare.addListener(_onSharedText);
+    widget.launchIntents?.pendingQuickChat.addListener(_onQuickChat);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _onSharedText();
+      _onQuickChat();
+    });
+  }
+
+  SavedConnection? _connectionForExternalAction() {
+    final lastId = widget.connManager.prefs.getString(_lastConnectionKey);
+    final preferred = _connections
+        .where((connection) => connection.id == lastId)
+        .firstOrNull;
+    return preferred ?? (_connections.length == 1 ? _connections.single : null);
+  }
+
+  void _onSharedText() {
+    if (!mounted || widget.shareIntents?.pendingShare.value == null) return;
+    final connection = _connectionForExternalAction();
+    if (connection == null) return;
+    _autoNavigated = true;
+    _navigateToWorkspace(connection);
+  }
+
+  void _onQuickChat() {
+    if (!mounted || widget.launchIntents?.pendingQuickChat.value != true) {
+      return;
+    }
+    final connection = _connectionForExternalAction();
+    if (connection == null) return;
+    _autoNavigated = true;
+    _navigateToWorkspace(connection);
+  }
+
+  /// A warm-start tap: the user selected a Hermes turn notification while the
+  /// app was already running (backgrounded). Route to the exact chat.
+  void _onNotificationTap(String turnId) {
+    if (!mounted) return;
+    _autoNavigated = true;
+    unawaited(_routeNotificationTap(turnId));
+  }
+
+  /// Resolves [turnId] to a connection + session and navigates, or does
+  /// nothing when there is no connection to open.
+  Future<void> _routeNotificationTap(String turnId) async {
+    final route = await _turnNotificationRouter.resolve(
+      turnId: turnId,
+      connections: _connections,
+      lastConnectionId: widget.connManager.prefs.getString(_lastConnectionKey),
+    );
+    if (!mounted || route == null) return;
+    _navigateToWorkspace(route.connection, initialSessionId: route.sessionId);
+  }
+
+  @override
+  void dispose() {
+    widget.shareIntents?.pendingShare.removeListener(_onSharedText);
+    widget.launchIntents?.pendingQuickChat.removeListener(_onQuickChat);
+    unawaited(_notificationTapSub?.cancel());
+    super.dispose();
   }
 
   @override
@@ -237,28 +403,49 @@ class _HomeScreenState extends State<HomeScreen> {
     super.didChangeDependencies();
     if (!_autoNavigated && _connections.isNotEmpty) {
       _autoNavigated = true;
-      _maybeAutoNavigate();
+      final launchTap = _turnNotifications.launchPayload;
+      if (launchTap != null && launchTap.isNotEmpty) {
+        // A cold start launched by a notification opens the exact chat that
+        // completed, replacing the regular last-connection auto-navigation.
+        unawaited(_routeNotificationTap(launchTap));
+      } else {
+        _maybeAutoNavigate();
+      }
     }
   }
 
   void _maybeAutoNavigate() {
+    // The share listener owns this route so the regular last-connection
+    // auto-navigation cannot stack a second Workspace above the shared draft.
+    if (widget.shareIntents?.pendingShare.value != null ||
+        widget.launchIntents?.pendingQuickChat.value == true) {
+      return;
+    }
     final lastId = widget.connManager.prefs.getString(_lastConnectionKey);
     if (lastId == null) return;
     final conn = _connections.where((c) => c.id == lastId).firstOrNull;
     if (conn == null) return;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) _navigateToSessions(conn);
+      if (mounted) _navigateToWorkspace(conn);
     });
   }
 
-  void _navigateToSessions(SavedConnection conn) {
+  void _navigateToWorkspace(SavedConnection conn, {String? initialSessionId}) {
     widget.connManager.prefs.setString(_lastConnectionKey, conn.id);
+    final sharedPayload = widget.shareIntents?.takePendingShare();
+    final initialQuickChat =
+        widget.launchIntents?.takePendingQuickChat() == true &&
+        sharedPayload == null;
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => SessionListScreen(
+        builder: (_) => WorkspaceScreen(
           connection: conn,
           turnApplicationController: widget.turnApplicationController,
+          turnNotifications: widget.turnNotifications,
+          initialSharedPayload: sharedPayload,
+          initialQuickChat: initialQuickChat,
+          initialSessionId: initialSessionId,
         ),
       ),
     );
@@ -321,6 +508,22 @@ class _HomeScreenState extends State<HomeScreen> {
               }
               _refresh();
             },
+      ),
+    );
+  }
+
+  /// Copies one connection to the clipboard as a single portable `hermes://`
+  /// config string, so a fresh install on another device can be set up by
+  /// pasting that one string instead of retyping every field.
+  Future<void> _copyConnectionConfig(SavedConnection conn) async {
+    final config = ConnectionConfigString.encode(conn);
+    await Clipboard.setData(ClipboardData(text: config));
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'Connection config copied. Paste it into the Add dialog on the other device.',
+        ),
       ),
     );
   }
@@ -405,18 +608,18 @@ class _HomeScreenState extends State<HomeScreen> {
                           apiKey: key,
                           pathPrefix: conn.gatewayPrefix ?? '',
                         );
-                        final ok = await client.healthCheck();
+                        final result = await client.checkHealth();
                         client.close();
 
                         if (!ctx.mounted) return;
 
-                        if (ok) {
+                        if (result.isHealthy) {
                           await widget.connManager.updateApiKey(conn.id, key);
                           if (!ctx.mounted) return;
                           await _closeDialogAndRefresh(ctx);
                         } else {
                           setDialogState(() {
-                            error = 'Invalid API key. Server returned 401.';
+                            error = result.userMessage(apiKeyProvided: true);
                             validating = false;
                           });
                         }
@@ -613,14 +816,14 @@ class _HomeScreenState extends State<HomeScreen> {
                           apiKey: conn.apiKey,
                           pathPrefix: gatewayPrefix,
                         );
-                        final ok = await apiClient.healthCheck();
+                        final result = await apiClient.checkHealth();
                         apiClient.close();
                         if (!ctx.mounted) return;
-                        if (!ok) {
+                        if (!result.isHealthy) {
                           setDialogState(() {
-                            error =
-                                'Could not reach/authenticate the Gateway API at '
-                                '${conn.host}:${conn.port}$gatewayPrefix.';
+                            error = result.userMessage(
+                              apiKeyProvided: conn.apiKey.isNotEmpty,
+                            );
                             validating = false;
                           });
                           return;
@@ -708,6 +911,28 @@ class _HomeScreenState extends State<HomeScreen> {
         trailing: PopupMenuButton<String>(
           onSelected: (v) async {
             if (v == 'delete') {
+              final confirmed = await showDialog<bool>(
+                context: context,
+                builder: (dialogContext) => AlertDialog(
+                  title: const Text('Delete this connection?'),
+                  content: const Text(
+                    'This removes the connection and its saved API key. '
+                    'Conversations on the Hermes host are not deleted.',
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(dialogContext, false),
+                      child: const Text('Cancel'),
+                    ),
+                    TextButton(
+                      style: TextButton.styleFrom(foregroundColor: Colors.red),
+                      onPressed: () => Navigator.pop(dialogContext, true),
+                      child: const Text('Delete'),
+                    ),
+                  ],
+                ),
+              );
+              if (confirmed != true || !mounted) return;
               try {
                 await widget.connManager.deleteConnection(conn.id);
                 if (mounted) _refresh();
@@ -727,6 +952,8 @@ class _HomeScreenState extends State<HomeScreen> {
               _showApiKeyDialog(conn);
             } else if (v == 'dashboard') {
               _showDashboardAuthDialog(conn);
+            } else if (v == 'copyconfig') {
+              await _copyConnectionConfig(conn);
             }
           },
           itemBuilder: (_) => [
@@ -737,12 +964,16 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Text('Dashboard / Proxy Settings'),
             ),
             const PopupMenuItem(
+              value: 'copyconfig',
+              child: Text('Copy connection config'),
+            ),
+            const PopupMenuItem(
               value: 'delete',
               child: Text('Delete', style: TextStyle(color: Colors.red)),
             ),
           ],
         ),
-        onTap: () => _navigateToSessions(conn),
+        onTap: () => _navigateToWorkspace(conn),
       ),
     );
   }
@@ -753,13 +984,23 @@ class _HomeScreenState extends State<HomeScreen> {
       appBar: AppBar(
         title: Text(
           'HERMES',
-          style: TextStyle(fontFamily: 'Cinzel', 
+          style: TextStyle(
+            fontFamily: 'Cinzel',
             fontWeight: FontWeight.w700,
             letterSpacing: 6,
             fontSize: 22,
           ),
         ),
         centerTitle: true,
+        actions: [
+          if (_connections.isNotEmpty)
+            IconButton(
+              key: const Key('home_restore_config_menu'),
+              tooltip: 'Restore configuration',
+              onPressed: _showRestoreConfig,
+              icon: const Icon(Icons.settings_backup_restore),
+            ),
+        ],
       ),
       body: _connections.isEmpty
           ? Center(
@@ -779,6 +1020,13 @@ class _HomeScreenState extends State<HomeScreen> {
                       context,
                     ).textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
                     textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 20),
+                  OutlinedButton.icon(
+                    key: const Key('home_restore_config_button'),
+                    onPressed: _showRestoreConfig,
+                    icon: const Icon(Icons.settings_backup_restore),
+                    label: const Text('Restore configuration'),
                   ),
                 ],
               ),
@@ -875,8 +1123,13 @@ class _AddDialogState extends State<_AddDialog> {
     );
     _dashUser = TextEditingController(text: conn?.dashboardUsername ?? '');
     _dashPass = TextEditingController(text: conn?.dashboardPassword ?? '');
+    // The Desktop Gateway URL is an advanced override, not a default: the
+    // app derives the JSON-RPC/WebSocket origin from the dashboard details
+    // when this field is blank. Pre-filling a hardcoded example here made
+    // every new connection silently point at a dead host and wedge Project
+    // loading. See docs/ANDROID_FINAL_UI_SPEC_DRAFT.md.
     _desktopGatewayUrl = TextEditingController(
-      text: conn?.desktopGatewayUrl ?? 'http://192.168.1.193/desktop',
+      text: conn?.desktopGatewayUrl ?? '',
     );
     _dashboardProxied = conn?.dashboardProxied ?? false;
     _showDashboard =
@@ -887,6 +1140,76 @@ class _AddDialogState extends State<_AddDialog> {
         conn?.dashboardPassword?.isNotEmpty == true ||
         _dashboardProxied ||
         conn?.desktopGatewayUrl?.isNotEmpty == true;
+  }
+
+  /// Reads a `hermes://` config string from the clipboard and pre-fills the
+  /// dialog fields, so pasting one string replaces typing eight fields.
+  Future<void> _pasteConfig() async {
+    final data = await Clipboard.getData(Clipboard.kTextPlain);
+    final text = data?.text?.trim() ?? '';
+    if (text.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('The clipboard is empty.')),
+        );
+      }
+      return;
+    }
+
+    final SavedConnection? decoded;
+    try {
+      decoded = ConnectionConfigString.decode(text);
+    } on FormatException catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error.message)));
+      }
+      return;
+    }
+    if (decoded == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('That is not a Hermes connection config.'),
+          ),
+        );
+      }
+      return;
+    }
+    final connection = decoded;
+
+    setState(() {
+      _label.text = connection.label;
+      _host.text = connection.useHttps
+          ? 'https://${connection.host}'
+          : connection.host;
+      _port.text = connection.port.toString();
+      _apiKey.text = connection.apiKey;
+      _gatewayPrefix.text = connection.gatewayPrefix ?? '';
+      _dashboardPrefix.text = connection.dashboardPrefix ?? '';
+      _dashPort.text = connection.dashboardPortOverride?.toString() ?? '';
+      _dashUser.text = connection.dashboardUsername ?? '';
+      _dashPass.text = connection.dashboardPassword ?? '';
+      _desktopGatewayUrl.text = connection.desktopGatewayUrl ?? '';
+      _dashboardProxied = connection.dashboardProxied;
+      _showDashboard =
+          connection.gatewayPrefix?.isNotEmpty == true ||
+          connection.dashboardPrefix?.isNotEmpty == true ||
+          connection.dashboardPortOverride != null ||
+          connection.dashboardUsername?.isNotEmpty == true ||
+          connection.dashboardPassword?.isNotEmpty == true ||
+          connection.dashboardProxied ||
+          connection.desktopGatewayUrl?.isNotEmpty == true;
+      _error = null;
+    });
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Config pasted — review and tap Connect.'),
+        ),
+      );
+    }
   }
 
   Future<void> _validateAndSave() async {
@@ -919,16 +1242,14 @@ class _AddDialogState extends State<_AddDialog> {
         apiKey: apiKey,
         pathPrefix: gatewayPrefix,
       );
-      final ok = await client.healthCheck();
+      final result = await client.checkHealth();
       client.close();
 
       if (!mounted) return;
 
-      if (!ok) {
+      if (!result.isHealthy) {
         setState(() {
-          _error = apiKey.isEmpty
-              ? 'Server requires an API key. Enter your API_SERVER_KEY.'
-              : 'Invalid API key. Server returned 401.';
+          _error = result.userMessage(apiKeyProvided: apiKey.isNotEmpty);
           _validating = false;
         });
         return;
@@ -1050,6 +1371,15 @@ class _AddDialogState extends State<_AddDialog> {
                 ),
               ),
             ],
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                key: const Key('paste_connection_config'),
+                onPressed: _validating ? null : _pasteConfig,
+                icon: const Icon(Icons.content_paste, size: 18),
+                label: const Text('Paste connection config'),
+              ),
+            ),
             TextField(
               controller: _label,
               decoration: const InputDecoration(labelText: 'Label'),

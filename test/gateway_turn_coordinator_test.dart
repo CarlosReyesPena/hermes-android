@@ -3074,6 +3074,54 @@ void main() {
       },
     );
 
+    test(
+      'onSessionBound fires once when a fresh draft gains its stored id',
+      () async {
+        late _GatewayFixture fixture;
+        var opens = 0;
+        fixture = await _GatewayFixture.start(
+          handler: (request, connectionIndex) {
+            final params = request['params'] as Map<String, dynamic>;
+            if (request['method'] == 'session.open') {
+              opens += 1;
+              return _openResult(
+                mobileSessionId: params['mobile_session_id'] as String,
+                connectionIndex: connectionIndex,
+                storedSessionId: 'stored-a',
+                bindingVersion: opens,
+              );
+            }
+            throw StateError('Unexpected method ${request['method']}');
+          },
+        );
+        final journal = GatewayTurnJournal(store: _MemoryJournalStore());
+        final coordinator = _coordinator(fixture: fixture, journal: journal);
+        final bounds = <(String, String)>[];
+        coordinator.onSessionBound = (local, stored) {
+          bounds.add((local, stored));
+        };
+
+        try {
+          await coordinator.ensureOpen();
+
+          // The first binding carries the durable stored id an owner needs to
+          // reconcile records keyed by the draft id.
+          expect(bounds, [('local-a', 'stored-a')]);
+
+          // A reconnect reuses the same binding; the callback must not re-fire
+          // (the assignment it drives is idempotent but should not spam).
+          await fixture.closeSocket();
+          await fixture.waitForSocketClosed();
+          await coordinator.waitForIdle();
+          await coordinator.ensureOpen();
+          expect(bounds, hasLength(1));
+        } finally {
+          await coordinator.close();
+          await fixture.close();
+        }
+      },
+    );
+
     test('WAL write failure sends zero prompt.submit requests', () async {
       final fixture = await _GatewayFixture.start();
       final store = _MemoryJournalStore();

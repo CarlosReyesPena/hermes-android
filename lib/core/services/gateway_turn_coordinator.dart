@@ -15,9 +15,14 @@ typedef GatewayTurnIdFactory = String Function();
 typedef GatewayTurnClock = DateTime Function();
 typedef GatewayTurnStateCallback =
     void Function(GatewayTurnRecoveryState state);
-typedef GatewayTurnSettledCallback = void Function(
-  GatewayTurnRecoveryState state,
-);
+typedef GatewayTurnSettledCallback =
+    void Function(GatewayTurnRecoveryState state);
+
+/// Fired when `session.open` first binds a draft (local) session id to the
+/// server's durable stored id. Lets an owning layer reconcile server-side
+/// records that were keyed by the draft id before the binding existed.
+typedef GatewayTurnSessionBoundCallback =
+    void Function(String localSessionId, String storedSessionId);
 
 enum GatewayTurnCoordinatorFailure {
   closed,
@@ -119,6 +124,10 @@ class GatewayTurnCoordinatorRegistry {
   /// observe turn settlement without reaching into internal state.
   GatewayTurnSettledCallback? onTurnSettled;
 
+  /// Set on every newly opened coordinator so an owner can reconcile
+  /// server-side records once a draft session gains its durable stored id.
+  GatewayTurnSessionBoundCallback? onSessionBound;
+
   GatewayTurnCoordinatorRegistry({
     required this.connectionId,
     required this.endpointDigest,
@@ -151,15 +160,18 @@ class GatewayTurnCoordinatorRegistry {
       );
       final coordinator = _coordinators.putIfAbsent(
         localSessionId,
-        () => GatewayTurnCoordinator(
-          connectionId: connectionId,
-          endpointDigest: endpointDigest,
-          localSessionId: localSessionId,
-          journal: journal,
-          freshSocketFactory: _leaseFreshSocket,
-          uuidFactory: uuidFactory,
-          clock: clock,
-        )..onTurnSettled = onTurnSettled,
+        () =>
+            GatewayTurnCoordinator(
+                connectionId: connectionId,
+                endpointDigest: endpointDigest,
+                localSessionId: localSessionId,
+                journal: journal,
+                freshSocketFactory: _leaseFreshSocket,
+                uuidFactory: uuidFactory,
+                clock: clock,
+              )
+              ..onTurnSettled = onTurnSettled
+              ..onSessionBound = onSessionBound,
       );
       Object? firstError;
       StackTrace? firstStack;
@@ -355,6 +367,9 @@ class GatewayTurnCoordinator {
   /// Called exactly once when a turn is settled into the tombstone,
   /// whether completed successfully or fail-closed.
   GatewayTurnSettledCallback? onTurnSettled;
+
+  /// Called when `session.open` first binds this draft session to a stored id.
+  GatewayTurnSessionBoundCallback? onSessionBound;
 
   GatewayTurnCoordinator({
     required this.connectionId,
@@ -836,6 +851,11 @@ class GatewayTurnCoordinator {
       );
       await journal.upsertBinding(durable);
       _requireOperational();
+      if (previous == null) {
+        // First binding for this draft session: the durable id now exists,
+        // so an owner can reconcile records that were keyed by the draft id.
+        onSessionBound?.call(localSessionId, durable.storedSessionId);
+      }
       _invalidateStagedAttachments();
       _transportGeneration += 1;
       _client = client;

@@ -47,6 +47,9 @@ abstract interface class GatewayTurnApplicationSession {
   Future<void> close();
 
   set onTurnSettled(GatewayTurnSettledCallback? callback);
+
+  /// Called when `session.open` first binds a draft session to its stored id.
+  set onSessionBound(GatewayTurnSessionBoundCallback? callback);
 }
 
 /// Owns recovery registries above screen and Navigator lifetimes.
@@ -197,6 +200,11 @@ class _CoordinatorGatewayTurnApplicationSession
   @override
   set onTurnSettled(GatewayTurnSettledCallback? callback) {
     _registry.onTurnSettled = callback;
+  }
+
+  @override
+  set onSessionBound(GatewayTurnSessionBoundCallback? callback) {
+    _registry.onSessionBound = callback;
   }
 }
 

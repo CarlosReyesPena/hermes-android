@@ -2,9 +2,30 @@
 import 'package:flutter/material.dart';
 import '../services/connection_manager.dart';
 
+/// Creates the dashboard client for a connection. Injectable so widget tests
+/// can substitute a mock transport without reaching the network.
+typedef SkillsDashboardClientFactory =
+    DashboardClient Function(SavedConnection connection);
+
+DashboardClient _defaultSkillsDashboardClient(SavedConnection connection) {
+  return DashboardClient(
+    host: connection.host,
+    port: connection.dashboardPort,
+    pathPrefix: connection.dashboardPrefix ?? '',
+    proxied: connection.dashboardProxied,
+    useHttps: connection.useHttps,
+    username: connection.dashboardUsername,
+    password: connection.dashboardPassword,
+  );
+}
+
 class SkillsScreen extends StatefulWidget {
   final SavedConnection connection;
-  const SkillsScreen({required this.connection, super.key});
+
+  /// Overrides client construction for tests.
+  final SkillsDashboardClientFactory? clientFactory;
+
+  const SkillsScreen({required this.connection, this.clientFactory, super.key});
 
   @override
   State<SkillsScreen> createState() => _SkillsScreenState();
@@ -19,15 +40,8 @@ class _SkillsScreenState extends State<SkillsScreen> {
   @override
   void initState() {
     super.initState();
-    _client = DashboardClient(
-      host: widget.connection.host,
-      port: widget.connection.dashboardPort,
-      pathPrefix: widget.connection.dashboardPrefix ?? "",
-      proxied: widget.connection.dashboardProxied,
-      useHttps: widget.connection.useHttps,
-      username: widget.connection.dashboardUsername,
-      password: widget.connection.dashboardPassword,
-    );
+    final factory = widget.clientFactory ?? _defaultSkillsDashboardClient;
+    _client = factory(widget.connection);
     _load();
   }
 
@@ -60,13 +74,17 @@ class _SkillsScreenState extends State<SkillsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // The count only means something once data has loaded — showing "(0)"
+    // during load or on error would report a false "0 skills".
+    final count = _loading || _error != null ? '' : ' (${_skills.length})';
     return Scaffold(
       appBar: AppBar(
-        title: Text('Skills (${_skills.length})'),
+        title: Text('Skills$count'),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: _loading ? null : _load,
+            tooltip: 'Refresh',
           ),
         ],
       ),

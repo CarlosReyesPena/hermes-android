@@ -7,6 +7,7 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:hermes_android/core/services/connection_manager.dart';
+import 'package:hermes_android/core/services/desktop_gateway_client.dart';
 import 'package:hermes_android/core/services/ws_client.dart';
 
 /// Case-insensitive request header lookup — package:http normalises header
@@ -441,6 +442,57 @@ void main() {
       client.close();
     });
 
+    test(
+      'checkHealth reports the failing prefixed endpoint and status',
+      () async {
+        final client = ApiClient(
+          baseUrl: 'https://hermes.example',
+          pathPrefix: '/hermes',
+          apiKey: 'prefixed-test-key',
+          httpClient: MockClient((request) async {
+            expect(request.url.path, '/hermes/health');
+            return http.Response('not found', 404);
+          }),
+        );
+
+        final result = await client.checkHealth();
+
+        expect(result.isHealthy, isFalse);
+        expect(result.statusCode, 404);
+        expect(result.endpoint.path, '/hermes/health');
+        expect(
+          result.userMessage(apiKeyProvided: true),
+          allOf(contains('HTTP 404'), contains('reverse-proxy routes')),
+        );
+        client.close();
+      },
+    );
+
+    test(
+      'checkHealth attributes auth failures to the sessions endpoint',
+      () async {
+        final client = ApiClient(
+          baseUrl: 'http://hermes.local:8642',
+          apiKey: 'invalid-test-key',
+          httpClient: MockClient((request) async {
+            if (request.url.path == '/health') return http.Response('{}', 200);
+            return http.Response('unauthorized', 401);
+          }),
+        );
+
+        final result = await client.checkHealth();
+
+        expect(result.isHealthy, isFalse);
+        expect(result.statusCode, 401);
+        expect(result.endpoint.path, '/api/sessions');
+        expect(
+          result.userMessage(apiKeyProvided: true),
+          contains('API key was rejected'),
+        );
+        client.close();
+      },
+    );
+
     test('deleteSession deletes a remote Hermes session', () async {
       final client = ApiClient(
         baseUrl: 'http://hermes.local:8642',
@@ -469,6 +521,56 @@ void main() {
       );
 
       await client.deleteSession('mob-absent');
+      client.close();
+    });
+
+    test('updateSessionFlags PATCHes pinned and archived in one call', () async {
+      final client = ApiClient(
+        baseUrl: 'http://hermes.local:8642',
+        apiKey: 'valid-key',
+        httpClient: MockClient((request) async {
+          expect(request.method, 'PATCH');
+          expect(request.url.path, '/api/sessions/mob-123');
+          expect(request.headers['authorization'], 'Bearer valid-key');
+          final body = jsonDecode(request.body) as Map<String, dynamic>;
+          expect(body, {'pinned': true, 'archived': false});
+          return http.Response('{"object":"hermes.session"}', 200);
+        }),
+      );
+
+      await client.updateSessionFlags('mob-123', pinned: true, archived: false);
+      client.close();
+    });
+
+    test('updateSessionFlags sends only the flags it was given', () async {
+      final client = ApiClient(
+        baseUrl: 'http://hermes.local:8642',
+        apiKey: 'valid-key',
+        httpClient: MockClient((request) async {
+          expect(request.method, 'PATCH');
+          final body = jsonDecode(request.body) as Map<String, dynamic>;
+          expect(body, {'pinned': false});
+          return http.Response('{"object":"hermes.session"}', 200);
+        }),
+      );
+
+      await client.updateSessionFlags('mob-123', pinned: false);
+      client.close();
+    });
+
+    test('updateSessionFlags surfaces a non-2xx gateway response', () async {
+      final client = ApiClient(
+        baseUrl: 'http://hermes.local:8642',
+        apiKey: 'valid-key',
+        httpClient: MockClient((request) async {
+          return http.Response('bad flag', 400);
+        }),
+      );
+
+      await expectLater(
+        client.updateSessionFlags('mob-123', pinned: true),
+        throwsException,
+      );
       client.close();
     });
   });
@@ -618,6 +720,81 @@ void main() {
         api.close();
       },
     );
+  });
+
+  group('Desktop gateway URL derivation', () {
+    test('derives the Desktop gateway from dashboard details by default', () {
+      final connection = SavedConnection(
+        id: 'miniserver',
+        label: 'Miniserver',
+        host: 'hermes-miniserver.example.ts.net',
+        port: 8642,
+        apiKey: 'test-key',
+        dashboardPortOverride: 9119,
+        dashboardUsername: 'carlos',
+        dashboardPassword: 'secret',
+      );
+
+      expect(
+        DesktopGatewayClient.normalizedGatewayBaseUrl(connection),
+        'http://hermes-miniserver.example.ts.net:9119',
+      );
+    });
+
+    test(
+      'ignores a redundant same-host override and derives dashboard port',
+      () {
+        final connection = SavedConnection(
+          id: 'miniserver',
+          label: 'Miniserver',
+          host: 'hermes-miniserver.example.ts.net',
+          port: 8642,
+          apiKey: 'test-key',
+          dashboardPortOverride: 9119,
+          desktopGatewayUrl: 'https://hermes-miniserver.example.ts.net',
+        );
+
+        expect(
+          DesktopGatewayClient.normalizedGatewayBaseUrl(connection),
+          'http://hermes-miniserver.example.ts.net:9119',
+        );
+      },
+    );
+
+    test('preserves an explicit Desktop gateway override', () {
+      final connection = SavedConnection(
+        id: 'remote',
+        label: 'Remote',
+        host: 'api.example.test',
+        port: 8642,
+        apiKey: 'test-key',
+        useHttps: true,
+        dashboardPortOverride: 9119,
+        desktopGatewayUrl: 'https://desktop.example.test/gateway',
+      );
+
+      expect(
+        DesktopGatewayClient.normalizedGatewayBaseUrl(connection),
+        'https://desktop.example.test:443/gateway',
+      );
+    });
+
+    test('includes the dashboard path prefix in the derived URL', () {
+      final connection = SavedConnection(
+        id: 'proxied',
+        label: 'Proxied',
+        host: 'hermes.example.test',
+        port: 443,
+        apiKey: 'test-key',
+        useHttps: true,
+        dashboardPrefix: 'dashboard',
+      );
+
+      expect(
+        DesktopGatewayClient.normalizedGatewayBaseUrl(connection),
+        'https://hermes.example.test:443/dashboard',
+      );
+    });
   });
 
   group('DashboardClient', () {
@@ -2149,6 +2326,48 @@ void main() {
         expect(request['method'], 'clarify.respond');
         expect(request['params'], {
           'request_id': 'clarify-request-123',
+          'answer': 'Balanced',
+        });
+      } finally {
+        client.close();
+        await socketSubscription.cancel();
+        await server.close(force: true);
+      }
+    });
+
+    test('echoes question_id back for batch clarify answers', () async {
+      final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+      final requestSeen = Completer<Map<String, dynamic>>();
+      final socketSubscription = server
+          .transform(WebSocketTransformer())
+          .listen((socket) {
+            socket.listen((raw) {
+              final request = jsonDecode(raw as String) as Map<String, dynamic>;
+              if (!requestSeen.isCompleted) requestSeen.complete(request);
+              socket.add(
+                jsonEncode({
+                  'jsonrpc': '2.0',
+                  'id': request['id'],
+                  'result': {'status': 'ok', 'remaining': <String>[]},
+                }),
+              );
+            });
+          });
+      final client = WsClient('http://127.0.0.1:${server.port}');
+
+      try {
+        await client.connect();
+        await client.respondToClarify(
+          requestId: 'clarify-request-123',
+          questionId: 'q1',
+          answer: 'Balanced',
+        );
+        final request = await requestSeen.future;
+
+        expect(request['method'], 'clarify.respond');
+        expect(request['params'], {
+          'request_id': 'clarify-request-123',
+          'question_id': 'q1',
           'answer': 'Balanced',
         });
       } finally {

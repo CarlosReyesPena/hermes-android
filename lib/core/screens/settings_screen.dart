@@ -1,15 +1,49 @@
 // Settings screen for model selection, theme toggle, and app info.
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../services/config_backup_io.dart';
+import '../services/config_backup_service.dart';
+import '../services/biometric_authenticator.dart';
 import '../services/connection_manager.dart';
+import '../utils/voice_label.dart';
+import '../widgets/biometric_settings_card.dart';
+import '../widgets/config_backup_card.dart';
 import '../widgets/text_size_settings_card.dart';
+import '../widgets/session_organizer_settings_card.dart';
 import '../../main.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
+/// Creates the dashboard client for a connection. Injectable so widget tests
+/// can substitute a mock transport without reaching the network.
+typedef SettingsDashboardClientFactory =
+    DashboardClient Function(SavedConnection connection);
+
+DashboardClient _defaultSettingsDashboardClient(SavedConnection connection) {
+  return DashboardClient(
+    host: connection.host,
+    port: connection.dashboardPort,
+    pathPrefix: connection.dashboardPrefix ?? '',
+    proxied: connection.dashboardProxied,
+    useHttps: connection.useHttps,
+    username: connection.dashboardUsername,
+    password: connection.dashboardPassword,
+  );
+}
+
 class SettingsScreen extends StatefulWidget {
   final SavedConnection connection;
-  const SettingsScreen({required this.connection, super.key});
+
+  /// Overrides client construction for tests.
+  final SettingsDashboardClientFactory? clientFactory;
+
+  const SettingsScreen({
+    required this.connection,
+    this.clientFactory,
+    super.key,
+  });
 
   @override
   State<SettingsScreen> createState() => _SettingsScreenState();
@@ -22,6 +56,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _loading = true;
   String? _error;
   String? _successMsg;
+  SessionOrganizerSettings? _organizerSettings;
+  bool _organizerLoading = true;
+  bool _organizerUnavailable = false;
 
   // Selected values
   String _selectedProvider = '';
@@ -32,16 +69,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   void initState() {
     super.initState();
-    _client = DashboardClient(
-      host: widget.connection.host,
-      port: widget.connection.dashboardPort,
-      pathPrefix: widget.connection.dashboardPrefix ?? "",
-      proxied: widget.connection.dashboardProxied,
-      useHttps: widget.connection.useHttps,
-      username: widget.connection.dashboardUsername,
-      password: widget.connection.dashboardPassword,
-    );
+    final factory = widget.clientFactory ?? _defaultSettingsDashboardClient;
+    _client = factory(widget.connection);
     _loadData();
+    unawaited(_loadOrganizerSettings());
+  }
+
+  /// Retries every server-backed section. A transient failure of one section
+  /// (e.g. the organizer plugin briefly unavailable) must not require
+  /// leaving and re-entering the screen once the server recovers.
+  void _refreshAll() {
+    _loadData();
+    setState(() {
+      _organizerLoading = true;
+      _organizerUnavailable = false;
+    });
+    unawaited(_loadOrganizerSettings());
   }
 
   @override
@@ -74,6 +117,47 @@ class _SettingsScreenState extends State<SettingsScreen> {
         _loading = false;
       });
     }
+  }
+
+  Future<void> _loadOrganizerSettings() async {
+    try {
+      final data = await _client.apiGet(
+        'plugins/session-project-organizer/settings',
+      );
+      if (!mounted) return;
+      setState(() {
+        _organizerSettings = SessionOrganizerSettings.fromJson(data);
+        _organizerLoading = false;
+        _organizerUnavailable = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _organizerLoading = false;
+        _organizerUnavailable = true;
+      });
+    }
+  }
+
+  Future<void> _saveOrganizerSettings(SessionOrganizerSettings settings) async {
+    final data = await _client.apiPut(
+      'plugins/session-project-organizer/settings',
+      body: settings.toJson(),
+    );
+    if (!mounted) return;
+    setState(() {
+      _organizerSettings = SessionOrganizerSettings.fromJson(data);
+    });
+  }
+
+  Map<String, List<String>> _organizerProviderModels() {
+    return {
+      for (final entry in _providerModels.entries)
+        entry.key: entry.value
+            .map((model) => model['id'] as String? ?? '')
+            .where((model) => model.isNotEmpty)
+            .toList(),
+    };
   }
 
   void _parseModelOptions() {
@@ -144,7 +228,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
-            onPressed: _loading ? null : _loadData,
+            onPressed: (_loading || _organizerLoading) ? null : _refreshAll,
             tooltip: 'Refresh',
           ),
         ],
@@ -154,165 +238,177 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Widget _buildBody() {
-    if (_loading) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
-    if (_error != null && _modelOptions == null) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(32),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.error_outline, size: 48, color: Colors.orange),
-              const SizedBox(height: 16),
-              Text(
-                'Failed to load settings',
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                _error!,
-                style: Theme.of(context).textTheme.bodySmall,
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 24),
-              ElevatedButton(onPressed: _loadData, child: const Text('Retry')),
-            ],
-          ),
-        ),
-      );
-    }
-
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        // ---- Section: Model ----
+        // ---- Section: Model (server-backed; its failure is local to this
+        // section so purely local controls below stay reachable offline) ----
         _buildSectionHeader('Profile default model'),
-        Text(
-          'Changes the default for ${widget.connection.label}. Use the selector in a chat to override only that conversation.',
-          style: Theme.of(context).textTheme.bodySmall,
-        ),
-        const SizedBox(height: 8),
-        if (_modelInfo != null)
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.smart_toy,
-                        color: Theme.of(context).colorScheme.primary,
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Current profile default',
-                        style: Theme.of(context).textTheme.titleSmall,
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    '${_modelInfo!['model'] ?? '???'}  \nvia `${_modelInfo!['provider'] ?? '???'}`',
-                    style: Theme.of(context).textTheme.bodyMedium,
-                  ),
-                  if (_modelInfo!['effective_context_length'] != null &&
-                      _modelInfo!['effective_context_length'] != 0)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 4),
-                      child: Text(
-                        'Context: ${_modelInfo!['effective_context_length']} tokens',
-                        style: Theme.of(
-                          context,
-                        ).textTheme.bodySmall?.copyWith(color: Colors.grey),
-                      ),
+        if (_loading)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 24),
+            child: Center(child: CircularProgressIndicator()),
+          )
+        else if (_error != null && _modelOptions == null)
+          _ModelSectionError(onRetry: _loadData)
+        else ...[
+          Text(
+            'Changes the default for ${widget.connection.label}. Use the selector in a chat to override only that conversation.',
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+          const SizedBox(height: 8),
+          if (_modelInfo != null)
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.smart_toy,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Current profile default',
+                          style: Theme.of(context).textTheme.titleSmall,
+                        ),
+                      ],
                     ),
-                ],
+                    const SizedBox(height: 8),
+                    Text(
+                      '${_modelInfo!['model'] ?? '???'}  \nvia `${_modelInfo!['provider'] ?? '???'}`',
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                    if (_modelInfo!['effective_context_length'] != null &&
+                        _modelInfo!['effective_context_length'] != 0)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Text(
+                          'Context: ${_modelInfo!['effective_context_length']} tokens',
+                          style: Theme.of(
+                            context,
+                          ).textTheme.bodySmall?.copyWith(color: Colors.grey),
+                        ),
+                      ),
+                  ],
+                ),
               ),
             ),
-          ),
-        const SizedBox(height: 12),
-
-        // Provider picker
-        if (_providers.isNotEmpty) ...[
-          _buildDropdown<String>(
-            label: 'Provider',
-            value:
-                _selectedProvider.isNotEmpty &&
-                    _providers.contains(_selectedProvider)
-                ? _selectedProvider
-                : null,
-            items: _providers
-                .map((p) => DropdownMenuItem(value: p, child: Text(p)))
-                .toList(),
-            onChanged: (val) {
-              setState(() {
-                _selectedProvider = val!;
-                // Reset model when switching providers
-                final models = _providerModels[val];
-                if (models != null && models.isNotEmpty) {
-                  _selectedModel = models.first['id'] as String? ?? '';
-                } else {
-                  _selectedModel = '';
-                }
-              });
-            },
-          ),
           const SizedBox(height: 12),
-        ],
 
-        // Model picker
-        if (_selectedProvider.isNotEmpty &&
-            _providerModels.containsKey(_selectedProvider)) ...[
-          _buildDropdown<String>(
-            label: 'Model',
-            value: _selectedModel,
-            items: _providerModels[_selectedProvider]!.map((m) {
-              final id = m['id'] as String? ?? '';
-              final name = m['name'] as String? ?? id;
-              return DropdownMenuItem(value: id, child: Text(name));
-            }).toList(),
-            onChanged: (val) {
-              setState(() => _selectedModel = val!);
-            },
-          ),
-          const SizedBox(height: 16),
-          SizedBox(
-            width: double.infinity,
-            child: FilledButton.icon(
-              onPressed: _applyModel,
-              icon: const Icon(Icons.check),
-              label: const Text('Set profile default'),
+          // Provider picker
+          if (_providers.isNotEmpty) ...[
+            _buildDropdown<String>(
+              label: 'Provider',
+              value:
+                  _selectedProvider.isNotEmpty &&
+                      _providers.contains(_selectedProvider)
+                  ? _selectedProvider
+                  : null,
+              items: _providers
+                  .map((p) => DropdownMenuItem(value: p, child: Text(p)))
+                  .toList(),
+              onChanged: (val) {
+                setState(() {
+                  _selectedProvider = val!;
+                  // Reset model when switching providers
+                  final models = _providerModels[val];
+                  if (models != null && models.isNotEmpty) {
+                    _selectedModel = models.first['id'] as String? ?? '';
+                  } else {
+                    _selectedModel = '';
+                  }
+                });
+              },
             ),
-          ),
+            const SizedBox(height: 12),
+          ],
+
+          // Model picker
+          if (_selectedProvider.isNotEmpty &&
+              _providerModels.containsKey(_selectedProvider)) ...[
+            _buildDropdown<String>(
+              label: 'Model',
+              value: _selectedModel,
+              items: _providerModels[_selectedProvider]!.map((m) {
+                final id = m['id'] as String? ?? '';
+                final name = m['name'] as String? ?? id;
+                return DropdownMenuItem(value: id, child: Text(name));
+              }).toList(),
+              onChanged: (val) {
+                setState(() => _selectedModel = val!);
+              },
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: _applyModel,
+                icon: const Icon(Icons.check),
+                label: const Text('Set profile default'),
+              ),
+            ),
+          ],
+          const SizedBox(height: 16),
+
+          // Success/error messages
+          if (_successMsg != null)
+            Card(
+              color: Colors.green.shade900,
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Text(
+                  _successMsg!,
+                  style: const TextStyle(color: Colors.white),
+                ),
+              ),
+            ),
+          if (_error != null && _modelOptions != null)
+            Card(
+              color: Colors.red.shade900,
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Text(
+                  _error!,
+                  style: const TextStyle(color: Colors.white),
+                ),
+              ),
+            ),
         ],
         const SizedBox(height: 16),
 
-        // Success/error messages
-        if (_successMsg != null)
-          Card(
-            color: Colors.green.shade900,
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Text(
-                _successMsg!,
-                style: const TextStyle(color: Colors.white),
+        // ---- Section: Automatic Project organization ----
+        _buildSectionHeader('Conversation organization'),
+        if (_organizerLoading)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 16),
+            child: Center(child: CircularProgressIndicator()),
+          )
+        else if (_organizerSettings != null &&
+            _organizerProviderModels().isNotEmpty)
+          SessionOrganizerSettingsCard(
+            key: ValueKey(
+              '${_organizerSettings!.aiEnabled}-'
+              '${_organizerSettings!.provider}-'
+              '${_organizerSettings!.model}',
+            ),
+            initialSettings: _organizerSettings!,
+            providerModels: _organizerProviderModels(),
+            onSave: _saveOrganizerSettings,
+          )
+        else if (_organizerUnavailable)
+          const Card(
+            child: ListTile(
+              leading: Icon(Icons.cloud_off),
+              title: Text('AI curator settings are unavailable'),
+              subtitle: Text(
+                'The session-project-organizer plugin must be enabled on the server.',
               ),
             ),
           ),
-        if (_error != null && _modelOptions != null)
-          Card(
-            color: Colors.red.shade900,
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Text(_error!, style: const TextStyle(color: Colors.white)),
-            ),
-          ),
-
         const SizedBox(height: 16),
 
         // ---- Section: Theme ----
@@ -331,6 +427,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
         const SizedBox(height: 8),
         _VerboseToggle(),
+        const SizedBox(height: 16),
+
+        // ---- Section: Security ----
+        _buildSectionHeader('Security'),
+        BiometricSettingsCard(
+          preferences: context
+              .findAncestorStateOfType<HermesAppState>()!
+              .widget
+              .connManager
+              .prefs,
+          authenticator: LocalAuthBiometricAuthenticator(),
+        ),
         const SizedBox(height: 16),
 
         const SizedBox(height: 16),
@@ -366,11 +474,56 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
         const SizedBox(height: 16),
 
+        // ---- Section: Backup ----
+        _buildSectionHeader('Backup & restore'),
+        ConfigBackupCard(
+          onExport: _exportConfig,
+          onDeliverExport: _deliverExport,
+          onPickBackupFile: _pickBackupFile,
+          onImport: _importConfig,
+        ),
+        const SizedBox(height: 16),
+
         // ---- Section: About ----
         _buildSectionHeader('About'),
         _AboutCard(),
       ],
     );
+  }
+
+  ConfigBackupIo _backupIo() {
+    final app = context.findAncestorStateOfType<HermesAppState>()!;
+    return ConfigBackupIo(connectionManager: app.widget.connManager);
+  }
+
+  Future<String> _exportConfig(String passphrase) {
+    return _backupIo().exportEncrypted(passphrase);
+  }
+
+  Future<String?> _deliverExport(String contents) {
+    return _backupIo().deliverExport(contents);
+  }
+
+  Future<String?> _pickBackupFile() {
+    return _backupIo().pickBackupFile();
+  }
+
+  Future<ConfigImportResult> _importConfig(
+    String contents,
+    String passphrase,
+    ConfigImportMode mode,
+  ) async {
+    final result = await _backupIo().importEncrypted(
+      contents,
+      passphrase,
+      mode,
+    );
+    if (mounted) {
+      // Theme and text size are read at app root; refresh so a restored
+      // preference is visible without restarting the app.
+      context.findAncestorStateOfType<HermesAppState>()?.setState(() {});
+    }
+    return result;
   }
 
   Widget _buildSectionHeader(String title) {
@@ -646,15 +799,10 @@ class _VoicePickerState extends State<_VoicePicker> {
   }
 
   String _voiceLabel(Map<String, String> voice) {
-    final name = voice['name'] ?? '';
-    final locale = voice['locale'] ?? '';
-    if (name == locale) return locale;
-    final gender = name.contains('male')
-        ? '(male)'
-        : name.contains('female')
-        ? '(female)'
-        : '';
-    return '$locale $gender  [$name]';
+    return formatVoiceLabel(
+      name: voice['name'] ?? '',
+      locale: voice['locale'] ?? '',
+    );
   }
 
   @override
@@ -673,7 +821,7 @@ class _VoicePickerState extends State<_VoicePicker> {
         child: Padding(
           padding: EdgeInsets.all(16),
           child: Text(
-            'No TTS voices found.\\n'
+            'No TTS voices found.\n'
             'Install Google Text-to-Speech and download voice data.',
             style: TextStyle(color: Colors.grey),
           ),
@@ -791,6 +939,59 @@ class _SessionSourcesFilterState extends State<_SessionSourcesFilter> {
             controlAffinity: ListTileControlAffinity.leading,
           );
         }).toList(),
+      ),
+    );
+  }
+}
+
+/// Localized error card for the server-backed Model section.
+///
+/// Unlike the previous full-screen error, this keeps every local Settings
+/// section (Appearance, Security, Voice, Backup…) reachable when the
+/// dashboard is unreachable — those controls must survive a network outage,
+/// because they are exactly what the user needs to repair the connection.
+class _ModelSectionError extends StatelessWidget {
+  const _ModelSectionError({required this.onRetry});
+
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.error_outline, color: Colors.orange),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Model settings are unavailable',
+                    style: Theme.of(context).textTheme.titleSmall,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'The dashboard could not be reached, so the default model '
+              'cannot be loaded. Local settings below still work.',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+            const SizedBox(height: 12),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: OutlinedButton.icon(
+                onPressed: onRetry,
+                icon: const Icon(Icons.refresh, size: 18),
+                label: const Text('Retry'),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

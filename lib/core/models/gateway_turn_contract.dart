@@ -689,7 +689,7 @@ class GatewayTurnSnapshot {
       assistant: GatewayTurnSnapshotAssistant(
         messageId: assistantMessageId,
         text: assistantText,
-        complete: true,
+        complete: assistantComplete,
       ),
       attachmentManifestDigest: digest,
       finalMessageRef: finalMessageRef,

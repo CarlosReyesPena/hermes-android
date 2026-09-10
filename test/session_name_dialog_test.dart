@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/screens/session_list_screen.dart';
+import 'package:hermes_android/core/widgets/session_name_dialog.dart';
 
 void main() {
   testWidgets('rapid IME, dialog, and owner-route back teardown stays safe', (

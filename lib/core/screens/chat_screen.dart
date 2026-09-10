@@ -16,31 +16,41 @@ import '../controllers/voice_composer_controller.dart';
 import '../services/connection_manager.dart';
 import '../services/attachment_draft_service.dart';
 import '../services/chat_model_override_store.dart';
+import '../services/composer_draft_store.dart';
 import '../services/desktop_gateway_client.dart';
 import '../services/gateway_turn_application_controller.dart';
+import '../services/haptics_service.dart';
 import '../services/gateway_turn_coordinator.dart';
 import '../services/gateway_turn_recovery.dart';
 import '../services/gateway_turn_ui_projection.dart';
+import '../services/remote_files_client.dart';
 import '../services/turn_notification_service.dart';
 import '../services/voice_composer_adapter.dart';
 import '../services/ws_client.dart';
 import '../models/attachment_draft.dart';
 import '../models/gateway_activity.dart';
+import '../utils/relative_time.dart';
 import '../models/gateway_approval.dart';
 import '../models/gateway_clarify.dart';
 import '../models/gateway_insight.dart';
 import '../models/gateway_sensitive_prompt.dart';
 import '../models/gateway_turn_contract.dart';
+import '../utils/chat_display_items.dart';
 import '../utils/chat_history_scroll.dart';
 import '../utils/message_content.dart';
 import '../utils/responsive.dart';
+import '../utils/turn_recovery_fallback.dart';
+import 'files_screen.dart';
 import '../widgets/gateway_activity_card.dart';
+import '../widgets/chat_context_header.dart';
+import '../widgets/markdown_code_block.dart';
 import '../widgets/attachment_draft_tile.dart';
 import '../widgets/chat_end_affordance.dart';
 import '../widgets/gateway_approval_dialog.dart';
 import '../widgets/gateway_clarify_dialog.dart';
 import '../widgets/gateway_insight_card.dart';
 import '../widgets/gateway_sensitive_prompt_dialog.dart';
+import '../widgets/session_name_dialog.dart';
 import '../widgets/voice_composer_controls.dart';
 
 /// These colors remain identical in light and dark themes. Their 8.15:1
@@ -73,13 +83,6 @@ const _reasoningEffortLabels = <String, String>{
   'ultra': 'Ultra',
 };
 
-class _GatewayReasoningDisplay {
-  final String text;
-  final bool initiallyExpanded;
-
-  const _GatewayReasoningDisplay(this.text, this.initiallyExpanded);
-}
-
 enum _ResponseTransport { none, rest, desktop }
 
 const _legacyTransportNotice =
@@ -100,6 +103,16 @@ typedef TestRemoteAttachmentUpload =
       required String dataUrl,
     });
 
+/// Reads the approvals the gateway still has pending for a session.
+///
+/// The real implementation calls `approval.pending` over the desktop gateway
+/// socket; tests substitute a canned list. Injectable exactly like
+/// [TestRemotePromptSubmit] so the replay behaviour can be asserted without
+/// a live gateway.
+@visibleForTesting
+typedef TestPendingApprovalLoader =
+    Future<List<Map<String, dynamic>>> Function(String sessionId);
+
 class _PendingSensitivePrompt {
   final GatewaySensitivePromptRequest request;
   final int responseGeneration;
@@ -117,7 +130,27 @@ class _PendingClarifyPrompt {
 class ChatScreen extends StatefulWidget {
   final SavedConnection connection;
   final Session session;
+
+  /// The server-owned Project this chat was opened from, when known.
+  /// `null` stays explicit as Unassigned in the sticky context header.
+  final String? projectName;
+
+  /// Optional text supplied by Android's share sheet. It only prefills the
+  /// composer; sending remains an explicit user action.
+  final String? initialComposerText;
+
+  /// Validated app-private files supplied by Android's share sheet.
+  final List<AttachmentDraft> initialAttachmentDrafts;
+
   final GatewayTurnApplicationController? turnApplicationController;
+
+  /// Renames the open conversation from the app bar. Offered only when the
+  /// connection supports the Desktop Gateway `session.title` RPC; null hides
+  /// the action so a bare REST connection never shows a dead menu item.
+  final Future<void> Function(Session session, String title)? onRenameSession;
+
+  /// Deletes the open conversation irreversibly. Null hides the action.
+  final Future<void> Function(Session session)? onDeleteSession;
 
   @visibleForTesting
   final GatewayTurnApplicationSession? testTurnApplicationSession;
@@ -132,6 +165,9 @@ class ChatScreen extends StatefulWidget {
   final TestRemotePromptSubmit? testRemotePromptSubmit;
 
   @visibleForTesting
+  final Future<String?> Function()? testServerFilePicker;
+
+  @visibleForTesting
   final TestRemoteAttachmentUpload? testRemoteAttachmentUpload;
 
   @visibleForTesting
@@ -140,17 +176,53 @@ class ChatScreen extends StatefulWidget {
   @visibleForTesting
   final VoiceComposerAdapter? testVoiceComposerAdapter;
 
+  /// Lets a test observe what the chat posts to Android when a turn settles,
+  /// without touching the notification platform channel.
+  @visibleForTesting
+  final TurnNotificationService? testTurnNotifications;
+
+  /// The app-level notification service shared across chats, so the platform
+  /// tap callback is registered exactly once. When both this and
+  /// [testTurnNotifications] are null, the chat creates its own.
+  final TurnNotificationService? turnNotifications;
+
+  /// Lets a test observe the haptic feedback the chat fires without touching
+  /// the platform channel. When null the chat creates its own service.
+  @visibleForTesting
+  final HapticsService? testHaptics;
+
+  /// Overrides how the chat reads approvals that are still pending on the
+  /// gateway (see [TestPendingApprovalLoader]).
+  @visibleForTesting
+  final TestPendingApprovalLoader? testPendingApprovalLoader;
+
+  /// Overrides the composer draft store so tests can seed and assert the
+  /// persisted half-typed prompt without touching real app storage.
+  @visibleForTesting
+  final ComposerDraftStore? testComposerDraftStore;
+
   const ChatScreen({
     required this.connection,
     required this.session,
+    this.projectName,
+    this.initialComposerText,
+    this.initialAttachmentDrafts = const [],
     this.turnApplicationController,
+    this.onRenameSession,
+    this.onDeleteSession,
     this.testTurnApplicationSession,
     this.testApiClient,
     this.testAttachmentDraftService,
     this.testRemotePromptSubmit,
+    this.testServerFilePicker,
     this.testRemoteAttachmentUpload,
     this.testInitialAttachmentDrafts = const [],
     this.testVoiceComposerAdapter,
+    this.testTurnNotifications,
+    this.turnNotifications,
+    this.testHaptics,
+    this.testPendingApprovalLoader,
+    this.testComposerDraftStore,
     super.key,
   });
 
@@ -196,6 +268,8 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   String? _activeClientTurnId;
   bool _recoveringTurn = false;
   bool _legacyTransportFallback = false;
+  bool _legacyHistoryResyncPending = false;
+  bool _legacyHistoryResyncing = false;
   int _responseGeneration = 0;
   bool _approvalDialogOpen = false;
   final List<_PendingSensitivePrompt> _sensitivePromptQueue = [];
@@ -231,12 +305,37 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   static final Map<String, List<GatewayNotice>> _savedGatewayNotices = {};
 
   late final TurnNotificationService _turnNotifications;
+  late final HapticsService _haptics;
+
+  // Composer draft persistence
+  late final Future<ComposerDraftStore> _composerDraftStore;
+  Timer? _composerSaveTimer;
+  static const _composerSaveDebounce = Duration(milliseconds: 350);
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _turnNotifications = TurnNotificationService();
+    _textController.text = widget.initialComposerText ?? '';
+    _textController.selection = TextSelection.collapsed(
+      offset: _textController.text.length,
+    );
+    _composerDraftStore = widget.testComposerDraftStore != null
+        ? Future.value(widget.testComposerDraftStore)
+        : ComposerDraftStore.open();
+    _textController.addListener(_onComposerChanged);
+    if (widget.initialComposerText != null) {
+      // Explicit share text wins over any stored draft and clears it, so the
+      // stale prompt can never resurface on a later reopen.
+      unawaited(_clearComposerDraft());
+    } else {
+      unawaited(_restoreComposerDraft());
+    }
+    _turnNotifications =
+        widget.testTurnNotifications ??
+        widget.turnNotifications ??
+        TurnNotificationService();
+    _haptics = widget.testHaptics ?? HapticsService();
     unawaited(_turnNotifications.ensureInitialized());
     _client =
         widget.testApiClient ??
@@ -256,13 +355,20 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
       adapter:
           widget.testVoiceComposerAdapter ?? SpeechToTextVoiceComposerAdapter(),
     )..addListener(_onVoiceComposerChanged);
-    _attachmentDrafts.addAll(widget.testInitialAttachmentDrafts);
+    _attachmentDrafts
+      ..addAll(widget.initialAttachmentDrafts)
+      ..addAll(widget.testInitialAttachmentDrafts);
     _gatewayNotices = List<GatewayNotice>.from(
       _savedGatewayNotices[_gatewayNoticeIdentity] ?? const [],
     );
     _chatModelStore = ChatModelOverrideStore.open();
     _sessionModelRestore = _restoreSessionModelOverride();
-    if (widget.connection.desktopGatewayUrl?.trim().isNotEmpty == true) {
+    final hasDashboardAuth =
+        widget.connection.dashboardProxied ||
+        (widget.connection.dashboardUsername?.trim().isNotEmpty == true &&
+            widget.connection.dashboardPassword?.trim().isNotEmpty == true);
+    if (widget.connection.desktopGatewayUrl?.trim().isNotEmpty == true ||
+        hasDashboardAuth) {
       try {
         _desktopGateway = DesktopGatewayClient.fromConnection(
           widget.connection,
@@ -319,6 +425,43 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     setState(() => _verboseMode = prefs.getBool('verbose_mode') ?? false);
   }
 
+  /// Debounces composer edits so a burst of keystrokes (or dictation partials)
+  /// produces a single write instead of one per frame.
+  void _onComposerChanged() {
+    _composerSaveTimer?.cancel();
+    _composerSaveTimer = Timer(_composerSaveDebounce, () {
+      if (mounted) unawaited(_persistComposerDraft(_textController.text));
+    });
+  }
+
+  Future<void> _restoreComposerDraft() async {
+    final store = await _composerDraftStore;
+    final draft = store.read(
+      connectionId: widget.connection.id,
+      sessionId: widget.session.id,
+    );
+    if (!mounted || draft == null) return;
+    _textController.text = draft;
+    _textController.selection = TextSelection.collapsed(offset: draft.length);
+  }
+
+  Future<void> _persistComposerDraft(String text) async {
+    final store = await _composerDraftStore;
+    await store.write(
+      connectionId: widget.connection.id,
+      sessionId: widget.session.id,
+      text: text,
+    );
+  }
+
+  Future<void> _clearComposerDraft() async {
+    final store = await _composerDraftStore;
+    await store.clear(
+      connectionId: widget.connection.id,
+      sessionId: widget.session.id,
+    );
+  }
+
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
@@ -342,7 +485,13 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     );
     _desktopGateway?.setAsyncEventListener(null);
     _desktopGateway?.close();
-    _textController.dispose();
+    _composerSaveTimer?.cancel();
+    // Best-effort last save: process death or a fast back-navigation must not
+    // lose the half-typed prompt.
+    unawaited(_persistComposerDraft(_textController.text));
+    _textController
+      ..removeListener(_onComposerChanged)
+      ..dispose();
     _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
     super.dispose();
@@ -352,11 +501,16 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.paused) {
       _appInBackground = true;
+      if (_legacyTransportFallback && (_sending || _streaming)) {
+        _legacyHistoryResyncPending = true;
+      }
     } else if (state == AppLifecycleState.resumed) {
       _appInBackground = false;
       unawaited(_turnNotifications.cancelAll());
       if (_desktopGateway != null) unawaited(_ensureDesktopSession());
-      if (_turnApplicationSession != null && !_legacyTransportFallback) {
+      if (_legacyTransportFallback) {
+        unawaited(_resyncLegacyHistoryAfterResume());
+      } else if (_turnApplicationSession != null) {
         unawaited(_recoverPendingTurn());
       }
     }
@@ -377,6 +531,39 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
       // The composer remains available. The next send retries with a fresh
       // single-use ticket and surfaces an actionable error if it still fails.
     }
+    // An approval requested while this chat was closed (or the socket was
+    // down) has no live event to replay — the gateway keeps it in its pending
+    // queue. Read it back so the turn is never blocked behind an invisible
+    // prompt. Best-effort: a gateway without `approval.pending`, or a socket
+    // that never connected, simply reports none.
+    if (widget.testPendingApprovalLoader != null) {
+      await _replayPendingApprovals(
+        () => widget.testPendingApprovalLoader!(widget.session.id),
+      );
+    } else if (gateway.isConnected) {
+      await _replayPendingApprovals(
+        () => gateway.fetchPendingApprovals(widget.session.id),
+      );
+    }
+  }
+
+  /// Re-shows the first unanswered approval, if any.
+  ///
+  /// Guarded by [_approvalDialogOpen] so a live `approval.request` that is
+  /// already on screen is never duplicated, and by the response generation so
+  /// a replay from an older turn cannot pop over a newer one.
+  Future<void> _replayPendingApprovals(
+    Future<List<Map<String, dynamic>>> Function() load,
+  ) async {
+    if (!mounted || _approvalDialogOpen || _desktopGateway == null) return;
+    List<Map<String, dynamic>> pending;
+    try {
+      pending = await load();
+    } catch (_) {
+      return;
+    }
+    if (!mounted || _approvalDialogOpen || pending.isEmpty) return;
+    _showGatewayApproval(pending.first, _responseGeneration);
   }
 
   void _editAndResend(String text) {
@@ -413,6 +600,75 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
         text: buffer.toString().trim(),
       ),
     );
+  }
+
+  /// Renames the open conversation via the Desktop Gateway RPC.
+  Future<void> _renameChatSession() async {
+    final rename = widget.onRenameSession;
+    if (rename == null) return;
+    final title = await showSessionNameDialog(
+      context: context,
+      title: 'Rename conversation',
+      initialValue: widget.session.title,
+      actionLabel: 'Save',
+    );
+    if (title == null || !mounted) return;
+    try {
+      await rename(widget.session, title);
+      if (!mounted) return;
+      setState(() {});
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Conversation renamed')));
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not rename the conversation')),
+      );
+    }
+  }
+
+  /// Confirms and performs the irreversible deletion of the open conversation,
+  /// then leaves the chat: a deleted session has nothing left to show.
+  Future<void> _deleteChatSession() async {
+    final deleter = widget.onDeleteSession;
+    if (deleter == null) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Delete this conversation?'),
+        content: Text(
+          '“${widget.session.title}” and its full history will be permanently '
+          'removed. Archiving keeps it; deleting cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            style: TextButton.styleFrom(
+              foregroundColor: Theme.of(dialogContext).colorScheme.error,
+            ),
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    _haptics.onDestructiveConfirmation();
+    try {
+      await deleter(widget.session);
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not delete the conversation')),
+      );
+      return;
+    }
+    if (!mounted) return;
+    Navigator.of(context).pop();
   }
 
   Future<void> _initVoice({bool requestSpeechPermission = false}) async {
@@ -684,6 +940,36 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     }
   }
 
+  Future<void> _resyncLegacyHistoryAfterResume() async {
+    if (!mounted ||
+        !_legacyTransportFallback ||
+        !_legacyHistoryResyncPending ||
+        _appInBackground ||
+        _legacyHistoryResyncing ||
+        _loading ||
+        _sending ||
+        _streaming) {
+      return;
+    }
+
+    _legacyHistoryResyncing = true;
+    try {
+      final messages = await _client.getMessages(widget.session.id);
+      if (!mounted || _appInBackground) return;
+      _extractToolMessages(messages);
+      setState(() {
+        _messages = messages;
+        _legacyHistoryResyncPending = false;
+      });
+      _scheduleInitialEndAlignment();
+    } catch (_) {
+      // Keep the pending watermark so the next resume can retry. The composer
+      // remains usable and the normal screen reload path still fetches history.
+    } finally {
+      _legacyHistoryResyncing = false;
+    }
+  }
+
   Future<void> _recoverPendingTurn({bool allowLegacyFallback = false}) async {
     final turnSession = _turnApplicationSession;
     if (turnSession == null || _recoveringTurn || _legacyTransportFallback) {
@@ -716,10 +1002,11 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
       }
     } catch (error) {
       if (!mounted) return;
-      if (allowLegacyFallback &&
-          error is GatewayTurnCoordinatorException &&
-          error.failure ==
-              GatewayTurnCoordinatorFailure.unsupportedCapability) {
+      final fallback = classifyTurnRecoveryFailure(
+        error,
+        allowLegacyFallback: allowLegacyFallback,
+      );
+      if (fallback == TurnRecoveryFallback.legacyTransport) {
         setState(() {
           _legacyTransportFallback = true;
           _sending = false;
@@ -808,6 +1095,17 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
       _scheduleStreamingFollow();
     } else {
       _scheduleScrollTarget(_scrollCoordinator.endStreaming());
+      // Tactile confirmation that the turn settled, distinct for a failure
+      // the user must notice. A fail-closed recovery (failure != null) and a
+      // turn that ended in `failed` both read as a failure.
+      final failed =
+          projection.isFailClosed ||
+          projection.status == GatewayRecoveryTurnStatus.failed;
+      if (failed) {
+        _haptics.onTurnFailed();
+      } else {
+        _haptics.onTurnCompleted();
+      }
     }
   }
 
@@ -909,6 +1207,15 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                 _pickCameraImage();
               },
             ),
+            ListTile(
+              leading: const Icon(Icons.cloud_outlined),
+              title: const Text('Browse server files'),
+              subtitle: const Text('Insert a remote @file reference'),
+              onTap: () {
+                Navigator.pop(sheetContext);
+                unawaited(_pickServerFile());
+              },
+            ),
             if (_desktopGateway != null)
               ListTile(
                 leading: const Icon(Icons.description_outlined),
@@ -924,6 +1231,38 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
           ],
         ),
       ),
+    );
+  }
+
+  Future<void> _pickServerFile() async {
+    String? path;
+    final testPicker = widget.testServerFilePicker;
+    if (testPicker != null) {
+      path = await testPicker();
+    } else {
+      final files = RemoteFilesClient.fromConnection(widget.connection);
+      try {
+        if (!mounted) return;
+        path = await Navigator.of(context).push<String>(
+          MaterialPageRoute<String>(
+            builder: (_) => FilesScreen(
+              files: files,
+              onAddToChat: (selectedPath) =>
+                  Navigator.of(context).pop(selectedPath),
+            ),
+          ),
+        );
+      } finally {
+        files.close();
+      }
+    }
+    if (!mounted || path == null || path.trim().isEmpty) return;
+    final current = _textController.text.trimRight();
+    final reference = '@file ${path.trim()} ';
+    final next = current.isEmpty ? reference : '$current\n$reference';
+    _textController.value = TextEditingValue(
+      text: next,
+      selection: TextSelection.collapsed(offset: next.length),
     );
   }
 
@@ -1174,7 +1513,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
-            'Configure Desktop Gateway URL and Dashboard credentials to choose a chat model.',
+            'Configure Dashboard credentials to choose a chat model.',
           ),
         ),
       );
@@ -1469,6 +1808,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
           ];
 
     _textController.text = '';
+    unawaited(_clearComposerDraft());
     _awaitingVoiceReply = speakResponse && _voiceReplyEnabled;
     final responseGeneration = ++_responseGeneration;
     _activeResponseTransport = _ResponseTransport.rest;
@@ -1661,6 +2001,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
             attachmentLabels,
           ].where((part) => part.trim().isNotEmpty).join('\n\n');
           _textController.clear();
+          unawaited(_clearComposerDraft());
           _scrollCoordinator.beginStreaming(isNearEnd: _isNearEnd());
           setState(() {
             _streaming = true;
@@ -1700,6 +2041,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
         _gatewayTurnStatus = null;
         _activeResponseTransport = _ResponseTransport.none;
       });
+      unawaited(_resyncLegacyHistoryAfterResume());
       _scheduleScrollTarget(_scrollCoordinator.endStreaming());
       if (_awaitingVoiceReply) {
         _awaitingVoiceReply = false;
@@ -1730,6 +2072,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
         });
       }
       _handleSendError(error);
+      unawaited(_resyncLegacyHistoryAfterResume());
     }
   }
 
@@ -1834,6 +2177,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
       attachmentLabels,
     ].where((part) => part.trim().isNotEmpty).join('\n\n');
     _textController.clear();
+    unawaited(_clearComposerDraft());
     _scrollCoordinator.beginStreaming(isNearEnd: _isNearEnd());
     setState(() {
       _streaming = true;
@@ -2091,6 +2435,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     if (_approvalDialogOpen) return;
     final request = GatewayApprovalRequest.fromEventData(eventData);
     _approvalDialogOpen = true;
+    _haptics.onAttentionNeeded();
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted || responseGeneration != _responseGeneration) {
@@ -2157,6 +2502,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
           (pending) => pending.request.requestId == request.requestId,
         );
     if (duplicate) return;
+    _haptics.onAttentionNeeded();
     _sensitivePromptQueue.add(
       _PendingSensitivePrompt(request, responseGeneration),
     );
@@ -2267,16 +2613,20 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     Map<String, dynamic> eventData,
     int responseGeneration,
   ) {
-    final request = GatewayClarifyRequest.fromEventData(eventData);
-    if (request == null) return;
-    final duplicate =
-        _activeClarifyPrompt?.request.requestId == request.requestId ||
-        _clarifyPromptQueue.any(
-          (pending) => pending.request.requestId == request.requestId,
-        );
-    if (duplicate) return;
-
-    _clarifyPromptQueue.add(_PendingClarifyPrompt(request, responseGeneration));
+    final requests = GatewayClarifyRequest.fromEventDataList(eventData);
+    if (requests.isEmpty) return;
+    _haptics.onAttentionNeeded();
+    for (final request in requests) {
+      final duplicate =
+          _activeClarifyPrompt?.request.identityKey == request.identityKey ||
+          _clarifyPromptQueue.any(
+            (pending) => pending.request.identityKey == request.identityKey,
+          );
+      if (duplicate) continue;
+      _clarifyPromptQueue.add(
+        _PendingClarifyPrompt(request, responseGeneration),
+      );
+    }
     _drainClarifyPromptQueue();
   }
 
@@ -2294,8 +2644,8 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted ||
           pending.responseGeneration != _responseGeneration ||
-          _activeClarifyPrompt?.request.requestId !=
-              pending.request.requestId) {
+          _activeClarifyPrompt?.request.identityKey !=
+              pending.request.identityKey) {
         _activeClarifyPrompt = null;
         _drainSensitivePromptQueue();
         _drainClarifyPromptQueue();
@@ -2316,23 +2666,26 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
           request: pending.request,
           onRespond: (answer) => desktopGateway.respondToClarify(
             requestId: pending.request.requestId,
+            questionId: pending.request.questionId,
             answer: answer,
           ),
         ),
       );
-      if (_activeClarifyPrompt?.request.requestId ==
-          pending.request.requestId) {
+      if (_activeClarifyPrompt?.request.identityKey ==
+          pending.request.identityKey) {
         _activeClarifyPrompt = null;
       }
 
       // System Back or a barrier dismiss maps to the official empty answer,
-      // matching Hermes Desktop's Skip behavior.
+      // matching Hermes Desktop's Skip behavior. Batch questions skip
+      // per-question so the remaining questions can still be answered.
       if (responded != true &&
           mounted &&
           pending.responseGeneration == _responseGeneration) {
         try {
           await desktopGateway.respondToClarify(
             requestId: pending.request.requestId,
+            questionId: pending.request.questionId,
             answer: '',
           );
         } catch (_) {
@@ -2411,6 +2764,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
 
   void _handleSendError(Object e, {bool removePendingUserMessage = false}) {
     _scrollCoordinator.cancelStreaming();
+    _haptics.onTurnFailed();
     setState(() {
       _sending = false;
       _streaming = false;
@@ -2470,62 +2824,43 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     _scheduleStreamingFollow();
   }
 
+  ChatConnectionStatus get _chatConnectionStatus {
+    if (_desktopGateway == null) {
+      if (_loading) return ChatConnectionStatus.connecting;
+      return _error == null
+          ? ChatConnectionStatus.connected
+          : ChatConnectionStatus.offline;
+    }
+    return switch (_desktopConnectionState) {
+      DesktopConnectionState.connected => ChatConnectionStatus.connected,
+      DesktopConnectionState.connecting => ChatConnectionStatus.connecting,
+      DesktopConnectionState.reconnecting => ChatConnectionStatus.reconnecting,
+      DesktopConnectionState.disconnected => ChatConnectionStatus.offline,
+    };
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        centerTitle: true,
-        title: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              widget.session.title,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            const SizedBox(height: 2),
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 7,
-                  height: 7,
-                  decoration: BoxDecoration(
-                    color: _desktopGateway == null
-                        ? (_loading
-                              ? Colors.orange
-                              : _error == null
-                              ? Colors.green
-                              : Theme.of(context).colorScheme.error)
-                        : switch (_desktopConnectionState) {
-                            DesktopConnectionState.connected => Colors.green,
-                            DesktopConnectionState.connecting ||
-                            DesktopConnectionState.reconnecting =>
-                              Colors.orange,
-                            DesktopConnectionState.disconnected => Theme.of(
-                              context,
-                            ).colorScheme.error,
-                          },
-                    shape: BoxShape.circle,
-                  ),
-                ),
-                const SizedBox(width: 6),
-                Flexible(
-                  child: Text(
-                    '${widget.connection.label} • ${_desktopGateway == null ? (_loading
-                              ? 'connecting'
-                              : _error == null
-                              ? 'connected'
-                              : 'offline') : _desktopConnectionState.name}',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
-                ),
-              ],
-            ),
-          ],
+        centerTitle: false,
+        title: Text(
+          widget.session.title.trim().isEmpty
+              ? 'Untitled chat'
+              : widget.session.title,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(48),
+          child: ChatContextHeader(
+            projectName: widget.projectName,
+            model: _sessionModel ?? widget.session.model,
+            reasoningEffort: _sessionReasoningEffort ?? 'default',
+            connectionLabel: widget.connection.label,
+            connectionStatus: _chatConnectionStatus,
+          ),
         ),
         actions: [
           if (_streaming)
@@ -2549,22 +2884,40 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
               onSelected: (action) {
                 if (action == 'refresh') _fetchMessages();
                 if (action == 'export') _exportConversation();
+                if (action == 'rename') unawaited(_renameChatSession());
+                if (action == 'delete') unawaited(_deleteChatSession());
               },
-              itemBuilder: (_) => const [
-                PopupMenuItem(
+              itemBuilder: (_) => [
+                const PopupMenuItem(
                   value: 'refresh',
                   child: ListTile(
                     leading: Icon(Icons.refresh),
                     title: Text('Refresh'),
                   ),
                 ),
-                PopupMenuItem(
+                if (widget.onRenameSession != null)
+                  PopupMenuItem(
+                    value: 'rename',
+                    child: ListTile(
+                      leading: Icon(Icons.edit_outlined),
+                      title: Text('Rename'),
+                    ),
+                  ),
+                const PopupMenuItem(
                   value: 'export',
                   child: ListTile(
                     leading: Icon(Icons.ios_share_outlined),
                     title: Text('Export / share'),
                   ),
                 ),
+                if (widget.onDeleteSession != null)
+                  PopupMenuItem(
+                    value: 'delete',
+                    child: const ListTile(
+                      leading: Icon(Icons.delete_outline),
+                      title: Text('Delete'),
+                    ),
+                  ),
               ],
             ),
         ],
@@ -2799,9 +3152,10 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                     label: 'Message',
                     textField: true,
                     child: TextField(
+                      key: const Key('chat-message-composer'),
                       controller: _textController,
                       decoration: InputDecoration(
-                        hintText: 'Type a message…',
+                        hintText: 'Message Hermes…',
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(24),
                         ),
@@ -2812,7 +3166,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                         isDense: true,
                       ),
                       minLines: 1,
-                      maxLines: 4,
+                      maxLines: 5,
                       textCapitalization: TextCapitalization.sentences,
                       keyboardType: TextInputType.multiline,
                       textInputAction: TextInputAction.send,
@@ -2937,63 +3291,13 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
       );
     }
 
-    // Build display list: consecutive tool messages grouped into cards,
-    // interleaved with user/assistant bubbles.
-    final toolQueue = List<GatewayToolActivity>.from(_toolActivities);
-    final displayMessages = <dynamic>[];
-    final currentGroup = <GatewayToolActivity>[];
-    String? lastUserPrompt;
-
-    for (final msg in _messages) {
-      final role = (msg['role'] as String?) ?? 'assistant';
-      if (isToolResultMessage(msg)) {
-        if (toolQueue.isNotEmpty) {
-          currentGroup.add(toolQueue.removeAt(0));
-        }
-        continue;
-      }
-      if (role != 'user' && role != 'assistant') continue;
-      final content = stripToolResultText(messageContentToText(msg['content']));
-      final reasoning = msg['_gateway_reasoning']?.toString() ?? '';
-      if (content.isEmpty && reasoning.trim().isEmpty) continue;
-
-      if (currentGroup.isNotEmpty) {
-        displayMessages.add(currentGroup.toList());
-        currentGroup.clear();
-      }
-      if (role == 'assistant' && reasoning.trim().isNotEmpty) {
-        displayMessages.add(
-          _GatewayReasoningDisplay(
-            reasoning,
-            _verboseMode || msg['_gateway_reasoning_verbose'] == true,
-          ),
-        );
-      }
-      if (content.isNotEmpty) {
-        if (role == 'user') lastUserPrompt = content;
-        displayMessages.add({
-          ...msg,
-          '_display_content': content,
-          if (role == 'assistant' && lastUserPrompt != null)
-            '_retry_prompt': lastUserPrompt,
-        });
-      }
-    }
-    if (currentGroup.isNotEmpty) {
-      displayMessages.add(currentGroup.toList());
-    }
-
-    // Tools from SSE events that arrived during streaming but haven't been
-    // matched to server messages yet — show them as a card.
-    if (toolQueue.isNotEmpty) {
-      displayMessages.add(toolQueue.toList());
-    }
-    if (_subagentActivities.isNotEmpty) {
-      displayMessages.add(
-        List<GatewaySubagentActivity>.from(_subagentActivities),
-      );
-    }
-    displayMessages.addAll(_gatewayNotices);
+    final displayMessages = buildChatDisplayItems(
+      messages: _messages,
+      toolActivities: _toolActivities,
+      subagentActivities: _subagentActivities,
+      notices: _gatewayNotices,
+      verbose: _verboseMode,
+    );
 
     return NotificationListener<ScrollMetricsNotification>(
       onNotification: (notification) {
@@ -3018,7 +3322,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
             if (item is List<GatewaySubagentActivity>) {
               return GatewaySubagentCard(activities: item);
             }
-            if (item is _GatewayReasoningDisplay) {
+            if (item is ChatReasoningItem) {
               return GatewayReasoningCard(
                 text: item.text,
                 initiallyExpanded: item.initiallyExpanded,
@@ -3084,6 +3388,10 @@ class MessageBubble extends StatelessWidget {
   final VoidCallback? onEdit;
   final Future<void> Function()? onRetry;
 
+  /// Injectable clock so widget tests can assert relative-time labels
+  /// deterministically. When null the bubble uses [DateTime.now].
+  final DateTime? now;
+
   const MessageBubble({
     super.key,
     required this.content,
@@ -3093,6 +3401,7 @@ class MessageBubble extends StatelessWidget {
     this.onReadAloud,
     this.onEdit,
     this.onRetry,
+    this.now,
   });
 
   Future<void> _copyMessage(BuildContext context) async {
@@ -3108,6 +3417,165 @@ class MessageBubble extends StatelessWidget {
           duration: Duration(seconds: 2),
         ),
       );
+  }
+
+  MarkdownStyleSheet _messageStyleSheet(
+    ThemeData theme, {
+    required bool isUser,
+    required Color assistantTextColor,
+  }) {
+    return MarkdownStyleSheet(
+      p: (isUser
+          ? theme.textTheme.bodyMedium?.copyWith(
+              color: hermesUserMessageForeground,
+            )
+          : theme.textTheme.bodyMedium?.copyWith(color: assistantTextColor)),
+      code: TextStyle(
+        backgroundColor: (isUser ? Colors.white : Colors.black).withValues(
+          alpha: 0.12,
+        ),
+        fontFamily: 'monospace',
+        color: isUser ? hermesUserMessageForeground : null,
+      ),
+      a: TextStyle(
+        color: isUser ? hermesUserMessageForeground : theme.colorScheme.primary,
+      ),
+      h1: isUser
+          ? theme.textTheme.headlineSmall?.copyWith(
+              color: hermesUserMessageForeground,
+            )
+          : theme.textTheme.headlineSmall,
+      h2: isUser
+          ? theme.textTheme.titleLarge?.copyWith(
+              color: hermesUserMessageForeground,
+            )
+          : theme.textTheme.titleLarge,
+      h3: isUser
+          ? theme.textTheme.titleMedium?.copyWith(
+              color: hermesUserMessageForeground,
+            )
+          : theme.textTheme.titleMedium,
+      blockquote: TextStyle(
+        color: isUser ? hermesUserMessageForeground : Colors.grey,
+        fontStyle: FontStyle.italic,
+      ),
+      blockquoteDecoration: BoxDecoration(
+        border: Border(
+          left: BorderSide(
+            color: isUser
+                ? hermesUserMessageForeground.withValues(alpha: 0.65)
+                : theme.colorScheme.primary,
+            width: 3,
+          ),
+        ),
+      ),
+      em: isUser
+          ? theme.textTheme.bodyMedium?.copyWith(
+              fontStyle: FontStyle.italic,
+              color: hermesUserMessageForeground,
+            )
+          : theme.textTheme.bodyMedium?.copyWith(fontStyle: FontStyle.italic),
+      strong: isUser
+          ? theme.textTheme.bodyMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+              color: hermesUserMessageForeground,
+            )
+          : theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold),
+    );
+  }
+
+  Future<void> _showActions(BuildContext context) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      // The sheet scrolls: at large text scales four 48 dp tiles plus the
+      // header exceed the default sheet height, and an action a user cannot
+      // reach is worse than one that scrolls.
+      builder: (sheetContext) => SafeArea(
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
+                child: Text(
+                  'Message actions',
+                  style: Theme.of(sheetContext).textTheme.titleSmall,
+                ),
+              ),
+              _actionTile(
+                sheetContext,
+                label: 'Copy message',
+                tooltip: 'Copy message',
+                icon: Icons.copy_outlined,
+                onTap: () {
+                  Navigator.of(sheetContext).pop();
+                  unawaited(_copyMessage(context));
+                },
+              ),
+              if (onReadAloud != null)
+                _actionTile(
+                  sheetContext,
+                  label: 'Read aloud',
+                  tooltip: 'Read aloud',
+                  icon: Icons.volume_up_outlined,
+                  onTap: () {
+                    Navigator.of(sheetContext).pop();
+                    unawaited(onReadAloud!());
+                  },
+                ),
+              if (onEdit != null)
+                _actionTile(
+                  sheetContext,
+                  label: 'Edit and resend',
+                  tooltip: 'Edit and resend',
+                  icon: Icons.edit_outlined,
+                  onTap: () {
+                    Navigator.of(sheetContext).pop();
+                    onEdit!();
+                  },
+                ),
+              if (onRetry != null)
+                _actionTile(
+                  sheetContext,
+                  label: 'Regenerate response',
+                  tooltip: 'Regenerate response',
+                  icon: Icons.refresh,
+                  onTap: () {
+                    Navigator.of(sheetContext).pop();
+                    unawaited(onRetry!());
+                  },
+                ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _actionTile(
+    BuildContext context, {
+    required String label,
+    required String tooltip,
+    required IconData icon,
+    required VoidCallback onTap,
+  }) {
+    return Semantics(
+      label: label,
+      button: true,
+      excludeSemantics: true,
+      child: Tooltip(
+        message: tooltip,
+        child: ListTile(
+          leading: Icon(icon),
+          title: Text(label),
+          minTileHeight: 48,
+          onTap: onTap,
+        ),
+      ),
+    );
   }
 
   @override
@@ -3139,191 +3607,117 @@ class MessageBubble extends StatelessWidget {
       }
     }
 
-    final bubble = Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      constraints: BoxConstraints(
-        maxWidth: MediaQuery.of(context).size.width - 80,
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: isUser ? userBubbleColor : assistantBubbleColor,
-        borderRadius: BorderRadius.circular(18),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Verbose metadata header
-          if (metaLines.isNotEmpty) ...[
-            Container(
-              margin: const EdgeInsets.only(bottom: 8),
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: (isUser ? Colors.white : Colors.black).withValues(
-                  alpha: 0.1,
-                ),
-                borderRadius: BorderRadius.circular(6),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+    final bubble = GestureDetector(
+      key: const Key('message-bubble'),
+      onLongPress: () => _showActions(context),
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        constraints: BoxConstraints(
+          maxWidth: MediaQuery.of(context).size.width - 80,
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: isUser ? userBubbleColor : assistantBubbleColor,
+          borderRadius: BorderRadius.circular(18),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Role header keeps user and assistant prose clearly separated;
+            // a relative timestamp grounds the transcript like Discord does.
+            Padding(
+              padding: const EdgeInsets.only(bottom: 6),
+              child: Row(
                 mainAxisSize: MainAxisSize.min,
-                children: metaLines
-                    .map(
-                      (line) => Text(
-                        line,
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontFamily: 'monospace',
-                          color: isUser
-                              ? hermesUserMessageForeground
-                              : (isDark ? Colors.grey[400] : Colors.grey[600]),
+                crossAxisAlignment: CrossAxisAlignment.baseline,
+                textBaseline: TextBaseline.alphabetic,
+                children: [
+                  Text(
+                    isUser ? 'You' : 'Hermes',
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: isUser
+                          ? hermesUserMessageForeground.withValues(alpha: 0.75)
+                          : theme.colorScheme.onSurfaceVariant,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.4,
+                    ),
+                  ),
+                  if (messageTimestampSeconds(metadata)
+                      case final seconds?) ...[
+                    const SizedBox(width: 8),
+                    Text(
+                      formatRelativeAge(
+                        DateTime.fromMillisecondsSinceEpoch(
+                          (seconds * 1000).round(),
                         ),
+                        now ?? DateTime.now(),
                       ),
-                    )
-                    .toList(),
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: isUser
+                            ? hermesUserMessageForeground.withValues(alpha: 0.6)
+                            : theme.colorScheme.onSurfaceVariant.withValues(
+                                alpha: 0.6,
+                              ),
+                      ),
+                    ),
+                  ],
+                ],
               ),
             ),
+            // Verbose metadata header
+            if (metaLines.isNotEmpty) ...[
+              Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: (isUser ? Colors.white : Colors.black).withValues(
+                    alpha: 0.1,
+                  ),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: metaLines
+                      .map(
+                        (line) => Text(
+                          line,
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontFamily: 'monospace',
+                            color: isUser
+                                ? hermesUserMessageForeground
+                                : (isDark
+                                      ? Colors.grey[400]
+                                      : Colors.grey[600]),
+                          ),
+                        ),
+                      )
+                      .toList(),
+                ),
+              ),
+            ],
+            // Message content: prose renders as markdown; fenced code
+            // blocks render with language, copy, and wrap controls, and
+            // diffs render with coloured line treatment.
+            ...splitMarkdownCodeBlocks(content).map(
+              (segment) => segment is Widget
+                  ? segment
+                  : MarkdownBody(
+                      data: segment as String,
+                      selectable: false,
+                      styleSheet: _messageStyleSheet(
+                        theme,
+                        isUser: isUser,
+                        assistantTextColor: assistantTextColor,
+                      ),
+                    ),
+            ),
+            const SizedBox(height: 4),
           ],
-          // Message content
-          MarkdownBody(
-            data: content,
-            selectable: true,
-            styleSheet: MarkdownStyleSheet(
-              p: (isUser
-                  ? theme.textTheme.bodyMedium?.copyWith(
-                      color: hermesUserMessageForeground,
-                    )
-                  : theme.textTheme.bodyMedium?.copyWith(
-                      color: assistantTextColor,
-                    )),
-              code: TextStyle(
-                backgroundColor: (isUser ? Colors.white : Colors.black)
-                    .withValues(alpha: 0.12),
-                fontFamily: 'monospace',
-                color: isUser ? hermesUserMessageForeground : null,
-              ),
-              a: TextStyle(
-                color: isUser
-                    ? hermesUserMessageForeground
-                    : theme.colorScheme.primary,
-              ),
-              h1: isUser
-                  ? theme.textTheme.headlineSmall?.copyWith(
-                      color: hermesUserMessageForeground,
-                    )
-                  : theme.textTheme.headlineSmall,
-              h2: isUser
-                  ? theme.textTheme.titleLarge?.copyWith(
-                      color: hermesUserMessageForeground,
-                    )
-                  : theme.textTheme.titleLarge,
-              h3: isUser
-                  ? theme.textTheme.titleMedium?.copyWith(
-                      color: hermesUserMessageForeground,
-                    )
-                  : theme.textTheme.titleMedium,
-              blockquote: TextStyle(
-                color: isUser ? hermesUserMessageForeground : Colors.grey,
-                fontStyle: FontStyle.italic,
-              ),
-              blockquoteDecoration: BoxDecoration(
-                border: Border(
-                  left: BorderSide(
-                    color: isUser
-                        ? hermesUserMessageForeground.withValues(alpha: 0.65)
-                        : theme.colorScheme.primary,
-                    width: 3,
-                  ),
-                ),
-              ),
-              em: isUser
-                  ? theme.textTheme.bodyMedium?.copyWith(
-                      fontStyle: FontStyle.italic,
-                      color: hermesUserMessageForeground,
-                    )
-                  : theme.textTheme.bodyMedium?.copyWith(
-                      fontStyle: FontStyle.italic,
-                    ),
-              strong: isUser
-                  ? theme.textTheme.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: hermesUserMessageForeground,
-                    )
-                  : theme.textTheme.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-            ),
-          ),
-          const SizedBox(height: 4),
-          Align(
-            alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
-            child: Wrap(
-              spacing: 0,
-              runSpacing: 0,
-              children: [
-                Semantics(
-                  label: 'Copy message',
-                  button: true,
-                  excludeSemantics: true,
-                  child: IconButton(
-                    icon: const Icon(Icons.copy_outlined, size: 19),
-                    tooltip: 'Copy message',
-                    onPressed: () => _copyMessage(context),
-                    constraints: const BoxConstraints.tightFor(
-                      width: 48,
-                      height: 48,
-                    ),
-                  ),
-                ),
-                if (onReadAloud != null)
-                  Semantics(
-                    label: 'Read aloud',
-                    button: true,
-                    excludeSemantics: true,
-                    child: IconButton(
-                      icon: const Icon(Icons.volume_up_outlined, size: 20),
-                      tooltip: 'Read aloud',
-                      onPressed: onReadAloud,
-                      constraints: const BoxConstraints.tightFor(
-                        width: 48,
-                        height: 48,
-                      ),
-                    ),
-                  ),
-                if (onEdit != null)
-                  Semantics(
-                    label: 'Edit and resend',
-                    button: true,
-                    excludeSemantics: true,
-                    child: IconButton(
-                      icon: const Icon(Icons.edit_outlined, size: 20),
-                      tooltip: 'Edit and resend',
-                      onPressed: onEdit,
-                      constraints: const BoxConstraints.tightFor(
-                        width: 48,
-                        height: 48,
-                      ),
-                    ),
-                  ),
-                if (onRetry != null)
-                  Semantics(
-                    label: 'Regenerate response',
-                    button: true,
-                    excludeSemantics: true,
-                    child: IconButton(
-                      icon: const Icon(Icons.refresh, size: 20),
-                      tooltip: 'Regenerate from the preceding prompt',
-                      onPressed: onRetry,
-                      constraints: const BoxConstraints.tightFor(
-                        width: 48,
-                        height: 48,
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-        ],
+        ),
       ),
     );
 

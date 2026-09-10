@@ -3,9 +3,12 @@ import 'dart:convert';
 
 import 'package:crypto/crypto.dart';
 
+import 'capability_registry.dart';
+import 'assets_gateway_client.dart';
 import 'connection_manager.dart';
 import 'gateway_turn_coordinator.dart';
 import 'gateway_turn_journal.dart';
+import 'projects_gateway_client.dart';
 import 'ws_client.dart';
 
 typedef DesktopAsyncEventCallback =
@@ -35,6 +38,9 @@ class DesktopGatewayClient {
   DesktopAsyncEventCallback? _asyncEventListener;
   DesktopConnectionCallback? _connectionListener;
   GatewayTurnCoordinatorRegistry? _turnCoordinatorRegistry;
+  ProjectsGatewayClient? _projects;
+  final CapabilityRegistry _capabilities = CapabilityRegistry();
+  AssetsGatewayClient? _assets;
 
   static const _asyncEventTypes = {
     'background.complete',
@@ -56,11 +62,32 @@ class DesktopGatewayClient {
     required this._documentProfile,
   });
 
-  factory DesktopGatewayClient.fromConnection(SavedConnection connection) {
-    final raw = connection.desktopGatewayUrl?.trim() ?? '';
-    if (raw.isEmpty) {
-      throw ArgumentError('A Desktop Gateway URL is required for this feature');
-    }
+  /// Whether the shared gateway socket is currently connected.
+  bool get isConnected => _ws?.isConnected ?? false;
+
+  /// The canonical gateway origin for [connection].
+  ///
+  /// Extracted so the recovery-journal scope can be derived without opening a
+  /// transport: an omitted default port and an explicit one must resolve to
+  /// the same string, or the same gateway would be recorded under two scopes.
+  static String normalizedGatewayBaseUrl(SavedConnection connection) {
+    final override = connection.desktopGatewayUrl?.trim() ?? '';
+    final overrideUri = override.isEmpty
+        ? null
+        : Uri.tryParse(
+            override.contains('://') ? override : 'https://$override',
+          );
+    final isDistinctOverride =
+        overrideUri != null &&
+        overrideUri.host.isNotEmpty &&
+        overrideUri.host.toLowerCase() != connection.host.toLowerCase();
+    final raw = isDistinctOverride
+        ? override
+        : SavedConnection.joinBaseUrl(
+            '${connection.useHttps ? 'https' : 'http'}://'
+            '${connection.host}:${connection.dashboardPort}',
+            connection.dashboardPrefix ?? '',
+          );
     final normalized = raw.contains('://') ? raw : 'https://$raw';
     final uri = Uri.tryParse(normalized);
     if (uri == null ||
@@ -75,16 +102,48 @@ class DesktopGatewayClient {
         : baseUri.scheme == 'https'
         ? 443
         : 80;
-    final baseUrl = SavedConnection.joinBaseUrl(
+    return SavedConnection.joinBaseUrl(
       '${baseUri.scheme}://${baseUri.host}:$port',
       pathPrefix,
     );
+  }
+
+  static String _endpointDigest(String baseUrl) =>
+      sha256.convert(utf8.encode(baseUrl)).toString();
+
+  /// The recovery-journal endpoint scope for [connection], or `null` when the
+  /// connection names no usable Desktop Gateway.
+  ///
+  /// Returning `null` rather than throwing keeps callers that only want to
+  /// *read* journal state — such as the Home digest — free of try/catch around
+  /// a plain configuration fact.
+  static String? endpointDigestFor(SavedConnection connection) {
+    final hasExplicitOverride =
+        connection.desktopGatewayUrl?.trim().isNotEmpty == true;
+    final hasDashboardAuth =
+        connection.dashboardProxied ||
+        (connection.dashboardUsername?.trim().isNotEmpty == true &&
+            connection.dashboardPassword?.trim().isNotEmpty == true);
+    if (!hasExplicitOverride && !hasDashboardAuth) return null;
+    try {
+      return _endpointDigest(normalizedGatewayBaseUrl(connection));
+    } on ArgumentError {
+      return null;
+    }
+  }
+
+  factory DesktopGatewayClient.fromConnection(SavedConnection connection) {
+    final baseUrl = normalizedGatewayBaseUrl(connection);
+    final baseUri = Uri.parse(baseUrl);
+    final pathPrefix = baseUri.path == '/' ? '' : baseUri.path;
     return DesktopGatewayClient._(
       connectionId: connection.id,
       baseUrl: baseUrl,
       dashboard: DashboardClient(
         host: baseUri.host,
-        port: port,
+        // The normalized base URL always carries an explicit port, so this
+        // never falls back to a scheme default.
+        port: baseUri.port,
         useHttps: baseUri.scheme == 'https',
         pathPrefix: pathPrefix,
         username: connection.dashboardUsername,
@@ -160,6 +219,73 @@ class DesktopGatewayClient {
     await _connect(sessionId);
   }
 
+  /// Server-owned Hermes Projects for this gateway.
+  ///
+  /// Projects are connection-scoped, not session-scoped, so this opens the
+  /// shared socket without resuming or creating any chat session. An older
+  /// gateway without `projects.*` surfaces a [ProjectsUnsupportedException]
+  /// instead of an error state, so callers can fall back to local grouping.
+  ProjectsGatewayClient get projects {
+    return _projects ??= ProjectsGatewayClient((method, params) async {
+      final client = await _connectControl();
+      return client.send(method, params);
+    }, capabilities: _capabilities);
+  }
+
+  /// Server-owned Assets index for this gateway (`assets.list`).
+  ///
+  /// Shares the same control socket as Projects; an older gateway without the
+  /// index surfaces an [AssetsUnsupportedException] so the UI can show a calm
+  /// compatibility notice instead of an error screen.
+  AssetsGatewayClient get assets {
+    return _assets ??= AssetsGatewayClient((method, params) async {
+      final client = await _connectControl();
+      return client.send(method, params);
+    }, capabilities: _capabilities);
+  }
+
+  /// What this gateway advertises or has been proven to support.
+  ///
+  /// Populated from `gateway.ready` on every connect and refined by the
+  /// outcome of real calls, so a feature can degrade politely on an older
+  /// gateway instead of failing.
+  CapabilityRegistry get capabilities => _capabilities;
+
+  /// Opens (or reuses) the gateway socket without binding it to a session.
+  Future<WsClient> _connectControl() async {
+    final existing = _ws;
+    if (existing != null && existing.isConnected) return existing;
+
+    _connectionListener?.call(
+      existing == null
+          ? DesktopConnectionState.connecting
+          : DesktopConnectionState.reconnecting,
+    );
+    existing?.close();
+    _gatewaySessionIds.clear();
+    final ticket = await _dashboard.mintWebSocketTicket();
+    final client = WsClient(_baseUrl, ticket: ticket);
+    _installAsyncEventBridge(client);
+    client.onConnectionChanged = (connected) {
+      if (connected) {
+        _connectionListener?.call(DesktopConnectionState.connected);
+      } else if (identical(_ws, client)) {
+        _gatewaySessionIds.clear();
+        _connectionListener?.call(DesktopConnectionState.disconnected);
+      }
+    };
+    try {
+      await client.connect();
+      _ws = client;
+      return client;
+    } catch (_) {
+      client.close();
+      if (identical(_ws, client)) _ws = null;
+      _connectionListener?.call(DesktopConnectionState.disconnected);
+      rethrow;
+    }
+  }
+
   /// Creates the source-only recovery-v2 registry without changing any legacy
   /// session, submit, interrupt, or event route in this client.
   GatewayTurnCoordinatorRegistry enableTurnRecoveryCoordinator({
@@ -167,7 +293,7 @@ class DesktopGatewayClient {
   }) {
     return _turnCoordinatorRegistry ??= GatewayTurnCoordinatorRegistry(
       connectionId: _connectionId,
-      endpointDigest: sha256.convert(utf8.encode(_baseUrl)).toString(),
+      endpointDigest: _endpointDigest(_baseUrl),
       journal: journal ?? GatewayTurnJournal(),
       freshSocketFactory: () async {
         final ticket = await _dashboard.mintWebSocketTicket();
@@ -216,6 +342,9 @@ class DesktopGatewayClient {
   }
 
   void _installAsyncEventBridge(WsClient client) {
+    // Every socket greets us with gateway.ready; that greeting is where the
+    // capability registry learns what this Hermes instance offers.
+    _capabilities.bindTo(client);
     client.onStreamEvent = (event) {
       if (!_asyncEventTypes.contains(event.type)) return;
       final gatewaySessionId = event.data['session_id']?.toString();
@@ -244,6 +373,22 @@ class DesktopGatewayClient {
     }
     await client.interruptSession(gatewaySessionId);
     return true;
+  }
+
+  /// Fetches approvals still pending on the gateway session mapped to
+  /// [sessionId]. Returns an empty list when the mobile chat has no bound
+  /// gateway session, the socket is down, or nothing is pending — the chat
+  /// replays the first one so a request that outlived the open screen is
+  /// never silently lost.
+  Future<List<Map<String, dynamic>>> fetchPendingApprovals(
+    String sessionId,
+  ) async {
+    final gatewaySessionId = _gatewaySessionIds[sessionId];
+    final client = _ws;
+    if (gatewaySessionId == null || client == null || !client.isConnected) {
+      return const [];
+    }
+    return client.fetchPendingApprovals(gatewaySessionId);
   }
 
   /// Resolves an approval against the gateway session mapped to this mobile
@@ -279,9 +424,14 @@ class DesktopGatewayClient {
   Future<void> respondToClarify({
     required String requestId,
     required String answer,
+    String? questionId,
   }) async {
     final client = _connectedClient();
-    await client.respondToClarify(requestId: requestId, answer: answer);
+    await client.respondToClarify(
+      requestId: requestId,
+      answer: answer,
+      questionId: questionId,
+    );
   }
 
   WsClient _connectedClient() {
@@ -348,6 +498,8 @@ class DesktopGatewayClient {
   void close() {
     _asyncEventListener = null;
     _connectionListener = null;
+    _projects = null;
+    _assets = null;
     _ws?.close();
     _ws = null;
     _gatewaySessionIds.clear();
