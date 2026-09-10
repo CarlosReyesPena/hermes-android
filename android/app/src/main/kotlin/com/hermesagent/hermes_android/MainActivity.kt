@@ -4,14 +4,17 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.provider.OpenableColumns
-import io.flutter.embedding.android.FlutterActivity
+import io.flutter.embedding.android.FlutterFragmentActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 import java.io.File
 import java.io.FileOutputStream
 import java.util.UUID
 
-class MainActivity : FlutterActivity() {
+// `local_auth` drives the AndroidX BiometricPrompt, which can only attach to a
+// FragmentActivity. Extending FlutterFragmentActivity (not FlutterActivity) is
+// what lets the app lock actually show the OS prompt.
+class MainActivity : FlutterFragmentActivity() {
     private val shareChannelName = "com.hermesagent.hermes_android/share"
     private val launchChannelName = "com.hermesagent.hermes_android/launch"
     private val quickChatAction = "com.hermesagent.hermes_android.action.QUICK_CHAT"

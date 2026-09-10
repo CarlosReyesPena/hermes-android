@@ -10,8 +10,8 @@
     "semantic_hash": ""
   },
   "android/app/src/main/kotlin/com/hermesagent/hermes_android/MainActivity.kt": {
-    "mtime": 1788242875.931366,
-    "ast_hash": "104a2e9162619f5cd787ccdffd982d4c",
+    "mtime": 1789015939.4481475,
+    "ast_hash": "cb76a851e92b721804a7ef65f3cdee51",
     "semantic_hash": ""
   },
   "android/build.gradle.kts": {
@@ -1560,8 +1560,8 @@
     "semantic_hash": ""
   },
   "docs/DAILY_DRIVER_FIT_FINISH_GOAL.md": {
-    "mtime": 1788994328.9940832,
-    "ast_hash": "e62e874da9563c8693320aea7060f247",
+    "mtime": 1788995902.3336833,
+    "ast_hash": "62994f54357d30a8e3cd532d12fc24ab",
     "semantic_hash": ""
   },
   "lib/core/utils/project_appearance.dart": {
@@ -1602,6 +1602,11 @@
   "test/responsive_breakpoint_test.dart": {
     "mtime": 1788995618.1110613,
     "ast_hash": "a695b597676373fceaf072984ecec216",
+    "semantic_hash": ""
+  },
+  "test/android_biometric_host_test.dart": {
+    "mtime": 1789015905.0317018,
+    "ast_hash": "d25b6801c7f0040032e8d4210cc2188c",
     "semantic_hash": ""
   }
 }
